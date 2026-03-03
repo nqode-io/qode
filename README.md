@@ -124,7 +124,7 @@ qode branch list               List active branches
 qode branch focus <name>       Switch to branch, show context
 qode branch remove <name>      Clean up branch and context
 
-qode ticket fetch <url>        Fetch ticket (Jira, Azure DevOps, Linear)
+qode ticket fetch <url>        Fetch ticket (Jira, Azure DevOps, Linear, GitHub Issues)
 
 qode plan refine [url]         Generate worker + judge prompts (25/25 target)
 qode plan spec                 Generate tech spec from refined analysis
@@ -206,7 +206,16 @@ qode ticket fetch https://dev.azure.com/org/project/_workitems/edit/456
 # Linear
 export LINEAR_API_KEY=your-key
 qode ticket fetch https://linear.app/team/ENG-123
+
+# GitHub Issues (public repos — no token required)
+qode ticket fetch https://github.com/owner/repo/issues/42
+
+# GitHub Issues (private repos — token required)
+export GITHUB_TOKEN=your-token
+qode ticket fetch https://github.com/owner/private-repo/issues/42
 ```
+
+See [docs/development-setup.md](docs/development-setup.md) for full setup instructions and token scope requirements.
 
 ## Customising Prompts
 
@@ -240,7 +249,7 @@ project:
           min_percentage: 80
 
 ticket_system:
-  type: jira                 # jira | azure-devops | linear | manual
+  type: jira                 # jira | azure-devops | linear | github | manual
   url: https://company.atlassian.net
   project_key: ENG
   auth:

@@ -4,11 +4,22 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/git"
 	"github.com/spf13/cobra"
 )
+
+func safeBranchDir(root, name string) (string, error) {
+	base := filepath.Join(root, config.QodeDir, "branches")
+	target := filepath.Join(base, name)
+	rel, err := filepath.Rel(base, target)
+	if err != nil || strings.HasPrefix(rel, "..") || rel == "." {
+		return "", fmt.Errorf("invalid branch name %q: path traversal detected", name)
+	}
+	return target, nil
+}
 
 func newBranchCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -43,7 +54,11 @@ func newBranchCreateCmd() *cobra.Command {
 			}
 
 			// Create context folder.
-			contextDir := filepath.Join(root, config.QodeDir, "branches", name, "context")
+			branchDir, err := safeBranchDir(root, name)
+			if err != nil {
+				return err
+			}
+			contextDir := filepath.Join(branchDir, "context")
 			if err := os.MkdirAll(contextDir, 0755); err != nil {
 				return fmt.Errorf("creating context dir: %w", err)
 			}
@@ -134,7 +149,11 @@ func newBranchFocusCmd() *cobra.Command {
 				return fmt.Errorf("checking out branch: %w", err)
 			}
 
-			contextDir := filepath.Join(root, config.QodeDir, "branches", name, "context")
+			branchDir, err := safeBranchDir(root, name)
+			if err != nil {
+				return err
+			}
+			contextDir := filepath.Join(branchDir, "context")
 			files, err := os.ReadDir(contextDir)
 			if err != nil && !os.IsNotExist(err) {
 				return err
@@ -169,8 +188,11 @@ func newBranchRemoveCmd() *cobra.Command {
 			}
 			name := args[0]
 
-			contextDir := filepath.Join(root, config.QodeDir, "branches", name)
-			if err := os.RemoveAll(contextDir); err != nil && !os.IsNotExist(err) {
+			branchDir, err := safeBranchDir(root, name)
+			if err != nil {
+				return err
+			}
+			if err := os.RemoveAll(branchDir); err != nil && !os.IsNotExist(err) {
 				return fmt.Errorf("removing context: %w", err)
 			}
 			fmt.Printf("Removed context for branch: %s\n", name)

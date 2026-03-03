@@ -118,16 +118,19 @@ func runPlanRefine(ticketURL string, iterations int, promptOnly bool) error {
 }
 
 func refinePromptOnly(branch, workerPath, judgePath string, out *plan.RefineOutput) error {
-	if err := copyToClipboard(out.WorkerPrompt); err != nil && flagVerbose {
-		fmt.Fprintf(os.Stderr, "Warning: could not copy to clipboard: %v\n", err)
-	}
 	fmt.Printf("Iteration %d — prompts ready:\n\n", out.Iteration)
 	fmt.Printf("  Worker prompt (do this first):\n    %s\n\n", workerPath)
 	if judgePath != "" {
 		fmt.Printf("  Judge prompt  (score the worker output):\n    %s\n\n", judgePath)
 	}
-	fmt.Println("Worker prompt copied to clipboard.")
-	fmt.Println()
+	if !flagNoClipboard {
+		if err := copyToClipboard(out.WorkerPrompt); err != nil && flagVerbose {
+			fmt.Fprintf(os.Stderr, "Warning: could not copy to clipboard: %v\n", err)
+		} else {
+			fmt.Println("Worker prompt copied to clipboard.")
+		}
+		fmt.Println()
+	}
 	fmt.Println("Next steps:")
 	fmt.Println("  1. Paste worker prompt into your IDE (or use /qode-plan-refine)")
 	fmt.Printf("  2. Copy the AI's analysis to: .qode/branches/%s/refined-analysis.md\n", branch)
@@ -238,8 +241,10 @@ func runPlanSpec(promptOnly bool) error {
 }
 
 func specPromptOnly(branch, promptPath, p string) error {
-	if err := copyToClipboard(p); err != nil && flagVerbose {
-		fmt.Fprintf(os.Stderr, "Warning: could not copy to clipboard: %v\n", err)
+	if !flagNoClipboard {
+		if err := copyToClipboard(p); err != nil && flagVerbose {
+			fmt.Fprintf(os.Stderr, "Warning: could not copy to clipboard: %v\n", err)
+		}
 	}
 	fmt.Printf("Spec prompt written to:\n  %s\n\n", promptPath)
 	fmt.Println("Paste into your IDE (or use /qode-plan-spec).")

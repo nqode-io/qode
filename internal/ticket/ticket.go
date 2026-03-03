@@ -2,11 +2,15 @@ package ticket
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/nqode/qode/internal/config"
 )
+
+var httpClient = &http.Client{Timeout: 30 * time.Second}
 
 // Ticket is the retrieved ticket data.
 type Ticket struct {
@@ -30,6 +34,7 @@ func init() {
 		&JiraProvider{},
 		&AzureDevOpsProvider{},
 		&LinearProvider{},
+		&GitHubProvider{},
 	}
 }
 

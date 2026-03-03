@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -30,7 +31,8 @@ func (p *AzureDevOpsProvider) Fetch(rawURL string) (*Ticket, error) {
 		return nil, fmt.Errorf("AZURE_DEVOPS_PAT environment variable not set\nSet it with: export AZURE_DEVOPS_PAT=your-token")
 	}
 
-	apiURL := fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/wit/workitems/%s?api-version=7.0", org, project, id)
+	apiURL := fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/wit/workitems/%s?api-version=7.0",
+		url.PathEscape(org), url.PathEscape(project), url.PathEscape(id))
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		return nil, err
@@ -38,14 +40,14 @@ func (p *AzureDevOpsProvider) Fetch(rawURL string) (*Ticket, error) {
 	req.SetBasicAuth("", pat)
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetching Azure DevOps work item: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return nil, fmt.Errorf("Azure DevOps API returned %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -87,8 +89,13 @@ func extractAzureParams(rawURL string) (org, project, id string, err error) {
 	return parts[0], parts[1], id, nil
 }
 
-// stripHTML removes basic HTML tags from a string.
+var (
+	dangerTagRe = regexp.MustCompile(`(?is)<(script|style|iframe|object|embed)[^>]*>.*?</(script|style|iframe|object|embed)>`)
+	htmlTagRe   = regexp.MustCompile(`<[^>]+>`)
+)
+
+// stripHTML removes HTML tags and the content of dangerous tags from a string.
 func stripHTML(s string) string {
-	re := regexp.MustCompile(`<[^>]+>`)
-	return re.ReplaceAllString(s, "")
+	s = dangerTagRe.ReplaceAllString(s, "")
+	return htmlTagRe.ReplaceAllString(s, "")
 }

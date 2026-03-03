@@ -65,8 +65,10 @@ clean code requirements.`,
 				return err
 			}
 
-			if err := copyToClipboard(p); err != nil && flagVerbose {
-				fmt.Fprintf(os.Stderr, "Warning: could not copy to clipboard: %v\n", err)
+			if !flagNoClipboard {
+				if err := copyToClipboard(p); err != nil && flagVerbose {
+					fmt.Fprintf(os.Stderr, "Warning: could not copy to clipboard: %v\n", err)
+				}
 			}
 
 			fmt.Printf("Implementation prompt written to:\n  %s\n\n", outPath)
