@@ -1,0 +1,53 @@
+{
+  "tasks": [
+    {
+      "command": "go test ./...",
+      "group": "test",
+      "label": "test: default",
+      "options": {
+        "cwd": "${workspaceFolder}/."
+      },
+      "type": "shell"
+    },
+    {
+      "command": "golangci-lint run",
+      "group": "build",
+      "label": "lint: default",
+      "options": {
+        "cwd": "${workspaceFolder}/."
+      },
+      "type": "shell"
+    },
+    {
+      "command": "go build ./...",
+      "group": {
+        "isDefault": true,
+        "kind": "build"
+      },
+      "label": "build: default",
+      "options": {
+        "cwd": "${workspaceFolder}/."
+      },
+      "type": "shell"
+    },
+    {
+      "command": "qode check",
+      "group": "test",
+      "label": "qode: check all",
+      "type": "shell"
+    },
+    {
+      "command": "qode review code",
+      "group": "test",
+      "label": "qode: review code",
+      "type": "shell"
+    },
+    {
+      "command": "qode review security",
+      "group": "test",
+      "label": "qode: review security",
+      "type": "shell"
+    }
+  ],
+  "version": "2.0.0"
+}

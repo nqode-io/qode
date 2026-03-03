@@ -1,0 +1,41 @@
+project:
+    name: qode
+    topology: single
+    layers:
+        - name: default
+          path: .
+          stack: go
+          test:
+            unit: go test ./...
+            lint: golangci-lint run
+            build: go build ./...
+review:
+    min_code_score: 8
+    min_security_score: 8
+scoring:
+    two_pass: true
+    max_refine_iterations: 5
+    refine_target_score: 25
+ide:
+    cursor:
+        enabled: true
+        rules_dir: .cursorrules
+        commands_dir: .cursor/commands
+    vscode:
+        enabled: true
+        launch: true
+        tasks: true
+        settings: true
+        extensions: true
+    claude_code:
+        enabled: true
+        claude_md: true
+        slash_commands: true
+knowledge:
+    auto_discover: true
+architecture:
+    dry_rules:
+        enabled: true
+        max_repetitions: 3
+    clean_code:
+        max_function_lines: 50

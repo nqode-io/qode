@@ -1,0 +1,18 @@
+---
+description: Clean code enforcement for qode
+globs: ["**/*.go"]
+alwaysApply: true
+---
+
+# Clean Code Requirements
+
+## Universal Rules
+- Functions/methods: max 50 lines
+- Single responsibility per function
+- Named constants instead of magic numbers
+- Explicit error handling — never swallow errors
+- No TODO comments in committed code
+
+## Stack-Specific
+
+

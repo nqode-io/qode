@@ -1,0 +1,110 @@
+# Security Review — {{.Project.Name}}
+
+You are a security engineer performing a security-focused code review.
+Review the diff below for security vulnerabilities.
+
+## Project Context
+
+**Project:** {{.Project.Name}}
+**Branch:** {{.Branch}}
+**Tech Stack:**
+{{range .Layers}}- **{{.Name}}** ({{.Stack}}) at `{{.Path}}`
+{{end}}
+
+## Changes to Review
+
+```diff
+{{.Diff}}
+```
+
+## Security Checklist
+
+Review each applicable area for the tech stacks above:
+
+### Injection
+- SQL injection (parameterised queries used?)
+- NoSQL injection
+- Command injection (user input in shell commands?)
+- LDAP injection
+- Template injection
+
+### Authentication & Authorisation
+- Authentication bypass possibilities
+- Missing authorisation checks
+- Privilege escalation paths
+- Insecure direct object references (IDOR)
+- JWT/session token handling
+
+### Data Exposure
+- Sensitive data in logs
+- PII/secrets in error messages
+- Over-fetching in API responses
+- Insecure data storage
+
+### Input Validation
+- All user inputs validated and sanitised
+- File upload restrictions
+- Integer overflow / boundary checks
+- Regex denial of service (ReDoS)
+
+### Cryptography
+- Weak algorithms (MD5, SHA1, DES)
+- Hardcoded secrets or API keys
+- Insecure random number generation
+- Improper certificate validation
+
+### Frontend-Specific (React / Angular)
+- XSS via dangerouslySetInnerHTML or innerHTML
+- CSP violations
+- Sensitive data in localStorage/sessionStorage
+- Open redirects
+
+### API Security
+- Rate limiting present?
+- CORS misconfiguration
+- Mass assignment vulnerabilities
+- Insecure deserialization
+
+### Dependency Issues
+- New dependencies added? Are they well-maintained?
+- Known CVEs in new packages?
+
+## Output Format
+
+For each vulnerability found:
+- **Severity:** (Critical | High | Medium | Low | Informational)
+- **OWASP Category:** (e.g. A01:2021 – Broken Access Control)
+- **File:** `path/to/file:lineNumber`
+- **Vulnerability:** description
+- **Exploit Scenario:** how could this be exploited?
+- **Remediation:** specific fix
+
+## Summary
+
+- Total vulnerabilities by severity
+- Overall security posture assessment
+- Must-fix before merge (Critical/High only)
+
+## Rating
+
+Score each dimension 0-2. Be strict — deduct for every vulnerability found above.
+
+| Dimension | Score (0-2) | Justification |
+|-----------|-------------|---------------|
+| Injection Prevention | | |
+| Auth & Access Control | | |
+| Data Protection | | |
+| Input Validation | | |
+| Dependency Security | | |
+
+**Total Score: X.X/10**
+
+---
+{{if .OutputPath}}
+## Output Instructions
+
+Write the complete review above (including the Rating table with filled scores) to:
+  {{.OutputPath}}
+
+Write the file directly. Keep your chat response to a single confirmation line.
+{{end}}

@@ -1,0 +1,9 @@
+---
+description: Security review for qode
+---
+
+Read the file: .qode/branches/$(git branch --show-current)/.security-review-prompt.md
+
+If the file does not exist, tell the user to run: qode review security
+
+Otherwise, execute the prompt in that file exactly as written.
