@@ -2,9 +2,11 @@
 description: Refine requirements for qode (target 25/25)
 ---
 
-Read the file: .qode/branches/$(git branch --show-current)/.refine-prompt.md
+First, run this command to generate the prompt:
+  qode plan refine --prompt-only
 
-If the file does not exist, tell the user to run: qode plan refine
+Then read and execute the prompt in:
+  .qode/branches/$(git branch --show-current)/.refine-prompt.md
 
-Otherwise, execute the prompt in that file exactly as written.
-After producing your analysis, run: qode plan refine (to generate the judge scoring prompt)
+After producing your analysis, save it to:
+  .qode/branches/$(git branch --show-current)/refined-analysis.md

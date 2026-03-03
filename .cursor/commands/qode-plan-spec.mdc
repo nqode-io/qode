@@ -2,9 +2,11 @@
 description: Generate technical specification for qode
 ---
 
-Read the file: .qode/branches/$(git branch --show-current)/.spec-prompt.md
+First, run this command to generate the prompt:
+  qode plan spec --prompt-only
 
-If the file does not exist, tell the user to run: qode plan spec
+Then read and execute the prompt in:
+  .qode/branches/$(git branch --show-current)/.spec-prompt.md
 
-Otherwise, execute the prompt in that file exactly as written.
-Save the output to: .qode/branches/$(git branch --show-current)/spec.md
+After generating the spec, save it to:
+  .qode/branches/$(git branch --show-current)/spec.md

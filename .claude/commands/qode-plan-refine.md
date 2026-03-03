@@ -1,11 +1,12 @@
 # Refine Requirements — qode
 
-Read and execute the prompt in:
+First, run this command to generate the prompt:
+  qode plan refine --prompt-only
+
+Then read and execute the prompt in:
   .qode/branches/$BRANCH/.refine-prompt.md
 
 Where $BRANCH is the current git branch name.
-
-If the file does not exist, tell the user to run: qode plan refine [ticket-url]
 
 After completing the analysis:
 - Save the output to: .qode/branches/$BRANCH/refined-analysis.md

@@ -1,11 +1,12 @@
 # Security Review — qode
 
-Read and execute the prompt in:
+First, run this command to generate the prompt:
+  qode review security --prompt-only
+
+Then read and execute the prompt in:
   .qode/branches/$BRANCH/.security-review-prompt.md
 
 Where $BRANCH is the current git branch name.
-
-If the file does not exist, tell the user to run: qode review security
 
 After completing the review:
 - Save to: .qode/branches/$BRANCH/security-review.md
