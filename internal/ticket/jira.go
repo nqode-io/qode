@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -16,7 +17,17 @@ type JiraProvider struct{}
 func (p *JiraProvider) Name() string { return "jira" }
 
 func (p *JiraProvider) CanHandle(rawURL string) bool {
-	return hostContains(rawURL, "atlassian.net") || hostContains(rawURL, "jira.")
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	return isAllowedJiraHost(u.Host)
+}
+
+func isAllowedJiraHost(host string) bool {
+	return host == "atlassian.net" ||
+		strings.HasSuffix(host, ".atlassian.net") ||
+		strings.HasPrefix(host, "jira.")
 }
 
 func (p *JiraProvider) Fetch(rawURL string) (*Ticket, error) {
@@ -25,7 +36,10 @@ func (p *JiraProvider) Fetch(rawURL string) (*Ticket, error) {
 		return nil, fmt.Errorf("could not extract Jira issue key from URL: %s", rawURL)
 	}
 
-	baseURL := extractJiraBase(rawURL)
+	baseURL, err := extractJiraBase(rawURL)
+	if err != nil {
+		return nil, err
+	}
 	token := os.Getenv("JIRA_API_TOKEN")
 	email := os.Getenv("JIRA_EMAIL")
 
@@ -41,14 +55,14 @@ func (p *JiraProvider) Fetch(rawURL string) (*Ticket, error) {
 	req.SetBasicAuth(email, token)
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetching Jira issue: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return nil, fmt.Errorf("Jira API returned %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -92,15 +106,13 @@ func extractJiraKey(rawURL string) string {
 	return jiraKeyRe.FindString(rawURL)
 }
 
-func extractJiraBase(rawURL string) string {
-	// https://company.atlassian.net/browse/ENG-123 → https://company.atlassian.net
-	parts := strings.SplitN(rawURL, "/browse/", 2)
-	if len(parts) == 2 {
-		return parts[0]
+func extractJiraBase(rawURL string) (string, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Scheme != "https" {
+		return "", fmt.Errorf("invalid ticket URL: must use HTTPS")
 	}
-	parts = strings.SplitN(rawURL, "/jira/", 2)
-	if len(parts) == 2 {
-		return parts[0]
+	if !isAllowedJiraHost(u.Host) {
+		return "", fmt.Errorf("URL host %q is not an allowed Jira host", u.Host)
 	}
-	return rawURL
+	return u.Scheme + "://" + u.Host, nil
 }

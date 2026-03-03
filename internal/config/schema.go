@@ -60,7 +60,7 @@ const (
 
 // TicketSystemConfig describes the external ticket system integration.
 type TicketSystemConfig struct {
-	Type       string     `yaml:"type,omitempty"` // jira, azure-devops, linear, notion, manual
+	Type       string     `yaml:"type,omitempty"` // jira, azure-devops, linear, github, notion, manual
 	URL        string     `yaml:"url,omitempty"`
 	ProjectKey string     `yaml:"project_key,omitempty"`
 	Auth       AuthConfig `yaml:"auth,omitempty"`
