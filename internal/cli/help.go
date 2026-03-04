@@ -27,6 +27,7 @@ qode Workflow
 ├─────────────────────────────────────────────────────────────────┤
 │  STEP 2: ADD CONTEXT                                            │
 │  qode ticket fetch <url>                                        │
+│  /qode-ticket-fetch <url>  (in Cursor/Claude Code)              │
 │  → Auto-fetches ticket into context/ticket.md                   │
 │  → Or manually edit .qode/branches/.../context/ticket.md        │
 │  → Add mockups: cp design.png .qode/branches/.../context/       │
@@ -34,7 +35,7 @@ qode Workflow
 │  STEP 3: REFINE REQUIREMENTS  (target: 25/25, ~3-5 iterations)  │
 │  /qode-plan-refine  (in Cursor/Claude Code)                     │
 │  → AI reads context + researches codebase                       │
-│  → Judge independently scores 5 dimensions × 5 points          │
+│  → Judge independently scores 5 dimensions × 5 points           │
 │  → Iterate: answer open questions, re-run until 25/25           │
 │  → Check status: qode plan status                               │
 ├─────────────────────────────────────────────────────────────────┤
@@ -45,8 +46,9 @@ qode Workflow
 ├─────────────────────────────────────────────────────────────────┤
 │  STEP 5: IMPLEMENT                                              │
 │  qode start                                                     │
+│  /qode-start  (in Cursor/Claude Code)                           │
 │  → Generates implementation prompt with spec + knowledge        │
-│  → Paste into Cursor/Claude Code; AI writes baseline code       │
+│  → Runs claude CLI interactively; falls back to clipboard in CI │
 ├─────────────────────────────────────────────────────────────────┤
 │  STEP 6: TEST LOCALLY                                           │
 │  → Test the implementation manually                             │

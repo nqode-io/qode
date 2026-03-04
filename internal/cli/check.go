@@ -121,7 +121,7 @@ func printGate(name string, r runner.GateResult) {
 		status = "⏭"
 		detail = "skipped"
 	}
-	fmt.Printf("║  ├── %-16s %s %-12s ║\n", name+":", status, detail)
+	fmt.Printf("║  ├── %-16s %s %-18s║\n", name+":", status, detail)
 }
 
 func printScoreGate(name string, score float64, min float64) {
