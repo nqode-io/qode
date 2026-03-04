@@ -1,6 +1,7 @@
-# Development Setup
+# How to use ticket fetch
 
-Environment variable configuration for all ticket system integrations.
+Each ticketing system required a specific environment variable or variables set. 
+Environment variable configuration for all ticket system integrations follows.
 
 ## Jira
 
