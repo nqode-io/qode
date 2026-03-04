@@ -57,24 +57,24 @@ func buildLaunchJSON(cfg *config.Config) map[string]interface{} {
 		switch layer.Stack {
 		case "nextjs", "react":
 			configs = append(configs, map[string]interface{}{
-				"name":             fmt.Sprintf("Debug: %s (%s)", layer.Name, layer.Stack),
-				"type":             "node",
-				"request":          "launch",
+				"name":              fmt.Sprintf("Debug: %s (%s)", layer.Name, layer.Stack),
+				"type":              "node",
+				"request":           "launch",
 				"runtimeExecutable": "npm",
-				"runtimeArgs":      []string{"run", "dev"},
-				"cwd":              "${workspaceFolder}/" + layer.Path,
-				"env":              map[string]string{"NODE_ENV": "development"},
-				"console":          "integratedTerminal",
+				"runtimeArgs":       []string{"run", "dev"},
+				"cwd":               "${workspaceFolder}/" + layer.Path,
+				"env":               map[string]string{"NODE_ENV": "development"},
+				"console":           "integratedTerminal",
 			})
 		case "angular":
 			configs = append(configs, map[string]interface{}{
-				"name":             fmt.Sprintf("Debug: %s (Angular)", layer.Name),
-				"type":             "node",
-				"request":          "launch",
+				"name":              fmt.Sprintf("Debug: %s (Angular)", layer.Name),
+				"type":              "node",
+				"request":           "launch",
 				"runtimeExecutable": "ng",
-				"runtimeArgs":      []string{"serve"},
-				"cwd":              "${workspaceFolder}/" + layer.Path,
-				"console":          "integratedTerminal",
+				"runtimeArgs":       []string{"serve"},
+				"cwd":               "${workspaceFolder}/" + layer.Path,
+				"console":           "integratedTerminal",
 			})
 		case "dotnet":
 			configs = append(configs, map[string]interface{}{
@@ -87,11 +87,11 @@ func buildLaunchJSON(cfg *config.Config) map[string]interface{} {
 			})
 		case "java":
 			configs = append(configs, map[string]interface{}{
-				"name":        fmt.Sprintf("Debug: %s (Java)", layer.Name),
-				"type":        "java",
-				"request":     "launch",
-				"cwd":         "${workspaceFolder}/" + layer.Path,
-				"console":     "integratedTerminal",
+				"name":    fmt.Sprintf("Debug: %s (Java)", layer.Name),
+				"type":    "java",
+				"request": "launch",
+				"cwd":     "${workspaceFolder}/" + layer.Path,
+				"console": "integratedTerminal",
 			})
 		case "python":
 			configs = append(configs, map[string]interface{}{

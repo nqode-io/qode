@@ -130,15 +130,14 @@ func (c *claudeCLI) RunInteractive(ctx context.Context, prompt string, opts Opti
 	return cmd.Run()
 }
 
-// RunInteractive resolves the best available dispatcher and runs it interactively.
-// Falls back to clipboard dispatch if claude CLI is unavailable.
+// RunInteractive resolves the claude CLI and runs it interactively.
+// Returns an error if the claude binary is not found.
 func RunInteractive(ctx context.Context, prompt string, opts Options) error {
-	if d := newClaudeCLI(); d.Available() {
-		return d.RunInteractive(ctx, prompt, opts)
+	d := newClaudeCLI()
+	if !d.Available() {
+		return fmt.Errorf("claude CLI not found — install it or use --prompt-only")
 	}
-	d := &clipboardDispatcher{}
-	_, err := d.Run(ctx, prompt, opts)
-	return err
+	return d.RunInteractive(ctx, prompt, opts)
 }
 
 // filterEnv returns a copy of env with all entries for the given key removed.

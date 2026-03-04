@@ -1,0 +1,88 @@
+# Requirements Refinement — {{.Project.Name}}
+
+You are a senior software engineer performing requirements analysis for the following feature.
+Work through this systematically. Do NOT score your own output.
+
+## Project Context
+
+**Project:** {{.Project.Name}}
+**Branch:** {{.Branch}}
+**Tech Stack:**
+{{range .Layers}}- **{{.Name}}** ({{.Stack}}) at `{{.Path}}`
+{{end}}
+
+## Ticket / Feature Description
+
+{{if .Ticket}}
+{{.Ticket}}
+{{else}}
+*(No ticket provided. Infer requirements from branch name and notes.)*
+{{end}}
+
+{{if .Notes}}
+## Additional Notes
+
+{{.Notes}}
+{{end}}
+
+{{if .Analysis}}
+## Previous Analysis (Iteration N-1)
+
+{{.Analysis}}
+
+---
+*Continue from the above analysis. Improve weak areas identified in the previous score.*
+{{end}}
+
+{{if .Extra}}
+## Extra Context
+
+{{.Extra}}
+{{end}}
+
+## Your Task
+
+Perform a thorough requirements analysis. Cover:
+
+1. **Problem Understanding**
+   - Restate the problem in your own words
+   - Identify the user need and business value
+   - Clarify any ambiguities (list open questions if any)
+
+2. **Technical Analysis**
+   - Which layers/components are affected? (reference the layer list above)
+   - What are the key technical decisions?
+   - What patterns/conventions should be followed?
+   - Are there dependencies on other features or services?
+
+3. **Risk & Edge Cases**
+   - What could go wrong?
+   - What edge cases must be handled?
+   - Are there security considerations?
+   - Performance implications?
+
+4. **Completeness Check**
+   - List all acceptance criteria derived from the ticket
+   - Are there implicit requirements not stated in the ticket?
+   - What is explicitly out of scope?
+
+5. **Actionable Implementation Plan**
+   - Break the work into concrete tasks (each implementable in one commit)
+   - Suggest the order of implementation
+   - Identify any prerequisite work
+
+## Constraints
+- Be specific. Vague statements score 0.
+- Reference actual file paths, function names, or APIs when possible.
+- If you lack information to answer something, say so explicitly and ask.
+
+---
+*[DO NOT SCORE YOUR OWN OUTPUT — a separate judge will score this independently]*
+{{if .OutputPath}}
+## Output Instructions
+
+Write your complete analysis to:
+  {{.OutputPath}}
+
+Write the file directly. Keep your chat response to a single confirmation line.
+{{end}}

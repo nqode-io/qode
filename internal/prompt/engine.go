@@ -16,8 +16,8 @@ var embeddedFS embed.FS
 
 // Engine renders prompt templates with project context.
 type Engine struct {
-	root     string
-	funcMap  template.FuncMap
+	root    string
+	funcMap template.FuncMap
 }
 
 // NewEngine creates an Engine for the given project root.
@@ -72,6 +72,28 @@ func (e *Engine) Render(name string, data TemplateData) (string, error) {
 		return "", fmt.Errorf("rendering template %q: %w", name, err)
 	}
 	return buf.String(), nil
+}
+
+// EmbeddedTemplates returns all built-in template names and their contents.
+// Names are relative paths like "refine/base" (without the .md.tmpl suffix).
+func EmbeddedTemplates() (map[string][]byte, error) {
+	templates := make(map[string][]byte)
+	entries := []string{
+		"refine/base",
+		"scoring/judge_refine",
+		"spec/base",
+		"start/base",
+		"review/code",
+		"review/security",
+	}
+	for _, name := range entries {
+		data, err := embeddedFS.ReadFile("templates/" + name + ".md.tmpl")
+		if err != nil {
+			return nil, fmt.Errorf("reading embedded template %q: %w", name, err)
+		}
+		templates[name] = data
+	}
+	return templates, nil
 }
 
 // loadTemplate returns the template content, preferring local overrides.

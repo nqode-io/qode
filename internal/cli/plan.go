@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -37,11 +36,11 @@ func newPlanRefineCmd() *cobra.Command {
 		Short: "Refine requirements through iterative AI analysis (target: 25/25)",
 		Long: `Generates and dispatches a requirements refinement prompt.
 
-By default the prompt is sent to the claude CLI (if available) and the
+By default the prompt is sent to the claude CLI and the
 analysis is saved to .qode/branches/<branch>/refined-analysis.md.
 When two-pass scoring is enabled, a judge prompt is also dispatched.
 
-Use --prompt-only to write the prompt file and copy to clipboard instead.`,
+Use --prompt-only to write the prompt file without dispatching.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ticketURL := ""
 			if len(args) > 0 {
@@ -51,7 +50,7 @@ Use --prompt-only to write the prompt file and copy to clipboard instead.`,
 		},
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "refinement iteration number (0 = auto-detect)")
-	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt file and copy to clipboard without dispatching")
+	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt file without dispatching")
 	return cmd
 }
 
@@ -62,15 +61,15 @@ func newPlanSpecCmd() *cobra.Command {
 		Short: "Generate a technical specification from the refined analysis",
 		Long: `Generates and dispatches a tech spec prompt.
 
-By default the prompt is sent to the claude CLI (if available) and the spec
+By default the prompt is sent to the claude CLI and the spec
 is saved to .qode/branches/<branch>/spec.md.
 
-Use --prompt-only to write the prompt file and copy to clipboard instead.`,
+Use --prompt-only to write the prompt file without dispatching.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runPlanSpec(promptOnly)
 		},
 	}
-	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt file and copy to clipboard without dispatching")
+	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt file without dispatching")
 	return cmd
 }
 
@@ -123,14 +122,6 @@ func refinePromptOnly(branch, workerPath, judgePath string, out *plan.RefineOutp
 	if judgePath != "" {
 		fmt.Printf("  Judge prompt  (score the worker output):\n    %s\n\n", judgePath)
 	}
-	if !flagNoClipboard {
-		if err := copyToClipboard(out.WorkerPrompt); err != nil && flagVerbose {
-			fmt.Fprintf(os.Stderr, "Warning: could not copy to clipboard: %v\n", err)
-		} else {
-			fmt.Println("Worker prompt copied to clipboard.")
-		}
-		fmt.Println()
-	}
 	fmt.Println("Next steps:")
 	fmt.Println("  1. Paste worker prompt into your IDE (or use /qode-plan-refine)")
 	fmt.Printf("  2. Copy the AI's analysis to: .qode/branches/%s/refined-analysis.md\n", branch)
@@ -143,9 +134,6 @@ func refineDispatch(root, branch string, out *plan.RefineOutput, workerPath, jud
 	fmt.Printf("Running refinement (iteration %d)...\n", out.Iteration)
 
 	if err := dispatch.RunInteractive(context.Background(), out.WorkerPrompt, dispatch.Options{WorkingDir: root}); err != nil {
-		if errors.Is(err, dispatch.ErrManualDispatch) {
-			return refinePromptOnly(branch, workerPath, judgePath, out)
-		}
 		return fmt.Errorf("refine worker: %w", err)
 	}
 
@@ -168,9 +156,6 @@ func refineDispatch(root, branch string, out *plan.RefineOutput, workerPath, jud
 
 	fmt.Println("Scoring...")
 	if err := dispatch.RunInteractive(context.Background(), freshJudge, dispatch.Options{WorkingDir: root}); err != nil {
-		if errors.Is(err, dispatch.ErrManualDispatch) {
-			return refinePromptOnly(branch, workerPath, judgePath, out)
-		}
 		return fmt.Errorf("refine judge: %w", err)
 	}
 
@@ -234,29 +219,20 @@ func runPlanSpec(promptOnly bool) error {
 	}
 
 	if promptOnly {
-		return specPromptOnly(branch, promptPath, p)
+		return specPromptOnly(branch, promptPath)
 	}
-	return specDispatch(root, branch, p, specPath)
+	return specDispatch(root, p, specPath)
 }
 
-func specPromptOnly(branch, promptPath, p string) error {
-	if !flagNoClipboard {
-		if err := copyToClipboard(p); err != nil && flagVerbose {
-			fmt.Fprintf(os.Stderr, "Warning: could not copy to clipboard: %v\n", err)
-		}
-	}
+func specPromptOnly(branch, promptPath string) error {
 	fmt.Printf("Spec prompt written to:\n  %s\n\n", promptPath)
 	fmt.Println("Paste into your IDE (or use /qode-plan-spec).")
 	fmt.Printf("Save the AI's spec to: .qode/branches/%s/spec.md\n", branch)
 	return nil
 }
 
-func specDispatch(root, branch, p, specPath string) error {
+func specDispatch(root, p, specPath string) error {
 	if err := dispatch.RunInteractive(context.Background(), p, dispatch.Options{WorkingDir: root}); err != nil {
-		if errors.Is(err, dispatch.ErrManualDispatch) {
-			promptPath := filepath.Join(config.QodeDir, "branches", branch, ".spec-prompt.md")
-			return specPromptOnly(branch, promptPath, p)
-		}
 		return fmt.Errorf("plan spec: %w", err)
 	}
 

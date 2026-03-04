@@ -1,6 +1,6 @@
 # qode
 
-AI-assisted developer workflow CLI for nQode.
+AI-assisted developer workflow CLI by nQode.
 
 Standardises how developers use AI coding assistants across client projects with varied tech stacks — Next.js+React, .NET+React, Angular+Java, and more.
 
@@ -29,15 +29,16 @@ qode ticket fetch https://company.atlassian.net/browse/ENG-123
 
 ```
 1. qode branch create <name>          Create git branch + context folder
-2. qode ticket fetch <url>            Fetch ticket into context (or edit manually)
+2. qode ticket fetch <url>            Fetch ticket into context
+   /qode-ticket-fetch <url>  (IDE)    — or use the slash command
 3. /qode-plan-refine  (in IDE)        Refine requirements — iterate to 25/25
 4. /qode-plan-spec    (in IDE)        Generate tech spec
-5. qode start                         Generate implementation prompt
-6. (code in Cursor/Claude Code)
-7. /qode-review-code  (in IDE)        Code review
-8. /qode-review-security (in IDE)     Security review
-9. qode check                         Run all quality gates
-10. git commit && git push
+5. qode start                         Run implementation prompt interactively
+   /qode-start        (in IDE)        — or use the slash command
+6. /qode-review-code  (in IDE)        Code review
+7. /qode-review-security (in IDE)     Security review
+8. qode check                         Run all quality gates
+9. qode branch remove <name>          Cleanup
 ```
 
 Run `qode workflow` for the full diagram.
@@ -55,36 +56,6 @@ Run `qode workflow` for the full diagram.
 | Python | `pyproject.toml`, `requirements.txt` |
 | Go | `go.mod` |
 | TypeScript | `tsconfig.json` |
-
-## Composite Stack Example
-
-A real nQode project with React frontend, Next.js BFF, and .NET backend:
-
-```yaml
-# qode.yaml
-project:
-  name: insurance-portal
-  topology: monorepo
-  layers:
-    - name: frontend
-      path: ./frontend
-      stack: react
-      test:
-        unit: "npx vitest run"
-        lint: "npx eslint ."
-    - name: bff
-      path: ./bff
-      stack: nextjs
-      test:
-        unit: "npm test"
-        lint: "npm run lint"
-    - name: api
-      path: ./backend
-      stack: dotnet
-      test:
-        unit: "dotnet test"
-        lint: "dotnet format --verify-no-changes"
-```
 
 ## Scoring
 
@@ -110,6 +81,8 @@ Target: 25/25 before generating a spec.
 | **VS Code** | `.vscode/launch.json`, `tasks.json`, `settings.json`, `extensions.json` |
 | **Claude Code** | `CLAUDE.md` + `.claude/commands/*.md` slash commands |
 
+Slash commands available in all IDEs: `/qode-ticket-fetch`, `/qode-plan-refine`, `/qode-plan-spec`, `/qode-start`, `/qode-review-code`, `/qode-review-security`
+
 All configs are stack-aware. Existing files are preserved — qode only adds/updates its own sections.
 
 ## Commands
@@ -130,7 +103,7 @@ qode plan refine [url]         Generate worker + judge prompts (25/25 target)
 qode plan spec                 Generate tech spec from refined analysis
 qode plan status               Show iteration scores for current branch
 
-qode start                     Generate implementation prompt
+qode start                     Generate and run implementation prompt interactively
 
 qode review code               Code review prompt
 qode review security           Security review prompt
@@ -209,86 +182,16 @@ qode ticket fetch https://linear.app/team/ENG-123
 
 # GitHub Issues (public repos — no token required)
 qode ticket fetch https://github.com/owner/repo/issues/42
-
-# GitHub Issues (private repos — token required)
-export GITHUB_TOKEN=your-token
-qode ticket fetch https://github.com/owner/private-repo/issues/42
 ```
 
-See [docs/development-setup.md](docs/development-setup.md) for full setup instructions and token scope requirements.
+Credentials are auto-loaded from a `.env` file in the project root. See [docs/how-to-use-ticket-fetch.md](docs/how-to-use-ticket-fetch.md) for full setup instructions and token scope requirements.
 
-## Customising Prompts
+## Further Reading
 
-Override any built-in prompt per-project:
-
-```bash
-mkdir -p .qode/prompts/refine
-# Create .qode/prompts/refine/base.md.tmpl with your custom content
-# qode will use your file instead of the built-in template
-```
-
-## qode.yaml Reference
-
-```yaml
-project:
-  name: my-project
-  description: Optional description
-  topology: monorepo        # monorepo | multirepo | single (auto-detected)
-  layers:
-    - name: frontend
-      path: ./frontend
-      stack: react           # react | angular | nextjs | vue | svelte |
-                             # dotnet | java | python | go | typescript
-      test:
-        unit: "npm test"
-        e2e: "npx playwright test"
-        lint: "npm run lint"
-        build: "npm run build"
-        coverage:
-          enabled: true
-          min_percentage: 80
-
-ticket_system:
-  type: jira                 # jira | azure-devops | linear | github | manual
-  url: https://company.atlassian.net
-  project_key: ENG
-  auth:
-    method: token
-    env_var: JIRA_API_TOKEN
-
-review:
-  min_code_score: 8.0
-  min_security_score: 8.0
-
-scoring:
-  two_pass: true
-  max_refine_iterations: 5
-  refine_target_score: 25
-
-ide:
-  cursor:
-    enabled: true
-  vscode:
-    enabled: true
-  claude_code:
-    enabled: true
-
-knowledge:
-  auto_discover: true
-  paths:
-    - docs/architecture/
-    - tests/**/README.md
-
-architecture:
-  clean_code:
-    max_function_lines: 50
-```
+- [docs/how-to-use-ticket-fetch.md](docs/how-to-use-ticket-fetch.md) — Ticket system setup and token scopes
+- [docs/qode-yaml-reference.md](docs/qode-yaml-reference.md) — Full `qode.yaml` configuration reference
+- [docs/how-to-customise-prompts.md](docs/how-to-customise-prompts.md) — Override built-in prompt templates per project
 
 ## Contributing
 
-```bash
-git clone https://github.com/nqode/qode
-cd qode
-go test ./...
-go install ./cmd/qode/
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.

@@ -10,9 +10,8 @@ import (
 var (
 	rootCmd *cobra.Command
 	// GlobalFlags shared across commands
-	flagRoot        string
-	flagVerbose     bool
-	flagNoClipboard bool
+	flagRoot    string
+	flagVerbose bool
 )
 
 // Execute runs the root command.
@@ -23,23 +22,24 @@ func Execute() error {
 func init() {
 	rootCmd = &cobra.Command{
 		Use:   "qode",
-		Short: "AI-assisted developer workflow CLI for nQode projects",
-		Long: `qode is a general-purpose AI developer workflow tool for nQode.
+		Short: "AI-assisted developer workflow CLI by nQode projects",
+		Long: `qode is a general-purpose AI developer workflow tool by nQode.
 
 It standardises how developers use AI coding assistants across client projects
 with varied tech stacks — Next.js+React, .NET+React, Angular+Java, and more.
 
 Workflow:
   1. qode branch create <name>            # Create feature branch
-  2. qode ticket fetch <url>              # Fetch ticket context
-  3. /qode-plan-refine  (in IDE)          # Refine requirements (3-5x → 25/25)
-  4. /qode-plan-spec    (in IDE)          # Generate tech spec
-  5. qode start                           # Generate implementation prompt
-  6. /qode-review-code  (in IDE)          # Code review
+  2. /fetch-ticket         (in IDE)       # Fetch ticket (or /qode-ticket-fetch in IDE)
+  3. /qode-plan-refine     (in IDE)       # Refine requirements (3-5x → 25/25)
+  4. /qode-plan-spec       (in IDE)       # Generate tech spec
+  5. /qode-start           (in IDE)       # Run implementation (or /qode-start in IDE)
+  6. /qode-review-code     (in IDE)       # Code review
   7. /qode-review-security (in IDE)       # Security review
   8. qode check                           # Run all quality gates
+  9. qode branch remove <name>            # Cleanup
 
-See 'qode help workflow' for the full diagram.`,
+See 'qode workflow' for the full diagram.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -47,9 +47,10 @@ See 'qode help workflow' for the full diagram.`,
 		},
 	}
 
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
+
 	rootCmd.PersistentFlags().StringVar(&flagRoot, "root", "", "project root directory (default: auto-detected)")
 	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "verbose output")
-	rootCmd.PersistentFlags().BoolVar(&flagNoClipboard, "no-clipboard", false, "skip copying prompts to clipboard")
 
 	rootCmd.AddCommand(
 		newInitCmd(),

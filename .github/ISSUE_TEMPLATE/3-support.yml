@@ -1,0 +1,41 @@
+name: Support / Question
+description: Ask a question or get help with qode
+labels: [question]
+
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What do you need help with?
+      placeholder: Describe your question or issue clearly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you've tried
+      description: What steps have you already taken to resolve this?
+      placeholder: |
+        1. I tried ...
+        2. I checked the docs at ...
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: e.g. macOS 15.3, Ubuntu 24.04, Windows 11
+    validations:
+      required: false
+
+  - type: input
+    id: qode-version
+    attributes:
+      label: qode version
+      description: Output of `qode --version`
+      placeholder: e.g. 0.5.0
+    validations:
+      required: false

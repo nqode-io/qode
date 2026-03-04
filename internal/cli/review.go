@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -35,7 +34,7 @@ func newReviewCodeCmd() *cobra.Command {
 			return runReview("code", promptOnly)
 		},
 	}
-	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt file and copy to clipboard without dispatching")
+	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt file without dispatching")
 	return cmd
 }
 
@@ -48,7 +47,7 @@ func newReviewSecurityCmd() *cobra.Command {
 			return runReview("security", promptOnly)
 		},
 	}
-	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt file and copy to clipboard without dispatching")
+	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt file without dispatching")
 	return cmd
 }
 
@@ -64,7 +63,7 @@ func newReviewAllCmd() *cobra.Command {
 			return runReview("security", promptOnly)
 		},
 	}
-	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt files and copy to clipboard without dispatching")
+	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt files without dispatching")
 	return cmd
 }
 
@@ -127,33 +126,23 @@ func runReview(kind string, promptOnly bool) error {
 	}
 
 	if promptOnly {
-		return reviewPromptOnly(kind, branch, promptPath, p)
+		return reviewPromptOnly(kind, promptPath)
 	}
-	return reviewDispatch(root, kind, branch, p, outputPath)
+	return reviewDispatch(root, kind, p, outputPath)
 }
 
-func reviewPromptOnly(kind, branch, promptPath, p string) error {
-	if err := copyToClipboard(p); err != nil && flagVerbose {
-		fmt.Fprintf(os.Stderr, "Warning: could not copy to clipboard: %v\n", err)
-	}
+func reviewPromptOnly(kind, promptPath string) error {
 	fmt.Printf("%s review prompt written to:\n  %s\n\n", capitalize(kind), promptPath)
 	fmt.Printf("Use slash command: /qode-review-%s\n", kind)
 	return nil
 }
 
-func reviewDispatch(root, kind, branch, p, outputPath string) error {
+func reviewDispatch(root, kind, p, outputPath string) error {
 	// Remove stale output so the AI always writes a fresh review.
 	// This prevents a re-run from silently reporting the previous score.
 	_ = os.Remove(outputPath)
 
 	if err := dispatch.RunInteractive(context.Background(), p, dispatch.Options{WorkingDir: root}); err != nil {
-		if errors.Is(err, dispatch.ErrManualDispatch) {
-			relPrompt := filepath.Join(config.QodeDir, "branches", branch,
-				fmt.Sprintf(".%s-review-prompt.md", kind))
-			fmt.Printf("\n%s review prompt written to:\n  %s\n\n", capitalize(kind), relPrompt)
-			fmt.Println(dispatch.ClipboardInstruction("qode-review-" + kind))
-			return nil
-		}
 		return fmt.Errorf("%s review: %w", kind, err)
 	}
 

@@ -1,6 +1,6 @@
-# Development Setup
+# How to use ticket fetch
 
-Environment variable configuration for all ticket system integrations.
+Each ticketing system requires specific environment variables. qode auto-loads a `.env` file from the project root, so you don't need to `source` it manually.
 
 ## Jira
 
@@ -64,7 +64,7 @@ Required permission: `Issues: Read` (for private repositories)
 
 ## Using a .env File
 
-To avoid setting variables in every shell session, store them in a `.env` file (never commit this file):
+Store credentials in a `.env` file at the project root (never commit this file). qode loads it automatically before fetching tickets.
 
 ```bash
 # .env — add to .gitignore
@@ -75,11 +75,15 @@ LINEAR_API_KEY=your-linear-key
 GITHUB_TOKEN=your-github-token
 ```
 
-Load with:
+## IDE Slash Command
 
-```bash
-set -a && source .env && set +a
+In Cursor or Claude Code, you can use the slash command instead of the terminal:
+
 ```
+/qode-ticket-fetch https://company.atlassian.net/browse/ENG-123
+```
+
+This runs the same fetch and writes the result to `context/ticket.md`.
 
 ## Verification
 

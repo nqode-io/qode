@@ -52,7 +52,7 @@ func (p *AzureDevOpsProvider) Fetch(rawURL string) (*Ticket, error) {
 	}
 
 	var result struct {
-		ID     int    `json:"id"`
+		ID     int `json:"id"`
 		Fields struct {
 			Title       string `json:"System.Title"`
 			Description string `json:"System.Description"`

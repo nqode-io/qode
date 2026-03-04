@@ -23,13 +23,13 @@ import (
 
 // Result holds the judge's scoring output.
 type Result struct {
-	TotalScore    int
-	MaxScore      int
-	Dimensions    []DimensionScore
-	Assessment    string
-	Improvements  []string
-	Ready         bool   // true when score meets the target
-	TargetScore   int
+	TotalScore   int
+	MaxScore     int
+	Dimensions   []DimensionScore
+	Assessment   string
+	Improvements []string
+	Ready        bool // true when score meets the target
+	TargetScore  int
 }
 
 // DimensionScore holds the score and justification for one rubric dimension.

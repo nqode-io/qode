@@ -87,8 +87,8 @@ type ScoringConfig struct {
 
 // IDEConfig controls which IDE integrations are generated.
 type IDEConfig struct {
-	Cursor    CursorIDEConfig    `yaml:"cursor,omitempty"`
-	VSCode    VSCodeIDEConfig    `yaml:"vscode,omitempty"`
+	Cursor     CursorIDEConfig     `yaml:"cursor,omitempty"`
+	VSCode     VSCodeIDEConfig     `yaml:"vscode,omitempty"`
 	ClaudeCode ClaudeCodeIDEConfig `yaml:"claude_code,omitempty"`
 }
 
