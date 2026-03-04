@@ -36,10 +36,10 @@ func TestClaudeSlashCommands_ContainsTicketFetch(t *testing.T) {
 	}
 }
 
-func TestClaudeSlashCommands_HasFiveEntries(t *testing.T) {
+func TestClaudeSlashCommands_HasSixEntries(t *testing.T) {
 	cmds := claudeSlashCommands(minimalConfig())
-	if len(cmds) != 5 {
-		t.Errorf("claudeSlashCommands: len = %d, want 5", len(cmds))
+	if len(cmds) != 6 {
+		t.Errorf("claudeSlashCommands: len = %d, want 6", len(cmds))
 	}
 }
 
@@ -63,10 +63,10 @@ func TestCursorSlashCommands_ContainsTicketFetch(t *testing.T) {
 	}
 }
 
-func TestCursorSlashCommands_HasFiveEntries(t *testing.T) {
+func TestCursorSlashCommands_HasSixEntries(t *testing.T) {
 	cmds := slashCommands(minimalConfig())
-	if len(cmds) != 5 {
-		t.Errorf("slashCommands: len = %d, want 5", len(cmds))
+	if len(cmds) != 6 {
+		t.Errorf("slashCommands: len = %d, want 6", len(cmds))
 	}
 }
 
