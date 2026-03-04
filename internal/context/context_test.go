@@ -140,6 +140,39 @@ func TestLoad_HeaderNewerThanGlob(t *testing.T) {
 	}
 }
 
+// TestLatestScore_ReturnsScoreOfHighestNumberedIteration verifies that the score
+// of the highest-numbered iteration is returned, not the highest score.
+func TestLatestScore_ReturnsScoreOfHighestNumberedIteration(t *testing.T) {
+	ctx := &Context{
+		Iterations: []Iteration{
+			{Number: 1, Score: 18},
+			{Number: 3, Score: 14},
+			{Number: 2, Score: 21},
+		},
+	}
+	if got := ctx.LatestScore(); got != 14 {
+		t.Errorf("want 14 (score of iter 3), got %d", got)
+	}
+}
+
+// TestLatestScore_Empty returns 0 when no iterations exist.
+func TestLatestScore_Empty(t *testing.T) {
+	ctx := &Context{}
+	if got := ctx.LatestScore(); got != 0 {
+		t.Errorf("want 0, got %d", got)
+	}
+}
+
+// TestLatestScore_SingleIteration returns the score of the only iteration.
+func TestLatestScore_SingleIteration(t *testing.T) {
+	ctx := &Context{
+		Iterations: []Iteration{{Number: 1, Score: 22}},
+	}
+	if got := ctx.LatestScore(); got != 22 {
+		t.Errorf("want 22, got %d", got)
+	}
+}
+
 // TestLoad_NoAnalysisMd — graceful fallback when file is absent.
 func TestLoad_NoAnalysisMd(t *testing.T) {
 	root, branchDir := setupBranchDir(t)
