@@ -70,7 +70,7 @@ alwaysApply: true
 2. Context → qode ticket fetch / edit context/ticket.md
 3. Refine → /qode-plan-refine (iterate until 25/25)
 4. Spec → /qode-plan-spec
-5. Implement → qode start → code in Cursor
+5. Implement → /qode-start → code in Cursor
 6. Review → /qode-review-code + /qode-review-security
 7. Check → qode check
 8. Ship → git commit && push
@@ -172,6 +172,19 @@ Then read and execute the prompt in:
 
 After completing the review, save it to:
   .qode/branches/$(git branch --show-current)/security-review.md
+`, cfg.Project.Name),
+
+		"qode-start": fmt.Sprintf(`---
+description: Start implementation session for %s
+---
+
+First, run this command to generate the prompt:
+  qode start --prompt-only
+
+Then read and execute the prompt in:
+  .qode/branches/$(git branch --show-current)/.start-prompt.md
+
+Execute the prompt as your implementation session.
 `, cfg.Project.Name),
 
 		"qode-ticket-fetch": fmt.Sprintf(`---

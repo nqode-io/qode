@@ -72,7 +72,7 @@ func buildClaudeMD(cfg *config.Config) string {
 	sb.WriteString("2. `qode ticket fetch <url>` — Fetch ticket context\n")
 	sb.WriteString("3. `/qode-plan-refine` — Iterate requirements (target 25/25)\n")
 	sb.WriteString("4. `/qode-plan-spec` — Generate tech spec\n")
-	sb.WriteString("5. `qode start` — Generate implementation prompt\n")
+	sb.WriteString("5. `/qode-start` — Generate and run implementation prompt\n")
 	sb.WriteString("6. `/qode-review-code` + `/qode-review-security` — Reviews\n")
 	sb.WriteString("7. `qode check` — All quality gates\n")
 	sb.WriteString("8. `git commit && git push` — Ship\n\n")
@@ -168,6 +168,19 @@ After completing the review:
 - Save to: .qode/branches/$BRANCH/security-review.md
 - List all Critical and High vulnerabilities with OWASP categories
 - Provide specific remediation for each issue
+`, name),
+
+		"qode-start": fmt.Sprintf(`# Start Implementation — %s
+
+First, run this command to generate the prompt:
+  qode start --prompt-only
+
+Then read and execute the prompt in:
+  .qode/branches/$BRANCH/.start-prompt.md
+
+Where $BRANCH is the current git branch name.
+
+Execute the prompt as your implementation session.
 `, name),
 
 		"qode-ticket-fetch": `!qode ticket fetch $ARGUMENTS`,

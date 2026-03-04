@@ -18,7 +18,7 @@ qode
 2. Context → qode ticket fetch / edit context/ticket.md
 3. Refine → /qode-plan-refine (iterate until 25/25)
 4. Spec → /qode-plan-spec
-5. Implement → qode start → code in Cursor
+5. Implement → /qode-start → code in Cursor
 6. Review → /qode-review-code + /qode-review-security
 7. Check → qode check
 8. Ship → git commit && push

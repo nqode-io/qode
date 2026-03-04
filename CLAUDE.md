@@ -22,7 +22,7 @@ Topology: single
 2. `qode ticket fetch <url>` — Fetch ticket context
 3. `/qode-plan-refine` — Iterate requirements (target 25/25)
 4. `/qode-plan-spec` — Generate tech spec
-5. `qode start` — Generate implementation prompt
+5. `/qode-start` — Generate and run implementation prompt
 6. `/qode-review-code` + `/qode-review-security` — Reviews
 7. `qode check` — All quality gates
 8. `git commit && git push` — Ship
