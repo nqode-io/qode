@@ -147,6 +147,12 @@ func buildTasksJSON(cfg *config.Config) map[string]interface{} {
 	// qode tasks.
 	tasks = append(tasks,
 		map[string]interface{}{
+			"label":   "qode: fetch ticket",
+			"type":    "shell",
+			"command": "qode ticket fetch ${input:ticketUrl}",
+			"group":   "build",
+		},
+		map[string]interface{}{
 			"label":   "qode: check all",
 			"type":    "shell",
 			"command": "qode check",
@@ -169,6 +175,13 @@ func buildTasksJSON(cfg *config.Config) map[string]interface{} {
 	return map[string]interface{}{
 		"version": "2.0.0",
 		"tasks":   tasks,
+		"inputs": []map[string]interface{}{
+			{
+				"id":          "ticketUrl",
+				"type":        "promptString",
+				"description": "Ticket URL (GitHub issue, Jira, Linear, Azure DevOps)",
+			},
+		},
 	}
 }
 
