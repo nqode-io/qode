@@ -15,14 +15,14 @@ func TestNextJSDetector(t *testing.T) {
 	root := t.TempDir()
 
 	// Not a next.js project — no package.json.
-	ok, conf := d.Detect(root)
+	ok, _ := d.Detect(root)
 	if ok {
 		t.Error("expected false for empty directory")
 	}
 
 	// Write package.json with next dep.
 	writeJSON(t, root, `{"dependencies":{"next":"14.0.0","react":"18.0.0"}}`)
-	ok, conf = d.Detect(root)
+	ok, conf := d.Detect(root)
 	if !ok {
 		t.Error("expected true with next in dependencies")
 	}
@@ -31,7 +31,9 @@ func TestNextJSDetector(t *testing.T) {
 	}
 
 	// Adding next.config.js should boost to 1.0.
-	os.WriteFile(filepath.Join(root, "next.config.js"), []byte("module.exports = {}"), 0644)
+	if err := os.WriteFile(filepath.Join(root, "next.config.js"), []byte("module.exports = {}"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	_, conf = d.Detect(root)
 	if conf != 1.0 {
 		t.Errorf("expected 1.0 confidence with next.config.js, got %.2f", conf)
@@ -78,7 +80,9 @@ func TestDotNetDetector(t *testing.T) {
 	}
 
 	// Solution file → 1.0.
-	os.WriteFile(filepath.Join(root, "MyApp.sln"), []byte(""), 0644)
+	if err := os.WriteFile(filepath.Join(root, "MyApp.sln"), []byte(""), 0644); err != nil {
+		t.Fatal(err)
+	}
 	ok, conf := d.Detect(root)
 	if !ok || conf != 1.0 {
 		t.Errorf("expected true/1.0 for .sln, got %v/%.2f", ok, conf)
@@ -94,7 +98,9 @@ func TestAngularDetector(t *testing.T) {
 		t.Error("expected false for empty directory")
 	}
 
-	os.WriteFile(filepath.Join(root, "angular.json"), []byte("{}"), 0644)
+	if err := os.WriteFile(filepath.Join(root, "angular.json"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	ok, conf := d.Detect(root)
 	if !ok || conf != 1.0 {
 		t.Errorf("expected true/1.0 for angular.json, got %v/%.2f", ok, conf)
@@ -110,7 +116,9 @@ func TestJavaDetector(t *testing.T) {
 		t.Error("expected false for empty directory")
 	}
 
-	os.WriteFile(filepath.Join(root, "pom.xml"), []byte("<project/>"), 0644)
+	if err := os.WriteFile(filepath.Join(root, "pom.xml"), []byte("<project/>"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	ok, conf := d.Detect(root)
 	if !ok || conf != 1.0 {
 		t.Errorf("expected true/1.0 for pom.xml, got %v/%.2f", ok, conf)
@@ -122,13 +130,19 @@ func TestComposite_MonorepoDetection(t *testing.T) {
 
 	// Frontend: React.
 	frontendDir := filepath.Join(root, "frontend")
-	os.MkdirAll(frontendDir, 0755)
+	if err := os.MkdirAll(frontendDir, 0755); err != nil {
+		t.Fatal(err)
+	}
 	writeJSONAt(t, frontendDir, `{"dependencies":{"react":"18.0.0"}}`)
 
 	// Backend: .NET.
 	backendDir := filepath.Join(root, "backend")
-	os.MkdirAll(backendDir, 0755)
-	os.WriteFile(filepath.Join(backendDir, "App.sln"), []byte(""), 0644)
+	if err := os.MkdirAll(backendDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(backendDir, "App.sln"), []byte(""), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	layers, err := Composite(root)
 	if err != nil {

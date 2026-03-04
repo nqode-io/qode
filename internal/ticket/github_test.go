@@ -88,7 +88,7 @@ func TestGitHubProvider_Fetch_Success(t *testing.T) {
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(issue)
+		_ = json.NewEncoder(w).Encode(issue)
 	}))
 	defer server.Close()
 
@@ -115,7 +115,7 @@ func TestGitHubProvider_Fetch_Success(t *testing.T) {
 func TestGitHubProvider_Fetch_NullBody(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"number":1,"title":"No body","body":null}`)
+		_, _ = fmt.Fprint(w, `{"number":1,"title":"No body","body":null}`)
 	}))
 	defer server.Close()
 
@@ -189,7 +189,7 @@ func TestGitHubProvider_Fetch_Forbidden(t *testing.T) {
 func TestGitHubProvider_Fetch_ServerError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, "internal server error")
+		_, _ = fmt.Fprint(w, "internal server error")
 	}))
 	defer server.Close()
 
@@ -209,7 +209,7 @@ func TestGitHubProvider_Fetch_SendsAuthHeader(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("Authorization")
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"number":1,"title":"T","body":null}`)
+		_, _ = fmt.Fprint(w, `{"number":1,"title":"T","body":null}`)
 	}))
 	defer server.Close()
 
@@ -223,7 +223,7 @@ func TestGitHubProvider_Fetch_SendsAuthHeader(t *testing.T) {
 func TestGitHubProvider_Fetch_DecodeError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "not json")
+		_, _ = fmt.Fprint(w, "not json")
 	}))
 	defer server.Close()
 

@@ -40,9 +40,3 @@ func Setup(root string, cfg *config.Config) error {
 	return nil
 }
 
-// managedStart / managedEnd are markers used to demarcate qode-managed sections
-// in existing config files, so they can be updated without overwriting custom content.
-const (
-	managedStart = "// qode:managed-start"
-	managedEnd   = "// qode:managed-end"
-)

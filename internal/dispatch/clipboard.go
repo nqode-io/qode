@@ -53,7 +53,7 @@ func copyToClipboard(text string) error {
 	if _, err := fmt.Fprint(stdin, text); err != nil {
 		return err
 	}
-	stdin.Close()
+	_ = stdin.Close()
 	return cmd.Wait()
 }
 

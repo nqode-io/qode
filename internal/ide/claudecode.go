@@ -16,13 +16,10 @@ func SetupClaudeCode(root string, cfg *config.Config) error {
 		return err
 	}
 
-	count := 0
-
 	if cfg.IDE.ClaudeCode.ClaudeMD {
 		if err := writeFile(filepath.Join(root, "CLAUDE.md"), buildClaudeMD(cfg)); err != nil {
 			return err
 		}
-		count++
 	}
 
 	if cfg.IDE.ClaudeCode.SlashCommands {
@@ -32,7 +29,6 @@ func SetupClaudeCode(root string, cfg *config.Config) error {
 				return err
 			}
 		}
-		count += len(cmds)
 	}
 
 	fmt.Printf("  Claude Code: CLAUDE.md + %d slash commands\n", len(claudeSlashCommands(cfg)))
@@ -42,7 +38,7 @@ func SetupClaudeCode(root string, cfg *config.Config) error {
 func buildClaudeMD(cfg *config.Config) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("# %s — Project Context\n\n", cfg.Project.Name))
+	fmt.Fprintf(&sb, "# %s — Project Context\n\n", cfg.Project.Name)
 
 	if cfg.Project.Description != "" {
 		sb.WriteString(cfg.Project.Description + "\n\n")
@@ -50,21 +46,21 @@ func buildClaudeMD(cfg *config.Config) string {
 
 	sb.WriteString("## Tech Stack\n\n")
 	for _, l := range cfg.Layers() {
-		sb.WriteString(fmt.Sprintf("- **%s** (%s): `%s`\n", l.Name, l.Stack, l.Path))
+		fmt.Fprintf(&sb, "- **%s** (%s): `%s`\n", l.Name, l.Stack, l.Path)
 	}
 	sb.WriteString("\n")
 
 	sb.WriteString("## Project Structure\n\n")
-	sb.WriteString(fmt.Sprintf("Topology: %s\n\n", cfg.Project.Topology))
+	fmt.Fprintf(&sb, "Topology: %s\n\n", cfg.Project.Topology)
 	for _, l := range cfg.Layers() {
-		sb.WriteString(fmt.Sprintf("- `%s/` — %s (%s)\n", l.Path, l.Name, l.Stack))
+		fmt.Fprintf(&sb, "- `%s/` — %s (%s)\n", l.Path, l.Name, l.Stack)
 	}
 	sb.WriteString("\n")
 
 	sb.WriteString("## Quality Standards\n\n")
-	sb.WriteString(fmt.Sprintf("- Minimum code review score: %.1f/10\n", cfg.Review.MinCodeScore))
-	sb.WriteString(fmt.Sprintf("- Minimum security review score: %.1f/10\n", cfg.Review.MinSecurityScore))
-	sb.WriteString(fmt.Sprintf("- Max function length: %d lines\n", cfg.Architecture.CleanCode.MaxFunctionLines))
+	fmt.Fprintf(&sb, "- Minimum code review score: %.1f/10\n", cfg.Review.MinCodeScore)
+	fmt.Fprintf(&sb, "- Minimum security review score: %.1f/10\n", cfg.Review.MinSecurityScore)
+	fmt.Fprintf(&sb, "- Max function length: %d lines\n", cfg.Architecture.CleanCode.MaxFunctionLines)
 	sb.WriteString("\n")
 
 	sb.WriteString("## Development Workflow\n\n")
@@ -86,9 +82,9 @@ func buildClaudeMD(cfg *config.Config) string {
 	sb.WriteString("- No TODO comments in committed code\n\n")
 
 	if cfg.TicketSystem.Type != "" && cfg.TicketSystem.Type != "manual" {
-		sb.WriteString(fmt.Sprintf("## Ticket System\n\nType: %s\n", cfg.TicketSystem.Type))
+		fmt.Fprintf(&sb, "## Ticket System\n\nType: %s\n", cfg.TicketSystem.Type)
 		if cfg.TicketSystem.URL != "" {
-			sb.WriteString(fmt.Sprintf("URL: %s\n", cfg.TicketSystem.URL))
+			fmt.Fprintf(&sb, "URL: %s\n", cfg.TicketSystem.URL)
 		}
 		sb.WriteString("\n")
 	}
