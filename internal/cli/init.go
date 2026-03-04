@@ -8,6 +8,7 @@ import (
 
 	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/detect"
+	"github.com/nqode/qode/internal/prompt"
 	"github.com/nqode/qode/internal/workspace"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -122,6 +123,20 @@ func runInitExisting(root string, ides []string) error {
 		return fmt.Errorf("writing %s: %w", outPath, err)
 	}
 
+	// Create .qode directory structure and copy prompt templates.
+	for _, dir := range []string{
+		filepath.Join(root, config.QodeDir, "branches"),
+		filepath.Join(root, config.QodeDir, "knowledge"),
+		filepath.Join(root, config.QodeDir, "prompts"),
+	} {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+	if err := copyEmbeddedTemplates(root); err != nil {
+		return err
+	}
+
 	fmt.Printf("Generated: %s\n", outPath)
 	fmt.Println()
 	fmt.Println("Next steps:")
@@ -192,7 +207,7 @@ func runInitNew(root string, scaffold bool, ides []string) error {
 		return fmt.Errorf("writing %s: %w", outPath, err)
 	}
 
-	// Create .qode directory structure.
+	// Create .qode directory structure and copy prompt templates.
 	for _, dir := range []string{
 		filepath.Join(root, config.QodeDir, "branches"),
 		filepath.Join(root, config.QodeDir, "knowledge"),
@@ -201,6 +216,9 @@ func runInitNew(root string, scaffold bool, ides []string) error {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
+	}
+	if err := copyEmbeddedTemplates(root); err != nil {
+		return err
 	}
 
 	fmt.Printf("\nGenerated: %s\n", outPath)
@@ -271,6 +289,29 @@ func applyIDEFlags(cfg *config.Config, ides []string) {
 	cfg.IDE.Cursor.Enabled = enabled["cursor"]
 	cfg.IDE.VSCode.Enabled = enabled["vscode"]
 	cfg.IDE.ClaudeCode.Enabled = enabled["claude"] || enabled["claudecode"] || enabled["claude-code"]
+}
+
+// copyEmbeddedTemplates writes all built-in prompt templates into
+// .qode/prompts/ so users can edit them directly. Existing files are
+// not overwritten.
+func copyEmbeddedTemplates(root string) error {
+	templates, err := prompt.EmbeddedTemplates()
+	if err != nil {
+		return fmt.Errorf("reading embedded templates: %w", err)
+	}
+	for name, content := range templates {
+		dst := filepath.Join(root, config.QodeDir, "prompts", name+".md.tmpl")
+		if _, err := os.Stat(dst); err == nil {
+			continue // already exists — do not overwrite
+		}
+		if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(dst, content, 0644); err != nil {
+			return fmt.Errorf("writing template %s: %w", dst, err)
+		}
+	}
+	return nil
 }
 
 func scaffoldProject(root string, layers []config.LayerConfig) error {

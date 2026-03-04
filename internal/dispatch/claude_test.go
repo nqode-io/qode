@@ -58,28 +58,13 @@ func TestRunInteractive_TempFileCleanedUp_NonTTY(t *testing.T) {
 	}
 }
 
-// clipboardDispatcher returns ErrManualDispatch — the fallback path used when
-// no claude binary is available.
-func TestClipboardDispatcher_ReturnsErrManualDispatch(t *testing.T) {
-	d := &clipboardDispatcher{}
-	_, err := d.Run(context.Background(), "test prompt", Options{})
-	if !errors.Is(err, ErrManualDispatch) {
-		t.Errorf("expected ErrManualDispatch, got %v", err)
-	}
-}
+// RunInteractive (package-level) returns an error when claude CLI is unavailable.
+func TestRunInteractive_PackageLevel_NoCLI(t *testing.T) {
+	// Save and clear PATH to ensure claude is not found.
+	t.Setenv("PATH", "")
 
-// RunInteractive (package-level) delegates to clipboard when claudeCLI is unavailable.
-func TestRunInteractive_PackageLevel_ClipboardFallback(t *testing.T) {
-	if isTTY() {
-		t.Skip("clipboard fallback test requires non-TTY stdin")
-	}
-	// Construct a claudeCLI with no binary path to simulate unavailability,
-	// then verify the package-level function falls back to clipboard.
-	// We test the underlying clipboard path directly since newClaudeCLI checks
-	// known paths on disk beyond just PATH.
-	d := &clipboardDispatcher{}
-	_, err := d.Run(context.Background(), "test", Options{})
-	if !errors.Is(err, ErrManualDispatch) {
-		t.Errorf("expected ErrManualDispatch from clipboard fallback, got %v", err)
+	err := RunInteractive(context.Background(), "test", Options{})
+	if err == nil {
+		t.Error("expected error when claude CLI is unavailable, got nil")
 	}
 }

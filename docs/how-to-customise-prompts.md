@@ -1,38 +1,34 @@
 # How to Customise Prompts
 
-qode ships with built-in prompt templates embedded in the binary. You can override any template per project without modifying the qode source.
+qode ships with built-in prompt templates embedded in the binary. When you run `qode init`, all templates are automatically copied to `.qode/prompts/` so you can edit them directly.
 
 ## How it works
 
-qode looks for prompt templates in two locations (in order):
+`qode init` copies all built-in templates into `.qode/prompts/`. qode checks this directory first when rendering prompts — if a file exists there, it is used instead of the built-in version.
 
-1. `.qode/prompts/` — **your project-local overrides** (checked first)
-2. `internal/prompt/templates/` — built-in templates compiled into the binary (fallback)
+Existing files are never overwritten, so running `qode init` again is safe.
 
-If a local override exists for a template, it is used instead of the built-in.
+## Customise a template
 
-## Override a template
-
-Create the override file at `.qode/prompts/<name>.md.tmpl`, mirroring the name used in `internal/prompt/templates/`:
+Edit the template file directly in `.qode/prompts/`:
 
 ```bash
-mkdir -p .qode/prompts/refine
-cp internal/prompt/templates/refine/base.md.tmpl .qode/prompts/refine/base.md.tmpl
-# Edit .qode/prompts/refine/base.md.tmpl to your requirements
+# Edit the refinement worker prompt
+$EDITOR .qode/prompts/refine/base.md.tmpl
 ```
 
-## Template naming
+## Template files
 
-Local override paths mirror the structure under `internal/prompt/templates/`:
+All templates are located under `.qode/prompts/`:
 
-| Template | Source path | Override path |
-|---|---|---|
-| Refinement worker | `internal/prompt/templates/refine/base.md.tmpl` | `.qode/prompts/refine/base.md.tmpl` |
-| Refinement judge | `internal/prompt/templates/scoring/judge_refine.md.tmpl` | `.qode/prompts/scoring/judge_refine.md.tmpl` |
-| Spec generation | `internal/prompt/templates/spec/base.md.tmpl` | `.qode/prompts/spec/base.md.tmpl` |
-| Implementation | `internal/prompt/templates/start/base.md.tmpl` | `.qode/prompts/start/base.md.tmpl` |
-| Code review | `internal/prompt/templates/review/code.md.tmpl` | `.qode/prompts/review/code.md.tmpl` |
-| Security review | `internal/prompt/templates/review/security.md.tmpl` | `.qode/prompts/review/security.md.tmpl` |
+| Template | Path |
+|---|---|
+| Refinement worker | `.qode/prompts/refine/base.md.tmpl` |
+| Refinement judge | `.qode/prompts/scoring/judge_refine.md.tmpl` |
+| Spec generation | `.qode/prompts/spec/base.md.tmpl` |
+| Implementation | `.qode/prompts/start/base.md.tmpl` |
+| Code review | `.qode/prompts/review/code.md.tmpl` |
+| Security review | `.qode/prompts/review/security.md.tmpl` |
 
 ## Template variables
 
@@ -51,4 +47,4 @@ Templates use Go's `text/template` syntax. The data struct passed in has these f
 
 ## Committing overrides
 
-Local prompt overrides in `.qode/prompts/` should be committed to your repository so all team members use the same customised prompts.
+Prompt templates in `.qode/prompts/` should be committed to your repository so all team members use the same customised prompts.

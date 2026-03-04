@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -71,32 +70,23 @@ clean code requirements.`,
 			}
 
 			if promptOnly {
-				return startPromptOnly(branch, outPath, p)
+				return startPromptOnly(branch, outPath)
 			}
-			return startDispatch(root, branch, p)
+			return startDispatch(root, p)
 		},
 	}
-	cmd.Flags().Bool("prompt-only", false, "Write prompt file and copy to clipboard; skip dispatch")
+	cmd.Flags().Bool("prompt-only", false, "write prompt file without dispatching")
 	return cmd
 }
 
-func startPromptOnly(branch, promptPath, p string) error {
-	if !flagNoClipboard {
-		if err := copyToClipboard(p); err != nil && flagVerbose {
-			fmt.Fprintf(os.Stderr, "Warning: could not copy to clipboard: %v\n", err)
-		}
-	}
+func startPromptOnly(branch, promptPath string) error {
 	fmt.Printf("Implementation prompt written to:\n  %s\n\n", promptPath)
 	fmt.Println("Paste into Cursor/Claude Code, or use: /qode-start")
 	return nil
 }
 
-func startDispatch(root, branch, p string) error {
+func startDispatch(root, p string) error {
 	if err := dispatch.RunInteractive(context.Background(), p, dispatch.Options{WorkingDir: root}); err != nil {
-		if errors.Is(err, dispatch.ErrManualDispatch) {
-			promptPath := filepath.Join(config.QodeDir, "branches", branch, ".start-prompt.md")
-			return startPromptOnly(branch, promptPath, p)
-		}
 		return fmt.Errorf("start: %w", err)
 	}
 

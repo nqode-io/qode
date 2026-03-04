@@ -10,9 +10,8 @@ import (
 var (
 	rootCmd *cobra.Command
 	// GlobalFlags shared across commands
-	flagRoot        string
-	flagVerbose     bool
-	flagNoClipboard bool
+	flagRoot    string
+	flagVerbose bool
 )
 
 // Execute runs the root command.
@@ -50,7 +49,6 @@ See 'qode workflow' for the full diagram.`,
 
 	rootCmd.PersistentFlags().StringVar(&flagRoot, "root", "", "project root directory (default: auto-detected)")
 	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "verbose output")
-	rootCmd.PersistentFlags().BoolVar(&flagNoClipboard, "no-clipboard", false, "skip copying prompts to clipboard")
 
 	rootCmd.AddCommand(
 		newInitCmd(),

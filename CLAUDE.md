@@ -11,7 +11,7 @@ qode is an AI-assisted developer workflow CLI written in Go. It standardises how
 | Package | Purpose |
 |---|---|
 | `internal/cli/` | Cobra command implementations |
-| `internal/dispatch/` | Prompt dispatch — runs `claude` CLI interactively or falls back to clipboard |
+| `internal/dispatch/` | Prompt dispatch — runs `claude` CLI interactively |
 | `internal/prompt/` | Template engine — embedded templates with per-project `.qode/prompts/` overrides |
 | `internal/config/` | `qode.yaml` loading and merging |
 | `internal/ticket/` | Ticket provider integrations (Jira, Azure DevOps, Linear, GitHub) |
@@ -34,7 +34,7 @@ Topology: single
 4. `/qode-plan-spec` — Generate tech spec
 
 **Either terminal or IDE:**
-5. `qode start` / `/qode-start` — Run implementation prompt (launches interactive Claude session; falls back to clipboard in CI)
+5. `qode start` / `/qode-start` — Run implementation prompt (launches interactive Claude session)
 6. `/qode-review-code` + `/qode-review-security` — Reviews
 
 **Terminal commands:**
