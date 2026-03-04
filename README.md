@@ -1,6 +1,6 @@
 # qode
 
-AI-assisted developer workflow CLI for nQode.
+AI-assisted developer workflow CLI by nQode.
 
 Standardises how developers use AI coding assistants across client projects with varied tech stacks — Next.js+React, .NET+React, Angular+Java, and more.
 
