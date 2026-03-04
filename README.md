@@ -215,7 +215,7 @@ export GITHUB_TOKEN=your-token
 qode ticket fetch https://github.com/owner/private-repo/issues/42
 ```
 
-See [docs/development-setup.md](docs/development-setup.md) for full setup instructions and token scope requirements.
+See [docs/how-to-use-ticket-fetch.md](docs/how-to-use-ticket-fetch.md) for full setup instructions and token scope requirements.
 
 ## Customising Prompts
 
