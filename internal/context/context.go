@@ -1,6 +1,7 @@
 package context
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -93,6 +94,13 @@ func Load(root, branch string) (*Context, error) {
 		ctx.Iterations = append(ctx.Iterations, Iteration{Number: num, Score: score, File: f})
 	}
 
+	// Merge iteration from refined-analysis.md header if newer than glob results.
+	if n, score, ok := parseIterationFromAnalysis(dir); ok {
+		if n > maxIterationNumber(ctx.Iterations) {
+			ctx.Iterations = append(ctx.Iterations, Iteration{Number: n, Score: score})
+		}
+	}
+
 	// Latest refined analysis.
 	latestAnalysis := filepath.Join(dir, "refined-analysis.md")
 	ctx.RefinedAnalysis = readFileOr(latestAnalysis, "")
@@ -126,4 +134,28 @@ func readFileOr(path, fallback string) string {
 		return fallback
 	}
 	return string(data)
+}
+
+func parseIterationFromAnalysis(branchDir string) (int, int, bool) {
+	data, err := os.ReadFile(filepath.Join(branchDir, "refined-analysis.md"))
+	if err != nil {
+		return 0, 0, false
+	}
+	for _, line := range strings.SplitN(string(data), "\n", 6) {
+		var n, score, total int
+		if _, err := fmt.Sscanf(line, "<!-- qode:iteration=%d score=%d/%d -->", &n, &score, &total); err == nil {
+			return n, score, true
+		}
+	}
+	return 0, 0, false
+}
+
+func maxIterationNumber(iterations []Iteration) int {
+	max := 0
+	for _, it := range iterations {
+		if it.Number > max {
+			max = it.Number
+		}
+	}
+	return max
 }
