@@ -39,4 +39,3 @@ func Setup(root string, cfg *config.Config) error {
 	fmt.Printf("Generated IDE configs for: %v\n", generated)
 	return nil
 }
-

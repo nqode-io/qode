@@ -33,7 +33,7 @@ Workflow:
   2. qode ticket fetch <url>              # Fetch ticket (or /qode-ticket-fetch in IDE)
   3. /qode-plan-refine  (in IDE)          # Refine requirements (3-5x → 25/25)
   4. /qode-plan-spec    (in IDE)          # Generate tech spec
-  5. qode start                           # Run implementation (or /qode-start in IDE)
+  5. /qode-start		(in IDE)          # Run implementation (or /qode-start in IDE)
   6. /qode-review-code  (in IDE)          # Code review
   7. /qode-review-security (in IDE)       # Security review
   8. qode check                           # Run all quality gates
@@ -46,6 +46,8 @@ See 'qode workflow' for the full diagram.`,
 			return cmd.Help()
 		},
 	}
+
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	rootCmd.PersistentFlags().StringVar(&flagRoot, "root", "", "project root directory (default: auto-detected)")
 	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "verbose output")

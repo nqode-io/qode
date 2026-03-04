@@ -11,8 +11,8 @@ import (
 
 func newCheckCmd() *cobra.Command {
 	var (
-		skipTests  bool
-		layerName  string
+		skipTests bool
+		layerName string
 	)
 
 	cmd := &cobra.Command{
@@ -89,7 +89,7 @@ func printCheckResults(results []runner.LayerResult, cfg *config.Config) {
 	allPassed := true
 	for _, r := range results {
 		fmt.Println("║                                           ║")
-		fmt.Printf("║  Layer: %-33s║\n", fmt.Sprintf("%s (%s)", r.Layer, r.Stack))
+		fmt.Printf("║  Layer: %-34s║\n", fmt.Sprintf("%s (%s)", r.Layer, r.Stack))
 
 		printGate("Tests", r.Tests)
 		printGate("Lint", r.Lint)
@@ -121,7 +121,7 @@ func printGate(name string, r runner.GateResult) {
 		status = "⏭"
 		detail = "skipped"
 	}
-	fmt.Printf("║  ├── %-16s %s %-18s║\n", name+":", status, detail)
+	fmt.Printf("║  ├── %-16s %s %-17s║\n", name+":", status, detail)
 }
 
 func printScoreGate(name string, score float64, min float64) {

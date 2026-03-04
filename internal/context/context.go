@@ -23,10 +23,10 @@ type Context struct {
 	ContextDir string
 
 	// Content files.
-	Ticket   string
-	Notes    string
-	Mockups  []string // paths to image files
-	Extra    []string // other text file contents
+	Ticket  string
+	Notes   string
+	Mockups []string // paths to image files
+	Extra   []string // other text file contents
 
 	// Refinement history.
 	Iterations []Iteration

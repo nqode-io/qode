@@ -65,8 +65,8 @@ func newBranchCreateCmd() *cobra.Command {
 
 			// Stub files.
 			stubs := map[string]string{
-				"ticket.md":   "# Ticket\n\nPaste ticket content here, or run: qode ticket fetch <url>\n",
-				"notes.md":    "# Notes\n\nAdd any additional context, decisions, or open questions here.\n",
+				"ticket.md": "# Ticket\n\nPaste ticket content here, or run: qode ticket fetch <url>\n",
+				"notes.md":  "# Notes\n\nAdd any additional context, decisions, or open questions here.\n",
 			}
 			for name, content := range stubs {
 				p := filepath.Join(contextDir, name)

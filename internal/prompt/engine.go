@@ -16,8 +16,8 @@ var embeddedFS embed.FS
 
 // Engine renders prompt templates with project context.
 type Engine struct {
-	root     string
-	funcMap  template.FuncMap
+	root    string
+	funcMap template.FuncMap
 }
 
 // NewEngine creates an Engine for the given project root.

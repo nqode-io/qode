@@ -48,7 +48,7 @@ qode Workflow
 │  qode start                                                     │
 │  /qode-start  (in Cursor/Claude Code)                           │
 │  → Generates implementation prompt with spec + knowledge        │
-│  → Runs claude CLI interactively                               │
+│  → Runs claude CLI interactively                                │
 ├─────────────────────────────────────────────────────────────────┤
 │  STEP 6: TEST LOCALLY                                           │
 │  → Test the implementation manually                             │
