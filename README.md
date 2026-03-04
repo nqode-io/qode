@@ -194,9 +194,4 @@ Credentials are auto-loaded from a `.env` file in the project root. See [docs/ho
 
 ## Contributing
 
-```bash
-git clone https://github.com/nqode/qode
-cd qode
-go test ./...
-go install ./cmd/qode/
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
