@@ -163,6 +163,14 @@ Then read and execute the prompt in:
 After completing the review, save it to:
   .qode/branches/$(git branch --show-current)/security-review.md
 `, cfg.Project.Name),
+
+		"qode-ticket-fetch": fmt.Sprintf(`---
+description: Fetch a ticket into branch context for %s
+---
+
+Run the following command with the ticket URL provided after the slash command:
+  qode ticket fetch $ARGUMENTS
+`, cfg.Project.Name),
 	}
 }
 

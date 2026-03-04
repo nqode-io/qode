@@ -1,4 +1,11 @@
 {
+  "inputs": [
+    {
+      "description": "Ticket URL (GitHub issue, Jira, Linear, Azure DevOps)",
+      "id": "ticketUrl",
+      "type": "promptString"
+    }
+  ],
   "tasks": [
     {
       "command": "go test ./...",
@@ -28,6 +35,12 @@
       "options": {
         "cwd": "${workspaceFolder}/."
       },
+      "type": "shell"
+    },
+    {
+      "command": "qode ticket fetch ${input:ticketUrl}",
+      "group": "build",
+      "label": "qode: fetch ticket",
       "type": "shell"
     },
     {

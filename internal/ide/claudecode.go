@@ -160,6 +160,8 @@ After completing the review:
 - List all Critical and High vulnerabilities with OWASP categories
 - Provide specific remediation for each issue
 `, name),
+
+		"qode-ticket-fetch": `!qode ticket fetch $ARGUMENTS`,
 	}
 }
 

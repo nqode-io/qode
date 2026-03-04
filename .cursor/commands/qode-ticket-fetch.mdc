@@ -1,0 +1,6 @@
+---
+description: Fetch a ticket into branch context for qode
+---
+
+Run the following command with the ticket URL provided after the slash command:
+  qode ticket fetch $ARGUMENTS
