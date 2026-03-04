@@ -92,11 +92,7 @@ func startPromptOnly(branch, promptPath, p string) error {
 }
 
 func startDispatch(root, branch, p string) error {
-	d := dispatch.Resolve()
-	fmt.Printf("Generating implementation via %s...\n", d.Name())
-
-	_, err := d.Run(context.Background(), p, dispatch.Options{WorkingDir: root})
-	if err != nil {
+	if err := dispatch.RunInteractive(context.Background(), p, dispatch.Options{WorkingDir: root}); err != nil {
 		if errors.Is(err, dispatch.ErrManualDispatch) {
 			promptPath := filepath.Join(config.QodeDir, "branches", branch, ".start-prompt.md")
 			return startPromptOnly(branch, promptPath, p)

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/nqode/qode/internal/config"
 	gocontext "github.com/nqode/qode/internal/context"
@@ -143,32 +142,11 @@ func reviewPromptOnly(kind, branch, promptPath, p string) error {
 }
 
 func reviewDispatch(root, kind, branch, p, outputPath string) error {
-	d := dispatch.Resolve()
-	fmt.Printf("Running %s review via %s", kind, d.Name())
-
 	// Remove stale output so the AI always writes a fresh review.
 	// This prevents a re-run from silently reporting the previous score.
 	_ = os.Remove(outputPath)
 
-	// Show a dot every 5 s so the user knows the process is alive.
-	done := make(chan struct{})
-	go func() {
-		t := time.NewTicker(5 * time.Second)
-		defer t.Stop()
-		for {
-			select {
-			case <-t.C:
-				fmt.Print(".")
-			case <-done:
-				return
-			}
-		}
-	}()
-
-	output, err := d.Run(context.Background(), p, dispatch.Options{WorkingDir: root})
-	close(done)
-	fmt.Println()
-	if err != nil {
+	if err := dispatch.RunInteractive(context.Background(), p, dispatch.Options{WorkingDir: root}); err != nil {
 		if errors.Is(err, dispatch.ErrManualDispatch) {
 			relPrompt := filepath.Join(config.QodeDir, "branches", branch,
 				fmt.Sprintf(".%s-review-prompt.md", kind))
@@ -177,17 +155,6 @@ func reviewDispatch(root, kind, branch, p, outputPath string) error {
 			return nil
 		}
 		return fmt.Errorf("%s review: %w", kind, err)
-	}
-
-	// The AI should have written the file via the OutputPath instructions.
-	// If it returned the review in stdout instead, save that as fallback.
-	if _, statErr := os.Stat(outputPath); os.IsNotExist(statErr) {
-		if output == "" {
-			return fmt.Errorf("%s review: AI returned no output and did not write the review file", kind)
-		}
-		if err := os.WriteFile(outputPath, []byte(output), 0644); err != nil {
-			return err
-		}
 	}
 
 	score := scoring.ExtractScoreFromFile(outputPath)

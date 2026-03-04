@@ -140,27 +140,19 @@ func refinePromptOnly(branch, workerPath, judgePath string, out *plan.RefineOutp
 }
 
 func refineDispatch(root, branch string, out *plan.RefineOutput, workerPath, judgePath, analysisPath string, cfg *config.Config, engine *prompt.Engine) error {
-	d := dispatch.Resolve()
-	fmt.Printf("Running refinement (iteration %d) via %s...\n", out.Iteration, d.Name())
+	fmt.Printf("Running refinement (iteration %d)...\n", out.Iteration)
 
-	workerOutput, err := d.Run(context.Background(), out.WorkerPrompt, dispatch.Options{WorkingDir: root})
-	if err != nil {
+	if err := dispatch.RunInteractive(context.Background(), out.WorkerPrompt, dispatch.Options{WorkingDir: root}); err != nil {
 		if errors.Is(err, dispatch.ErrManualDispatch) {
 			return refinePromptOnly(branch, workerPath, judgePath, out)
 		}
 		return fmt.Errorf("refine worker: %w", err)
 	}
 
-	// Use the file the AI wrote, or persist the captured output.
-	if _, statErr := os.Stat(analysisPath); os.IsNotExist(statErr) {
-		if workerOutput == "" {
-			return fmt.Errorf("refine: AI returned no output")
-		}
-		if err := os.WriteFile(analysisPath, []byte(workerOutput), 0644); err != nil {
-			return err
-		}
+	savedAnalysis, err := os.ReadFile(analysisPath)
+	if err != nil {
+		return fmt.Errorf("refine: analysis file not found after worker session — did Claude write %s? (%w)", analysisPath, err)
 	}
-	savedAnalysis, _ := os.ReadFile(analysisPath)
 
 	if out.JudgePrompt == "" || judgePath == "" {
 		fmt.Println("\nRefinement analysis saved.")
@@ -174,13 +166,15 @@ func refineDispatch(root, branch string, out *plan.RefineOutput, workerPath, jud
 		freshJudge = out.JudgePrompt
 	}
 
-	fmt.Printf("Scoring via %s...\n", d.Name())
-	judgeOutput, judgeErr := d.Run(context.Background(), freshJudge, dispatch.Options{WorkingDir: root})
+	fmt.Println("Scoring...")
+	if err := dispatch.RunInteractive(context.Background(), freshJudge, dispatch.Options{WorkingDir: root}); err != nil {
+		if errors.Is(err, dispatch.ErrManualDispatch) {
+			return refinePromptOnly(branch, workerPath, judgePath, out)
+		}
+		return fmt.Errorf("refine judge: %w", err)
+	}
 
 	result := scoring.ParseScore("", scoring.RefineRubric)
-	if judgeErr == nil && judgeOutput != "" {
-		result = scoring.ParseScore(judgeOutput, scoring.RefineRubric)
-	}
 	result.TargetScore = 25
 
 	if saveErr := plan.SaveIterationResult(root, branch, out.Iteration, string(savedAnalysis), result); saveErr != nil && flagVerbose {
@@ -188,12 +182,7 @@ func refineDispatch(root, branch string, out *plan.RefineOutput, workerPath, jud
 	}
 
 	fmt.Printf("\nRefinement iteration %d complete.\n", out.Iteration)
-	fmt.Printf("Score: %d/25\n", result.TotalScore)
-	if result.TotalScore >= 25 {
-		fmt.Println("Target reached! Run: qode plan spec")
-	} else {
-		fmt.Printf("Need %d more points. Run: qode plan refine\n", 25-result.TotalScore)
-	}
+	fmt.Println("Run: qode plan refine (to score) or qode plan spec (if done)")
 	return nil
 }
 
@@ -263,25 +252,12 @@ func specPromptOnly(branch, promptPath, p string) error {
 }
 
 func specDispatch(root, branch, p, specPath string) error {
-	d := dispatch.Resolve()
-	fmt.Printf("Generating spec via %s...\n", d.Name())
-
-	output, err := d.Run(context.Background(), p, dispatch.Options{WorkingDir: root})
-	if err != nil {
+	if err := dispatch.RunInteractive(context.Background(), p, dispatch.Options{WorkingDir: root}); err != nil {
 		if errors.Is(err, dispatch.ErrManualDispatch) {
 			promptPath := filepath.Join(config.QodeDir, "branches", branch, ".spec-prompt.md")
 			return specPromptOnly(branch, promptPath, p)
 		}
 		return fmt.Errorf("plan spec: %w", err)
-	}
-
-	if _, statErr := os.Stat(specPath); os.IsNotExist(statErr) {
-		if output == "" {
-			return fmt.Errorf("plan spec: AI returned no output")
-		}
-		if err := os.WriteFile(specPath, []byte(output), 0644); err != nil {
-			return err
-		}
 	}
 
 	fmt.Println("\nSpec generated.")
