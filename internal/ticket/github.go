@@ -97,7 +97,7 @@ func (p *GitHubProvider) fetchIssue(owner, repo string, number int) (*githubIssu
 	if err != nil {
 		return nil, fmt.Errorf("fetching GitHub issue: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return nil, fmt.Errorf("GitHub API returned %d — check GITHUB_TOKEN\nSet it with: export GITHUB_TOKEN=your-token", resp.StatusCode)
 	}

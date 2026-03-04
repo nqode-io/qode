@@ -292,7 +292,7 @@ func readLine(label, defaultVal string) string {
 		fmt.Printf("%s: ", label)
 	}
 	var input string
-	fmt.Scanln(&input)
+	_, _ = fmt.Scanln(&input)
 	if input == "" {
 		return defaultVal
 	}
@@ -311,7 +311,7 @@ func pickChoice(label string, choices []string, defaultVal string) string {
 	}
 	fmt.Printf("Enter number [%s]: ", defaultVal)
 	var input string
-	fmt.Scanln(&input)
+	_, _ = fmt.Scanln(&input)
 	if input == "" {
 		return defaultVal
 	}

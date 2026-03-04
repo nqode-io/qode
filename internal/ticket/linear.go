@@ -42,11 +42,11 @@ func (p *LinearProvider) Fetch(rawURL string) (*Ticket, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fetching Linear issue: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
-		return nil, fmt.Errorf("Linear API returned %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("linear API returned %d: %s", resp.StatusCode, string(body))
 	}
 
 	var result struct {

@@ -202,7 +202,7 @@ Run the following command with the ticket URL provided after the slash command:
 func layerList(cfg *config.Config) string {
 	var sb strings.Builder
 	for _, l := range cfg.Layers() {
-		sb.WriteString(fmt.Sprintf("- %s (%s) at %s\n", l.Name, l.Stack, l.Path))
+		fmt.Fprintf(&sb, "- %s (%s) at %s\n", l.Name, l.Stack, l.Path)
 	}
 	return sb.String()
 }

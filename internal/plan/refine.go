@@ -167,6 +167,6 @@ func ParseIterationFromOutput(root, branch string, iteration int, analysisText s
 
 func buildAnalysisHeader(iteration int, result scoring.Result) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("<!-- qode:iteration=%d score=%d/%d -->\n\n", iteration, result.TotalScore, result.MaxScore))
+	fmt.Fprintf(&sb, "<!-- qode:iteration=%d score=%d/%d -->\n\n", iteration, result.TotalScore, result.MaxScore)
 	return sb.String()
 }

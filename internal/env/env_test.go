@@ -23,8 +23,8 @@ func TestLoad_MissingFile(t *testing.T) {
 func TestLoad_SetsUnsetVar(t *testing.T) {
 	dir := t.TempDir()
 	writeEnvFile(t, dir, "TEST_QODE_FOO=bar\n")
-	os.Unsetenv("TEST_QODE_FOO")
-	t.Cleanup(func() { os.Unsetenv("TEST_QODE_FOO") })
+	_ = os.Unsetenv("TEST_QODE_FOO")
+	t.Cleanup(func() { _ = os.Unsetenv("TEST_QODE_FOO") })
 
 	if err := Load(dir); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -72,11 +72,11 @@ func TestLoad_EmptyFile(t *testing.T) {
 func TestLoad_MultipleVars(t *testing.T) {
 	dir := t.TempDir()
 	writeEnvFile(t, dir, "TEST_QODE_A=1\nTEST_QODE_B=2\n")
-	os.Unsetenv("TEST_QODE_A")
-	os.Unsetenv("TEST_QODE_B")
+	_ = os.Unsetenv("TEST_QODE_A")
+	_ = os.Unsetenv("TEST_QODE_B")
 	t.Cleanup(func() {
-		os.Unsetenv("TEST_QODE_A")
-		os.Unsetenv("TEST_QODE_B")
+		_ = os.Unsetenv("TEST_QODE_A")
+		_ = os.Unsetenv("TEST_QODE_B")
 	})
 
 	if err := Load(dir); err != nil {

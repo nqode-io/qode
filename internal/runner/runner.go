@@ -105,5 +105,5 @@ func runCommand(dir, command string) GateResult {
 		return GateResult{Passed: false, Detail: fmt.Sprintf("FAILED (%s): %s", elapsed, last)}
 	}
 
-	return GateResult{Passed: true, Detail: fmt.Sprintf("%s", elapsed)}
+	return GateResult{Passed: true, Detail: elapsed.String()}
 }

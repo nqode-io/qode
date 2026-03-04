@@ -86,7 +86,9 @@ func TestSave_Load(t *testing.T) {
 func TestFindRoot(t *testing.T) {
 	dir := t.TempDir()
 	subDir := filepath.Join(dir, "src", "components")
-	os.MkdirAll(subDir, 0755)
+	if err := os.MkdirAll(subDir, 0755); err != nil {
+		t.Fatal(err)
+	}
 
 	// No qode.yaml → error.
 	_, err := FindRoot(subDir)
@@ -95,7 +97,9 @@ func TestFindRoot(t *testing.T) {
 	}
 
 	// Write qode.yaml at root.
-	os.WriteFile(filepath.Join(dir, ConfigFileName), []byte("project:\n  name: test\n"), 0644)
+	if err := os.WriteFile(filepath.Join(dir, ConfigFileName), []byte("project:\n  name: test\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	found, err := FindRoot(subDir)
 	if err != nil {
