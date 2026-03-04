@@ -119,13 +119,15 @@ func (c *Context) HasRefinedAnalysis() bool { return c.RefinedAnalysis != "" }
 
 // LatestScore returns the score from the most recent iteration, or 0.
 func (c *Context) LatestScore() int {
-	best := 0
+	latestNum := 0
+	latestScore := 0
 	for _, it := range c.Iterations {
-		if it.Number > best {
-			best = it.Score
+		if it.Number > latestNum {
+			latestNum = it.Number
+			latestScore = it.Score
 		}
 	}
-	return best
+	return latestScore
 }
 
 func readFileOr(path, fallback string) string {

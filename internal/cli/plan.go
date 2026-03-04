@@ -114,7 +114,7 @@ func runPlanRefine(ticketURL string, iterations int, promptOnly bool) error {
 	if promptOnly {
 		return refinePromptOnly(branch, workerPath, judgePath, out)
 	}
-	return refineDispatch(root, branch, out, workerPath, judgePath, analysisPath, cfg)
+	return refineDispatch(root, branch, out, workerPath, judgePath, analysisPath, cfg, engine)
 }
 
 func refinePromptOnly(branch, workerPath, judgePath string, out *plan.RefineOutput) error {
@@ -139,7 +139,7 @@ func refinePromptOnly(branch, workerPath, judgePath string, out *plan.RefineOutp
 	return nil
 }
 
-func refineDispatch(root, branch string, out *plan.RefineOutput, workerPath, judgePath, analysisPath string, cfg *config.Config) error {
+func refineDispatch(root, branch string, out *plan.RefineOutput, workerPath, judgePath, analysisPath string, cfg *config.Config, engine *prompt.Engine) error {
 	d := dispatch.Resolve()
 	fmt.Printf("Running refinement (iteration %d) via %s...\n", out.Iteration, d.Name())
 
@@ -169,12 +169,22 @@ func refineDispatch(root, branch string, out *plan.RefineOutput, workerPath, jud
 		return nil
 	}
 
-	fmt.Printf("Scoring via %s...\n", d.Name())
-	judgeOutput, judgeErr := d.Run(context.Background(), out.JudgePrompt, dispatch.Options{WorkingDir: root})
+	freshJudge, err := scoring.NewEngine(engine, cfg).BuildJudgePrompt(string(savedAnalysis), scoring.RefineRubric)
+	if err != nil {
+		freshJudge = out.JudgePrompt
+	}
 
-	result, _ := plan.ParseIterationFromOutput(root, branch, out.Iteration, string(savedAnalysis))
+	fmt.Printf("Scoring via %s...\n", d.Name())
+	judgeOutput, judgeErr := d.Run(context.Background(), freshJudge, dispatch.Options{WorkingDir: root})
+
+	result := scoring.ParseScore("", scoring.RefineRubric)
 	if judgeErr == nil && judgeOutput != "" {
 		result = scoring.ParseScore(judgeOutput, scoring.RefineRubric)
+	}
+	result.TargetScore = 25
+
+	if saveErr := plan.SaveIterationResult(root, branch, out.Iteration, string(savedAnalysis), result); saveErr != nil && flagVerbose {
+		fmt.Fprintf(os.Stderr, "Warning: could not save iteration result: %v\n", saveErr)
 	}
 
 	fmt.Printf("\nRefinement iteration %d complete.\n", out.Iteration)

@@ -127,6 +127,25 @@ func SaveIterationFiles(root, branch string, out *RefineOutput) (workerPath, jud
 	return workerPath, judgePath, nil
 }
 
+// SaveIterationResult writes iteration files using a pre-computed score result.
+// Use this instead of ParseIterationFromOutput when the score is known from
+// judge output rather than parsed from the analysis text.
+func SaveIterationResult(root, branch string, iteration int, analysisText string, result scoring.Result) error {
+	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
+	if err := os.MkdirAll(branchDir, 0755); err != nil {
+		return err
+	}
+
+	iterFile := filepath.Join(branchDir, fmt.Sprintf("refined-analysis-%d-score-%d.md", iteration, result.TotalScore))
+	if err := os.WriteFile(iterFile, []byte(analysisText), 0644); err != nil {
+		return err
+	}
+
+	latestFile := filepath.Join(branchDir, "refined-analysis.md")
+	header := buildAnalysisHeader(iteration, result)
+	return os.WriteFile(latestFile, []byte(header+analysisText), 0644)
+}
+
 // ParseIterationFromOutput tries to extract a score and save the analysis file.
 func ParseIterationFromOutput(root, branch string, iteration int, analysisText string) (scoring.Result, error) {
 	result := scoring.ParseScore(analysisText, scoring.RefineRubric)
