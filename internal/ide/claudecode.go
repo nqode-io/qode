@@ -17,8 +17,11 @@ func SetupClaudeCode(root string, cfg *config.Config) error {
 	}
 
 	if cfg.IDE.ClaudeCode.ClaudeMD {
-		if err := writeFile(filepath.Join(root, "CLAUDE.md"), buildClaudeMD(cfg)); err != nil {
-			return err
+		claudeMDPath := filepath.Join(root, "CLAUDE.md")
+		if _, err := os.Stat(claudeMDPath); os.IsNotExist(err) {
+			if err := writeFile(claudeMDPath, buildClaudeMD(cfg)); err != nil {
+				return err
+			}
 		}
 	}
 
