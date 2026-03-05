@@ -1,12 +1,18 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/nqode/qode/internal/config"
+	gocontext "github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/dispatch"
+	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/knowledge"
+	"github.com/nqode/qode/internal/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -15,7 +21,7 @@ func newKnowledgeCmd() *cobra.Command {
 		Use:   "knowledge",
 		Short: "Manage the project knowledge base",
 	}
-	cmd.AddCommand(newKnowledgeListCmd(), newKnowledgeAddCmd(), newKnowledgeSearchCmd())
+	cmd.AddCommand(newKnowledgeListCmd(), newKnowledgeAddCmd(), newKnowledgeSearchCmd(), newKnowledgeAddBranchCmd())
 	return cmd
 }
 
@@ -109,4 +115,161 @@ func newKnowledgeSearchCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+const maxDiffLines = 500
+
+func newKnowledgeAddBranchCmd() *cobra.Command {
+	var promptOnly bool
+	cmd := &cobra.Command{
+		Use:   "add-branch [branches...]",
+		Short: "Extract lessons learned from branch context",
+		Long:  "Reads branch artifacts (ticket, spec, reviews, diff) and extracts lessons learned into the knowledge base.",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runKnowledgeAddBranch(args, promptOnly)
+		},
+	}
+	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt file without dispatching")
+	return cmd
+}
+
+func runKnowledgeAddBranch(args []string, promptOnly bool) error {
+	root, err := resolveRoot()
+	if err != nil {
+		return err
+	}
+	cfg, err := config.Load(root)
+	if err != nil {
+		return err
+	}
+	branch, err := git.CurrentBranch(root)
+	if err != nil {
+		return err
+	}
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		return err
+	}
+
+	branches := parseBranchArgs(args)
+	fmt.Printf("Extracting lessons from branches: %s\n", strings.Join(branches, ", "))
+
+	data, err := buildBranchLessonData(root, cfg, branches)
+	if err != nil {
+		return err
+	}
+
+	p, err := engine.Render("knowledge/add-branch", data)
+	if err != nil {
+		return err
+	}
+
+	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
+	if err := os.MkdirAll(branchDir, 0755); err != nil {
+		return err
+	}
+	promptPath := filepath.Join(branchDir, ".knowledge-add-branch-prompt.md")
+	if err := os.WriteFile(promptPath, []byte(p), 0644); err != nil {
+		return err
+	}
+
+	if promptOnly {
+		fmt.Printf("Lesson extraction prompt written to:\n  %s\n\n", promptPath)
+		fmt.Println("Use slash command: /qode-knowledge-add-branch")
+		return nil
+	}
+	return dispatch.RunInteractive(context.Background(), p, dispatch.Options{WorkingDir: root})
+}
+
+func buildBranchLessonData(root string, cfg *config.Config, branches []string) (prompt.TemplateData, error) {
+	var allTicket, allAnalysis, allSpec, allExtra strings.Builder
+	var diff string
+
+	for _, b := range branches {
+		ctx, err := gocontext.Load(root, b)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: branch context %q: %v\n", b, err)
+			continue
+		}
+		if ctx.Ticket != "" {
+			allTicket.WriteString(ctx.Ticket)
+			allTicket.WriteString("\n\n")
+		}
+		if ctx.RefinedAnalysis != "" {
+			allAnalysis.WriteString(ctx.RefinedAnalysis)
+			allAnalysis.WriteString("\n\n")
+		}
+		if ctx.Spec != "" {
+			allSpec.WriteString(ctx.Spec)
+			allSpec.WriteString("\n\n")
+		}
+
+		branchDir := filepath.Join(root, config.QodeDir, "branches", b)
+		for _, reviewFile := range []string{"code-review.md", "security-review.md"} {
+			data, readErr := os.ReadFile(filepath.Join(branchDir, reviewFile))
+			if readErr == nil && len(data) > 0 {
+				allExtra.WriteString("### ")
+				allExtra.WriteString(reviewFile)
+				allExtra.WriteString("\n\n")
+				allExtra.Write(data)
+				allExtra.WriteString("\n\n")
+			}
+		}
+	}
+
+	d, err := git.DiffFromBase(root, "")
+	if err == nil {
+		diff = truncateLines(d, maxDiffLines)
+	}
+
+	lessons, err := knowledge.ListLessons(root)
+	if err != nil && flagVerbose {
+		fmt.Fprintf(os.Stderr, "Warning: listing lessons: %v\n", err)
+	}
+	lessonsStr := formatLessonsList(lessons)
+
+	return prompt.TemplateData{
+		Project:  cfg.Project,
+		Layers:   cfg.Layers(),
+		Branch:   branches[0],
+		Ticket:   allTicket.String(),
+		Analysis: allAnalysis.String(),
+		Spec:     allSpec.String(),
+		Diff:     diff,
+		Extra:    allExtra.String(),
+		Lessons:  lessonsStr,
+	}, nil
+}
+
+func parseBranchArgs(args []string) []string {
+	var branches []string
+	for _, arg := range args {
+		for _, b := range strings.Split(arg, ",") {
+			b = strings.TrimSpace(b)
+			if b != "" && !strings.Contains(b, "..") {
+				branches = append(branches, b)
+			}
+		}
+	}
+	return branches
+}
+
+func formatLessonsList(lessons []knowledge.LessonSummary) string {
+	if len(lessons) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	for _, l := range lessons {
+		fmt.Fprintf(&sb, "- **%s**: %s\n", l.Title, l.Summary)
+	}
+	return sb.String()
+}
+
+func truncateLines(s string, max int) string {
+	lines := strings.SplitN(s, "\n", max+1)
+	if len(lines) <= max {
+		return s
+	}
+	return strings.Join(lines[:max], "\n") + "\n\n(truncated)"
 }

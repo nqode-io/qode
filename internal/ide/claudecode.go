@@ -73,8 +73,9 @@ func buildClaudeMD(cfg *config.Config) string {
 	sb.WriteString("4. `/qode-plan-spec` — Generate tech spec\n")
 	sb.WriteString("5. `/qode-start` — Generate and run implementation prompt\n")
 	sb.WriteString("6. `/qode-review-code` + `/qode-review-security` — Reviews\n")
-	sb.WriteString("7. `qode check` — All quality gates\n")
-	sb.WriteString("8. `git commit && git push` — Ship\n\n")
+	sb.WriteString("7. `/qode-knowledge-add-context` — (Recommended) Extract lessons learned\n")
+	sb.WriteString("8. `qode check` — All quality gates\n")
+	sb.WriteString("9. `git commit && git push` — Ship\n\n")
 
 	sb.WriteString("## Clean Code Rules\n\n")
 	sb.WriteString("- Read existing code before writing new code\n")
@@ -183,6 +184,44 @@ Execute the prompt as your implementation session.
 `, name),
 
 		"qode-ticket-fetch": `!qode ticket fetch $ARGUMENTS`,
+
+		"qode-knowledge-add-context": fmt.Sprintf(`# Extract Lessons Learned — %s
+
+Reflect on the current session and extract actionable lessons learned.
+
+1. First, check existing lessons by running: qode knowledge list
+2. Review the full conversation history of this session
+3. Identify 1-5 actionable, specific lessons (not generic advice)
+4. Write each lesson to its own file at .qode/knowledge/lessons/<kebab-case-title>.md
+
+Each lesson file MUST follow this format:
+
+`+"```"+`
+### Title in sentence case
+Short description (one paragraph, max 100 words). Be specific — state when
+this lesson applies and what to do or avoid.
+
+**Example 1:** What to do or avoid
+Code snippet, pattern, or concrete example illustrating the lesson.
+`+"```"+`
+
+Rules:
+- Do NOT duplicate existing lessons (check the list from step 1)
+- Do NOT include credentials, API keys, or secrets
+- Focus on: recurring mistakes, non-obvious patterns, project-specific conventions
+- If no actionable lessons can be identified, inform the user
+`, name),
+
+		"qode-knowledge-add-branch": fmt.Sprintf(`# Extract Lessons from Branch — %s
+
+First, run this command to generate the prompt:
+  qode knowledge add-branch --prompt-only $ARGUMENTS
+
+Then read and execute the prompt in:
+  .qode/branches/$BRANCH/.knowledge-add-branch-prompt.md
+
+Where $BRANCH is the current git branch name.
+`, name),
 	}
 }
 

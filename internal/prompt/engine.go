@@ -52,6 +52,7 @@ type TemplateData struct {
 	Diff       string
 	Extra      string
 	KB         string
+	Lessons    string // compact lesson listing for dedup in extraction prompts
 	OutputPath string // when set, templates append file-write instructions
 }
 

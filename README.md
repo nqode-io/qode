@@ -28,17 +28,18 @@ qode ticket fetch https://company.atlassian.net/browse/ENG-123
 ## The Workflow
 
 ```
-1. qode branch create <name>          Create git branch + context folder
-2. qode ticket fetch <url>            Fetch ticket into context
-   /qode-ticket-fetch <url>  (IDE)    — or use the slash command
-3. /qode-plan-refine  (in IDE)        Refine requirements — iterate to 25/25
-4. /qode-plan-spec    (in IDE)        Generate tech spec
-5. qode start                         Run implementation prompt interactively
-   /qode-start        (in IDE)        — or use the slash command
-6. /qode-review-code  (in IDE)        Code review
-7. /qode-review-security (in IDE)     Security review
-8. qode check                         Run all quality gates
-9. qode branch remove <name>          Cleanup
+1. qode branch create <name>                 Create git branch + context folder
+2. qode ticket fetch <url>                   Fetch ticket into context
+   /qode-ticket-fetch <url>      (in IDE)    — or use the slash command
+3. /qode-plan-refine             (in IDE)    Refine requirements — iterate to 25/25
+4. /qode-plan-spec               (in IDE)    Generate tech spec
+5. qode start                                Run implementation prompt interactively
+   /qode-start                   (in IDE)    — or use the slash command
+6. /qode-review-code             (in IDE)    Code review
+7. /qode-review-security         (in IDE)    Security review
+8. qode check                                Run all quality gates
+9. `/qode-knowledge-add-context` (in IDE)    (Recommended) Extract lessons learned
+10. qode branch remove <name>                Cleanup
 ```
 
 Run `qode workflow` for the full diagram.
@@ -99,7 +100,7 @@ qode branch remove <name>      Clean up branch and context
 
 qode ticket fetch <url>        Fetch ticket (Jira, Azure DevOps, Linear, GitHub Issues)
 
-qode plan refine [url]         Generate worker + judge prompts (25/25 target)
+qode plan refine               Generate worker + judge prompts (25/25 target)
 qode plan spec                 Generate tech spec from refined analysis
 qode plan status               Show iteration scores for current branch
 

@@ -135,5 +135,5 @@ func printScoreGate(name string, score float64, min float64) {
 		status = "⏭"
 		detail = "skipped"
 	}
-	fmt.Printf("║  └── %-16s %s %-18s║\n", name+":", status, detail)
+	fmt.Printf("║  └── %-16s %s %-17s║\n", name+":", status, detail)
 }

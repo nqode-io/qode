@@ -37,10 +37,16 @@ Topology: single
 5. `qode start` / `/qode-start` — Run implementation prompt (launches interactive Claude session)
 6. `/qode-review-code` + `/qode-review-security` — Reviews
 
+
 **Terminal commands:**
 7. `qode check` — All quality gates
-8. `git commit && git push` — Ship
-9. `qode branch remove <name>` — Cleanup
+
+**Either terminal or IDE:**
+8. `/qode-knowledge-add-context` — (Recommended) Capture lessons learned from context
+
+**Terminal commands:**
+9. `git commit && git push` — Ship
+10. `qode branch remove <name>` — Cleanup
 
 ## Quality Standards
 

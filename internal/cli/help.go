@@ -61,11 +61,15 @@ qode Workflow
 │  qode check    (runs tests + lint + both reviews per layer)     │
 │  → Apply suggested fixes; re-run until all gates pass           │
 ├─────────────────────────────────────────────────────────────────┤
-│  STEP 8: SHIP                                                   │
+│  STEP 8: CAPTURE LESSONS LEARNED                                │
+│  /qode-knowledge-add-context (in Cursor/Claude Code)            │
+│  → Capture insights and best practices from context             │
+├─────────────────────────────────────────────────────────────────┤
+│  STEP 9: SHIP                                                   │
 │  git add . && git commit && git push                            │
 │  gh pr create  (or az repos pr create)                          │
 ├─────────────────────────────────────────────────────────────────┤
-│  STEP 9: CLEANUP                                                │
+│  STEP 10: CLEANUP                                               │
 │  qode branch remove feat-user-dashboard                         │
 └─────────────────────────────────────────────────────────────────┘
 
