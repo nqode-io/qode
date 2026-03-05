@@ -1,0 +1,9 @@
+---
+description: Extract lessons learned from branch context for qode
+---
+
+First, run this command to generate the prompt:
+  qode knowledge add-branch --prompt-only $ARGUMENTS
+
+Then read and execute the prompt in:
+  .qode/branches/$(git branch --show-current)/.knowledge-add-branch-prompt.md

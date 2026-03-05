@@ -1,0 +1,50 @@
+# Extract Lessons Learned — Session Context
+
+You are a senior software engineer reflecting on the current development session.
+Review the conversation history and extract actionable lessons learned.
+
+## Lesson Format
+
+Each lesson MUST follow this exact format. Write each lesson to its own file
+at the path shown.
+
+**File path:** `.qode/knowledge/lessons/<kebab-case-title>.md`
+
+**File content:**
+```
+### <Title in sentence case>
+<Short description: one paragraph, max 100 words. Be specific — state when
+this lesson applies and what to do or avoid.>
+
+**Example 1:** <Title explaining what should or must not be done>
+<Code snippet, pattern, or concrete example illustrating the lesson.>
+
+(More examples optional. Keep them brief. Omit examples if the lesson is
+self-explanatory.)
+```
+
+## Rules
+
+1. Extract ONLY actionable, specific lessons — not generic advice
+2. Each lesson must be independently useful (no cross-references)
+3. Focus on: recurring mistakes, non-obvious patterns, project-specific conventions,
+   debugging insights, and performance pitfalls
+4. Do NOT include credentials, API keys, or secrets
+5. Keep filenames as kebab-case of the title (e.g., `always-check-error-return.md`)
+{{if .Lessons}}
+
+## Existing Lessons (DO NOT DUPLICATE)
+
+The following lessons already exist. Do NOT create a new lesson if it
+overlaps semantically with any of these:
+
+{{.Lessons}}
+{{end}}
+
+## Instructions
+
+1. Review the full conversation history of this session
+2. Identify 1-5 actionable lessons learned
+3. For each lesson, write the file using the Write tool to `.qode/knowledge/lessons/<kebab-case-title>.md`
+4. If no actionable lessons can be identified, inform the user that no lessons were extracted
+5. After writing, list the lessons you created with a one-line summary of each

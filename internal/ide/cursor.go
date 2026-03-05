@@ -72,8 +72,9 @@ alwaysApply: true
 4. Spec → /qode-plan-spec
 5. Implement → /qode-start → code in Cursor
 6. Review → /qode-review-code + /qode-review-security
-7. Check → qode check
-8. Ship → git commit && push
+7. Lessons → /qode-knowledge-add-context (recommended)
+8. Check → qode check
+9. Ship → git commit && push
 
 ## Rules
 - Always read existing code before writing new code
@@ -193,6 +194,44 @@ description: Fetch a ticket into branch context for %s
 
 Run the following command with the ticket URL provided after the slash command:
   qode ticket fetch $ARGUMENTS
+`, cfg.Project.Name),
+
+		"qode-knowledge-add-context": fmt.Sprintf(`---
+description: Extract lessons learned from current session for %s
+---
+
+Reflect on the current session and extract actionable lessons learned.
+
+1. First, check existing lessons by running: qode knowledge list
+2. Review the full conversation history of this session
+3. Identify 1-5 actionable, specific lessons (not generic advice)
+4. Write each lesson to its own file at .qode/knowledge/lessons/<kebab-case-title>.md
+
+Each lesson file MUST follow this format:
+`+"```"+`
+### Title in sentence case
+Short description (one paragraph, max 100 words). Be specific.
+
+**Example 1:** What to do or avoid
+Code snippet, pattern, or concrete example.
+`+"```"+`
+
+Rules:
+- Do NOT duplicate existing lessons
+- Do NOT include credentials, API keys, or secrets
+- Focus on: recurring mistakes, non-obvious patterns, project-specific conventions
+- If no actionable lessons can be identified, inform the user
+`, cfg.Project.Name),
+
+		"qode-knowledge-add-branch": fmt.Sprintf(`---
+description: Extract lessons learned from branch context for %s
+---
+
+First, run this command to generate the prompt:
+  qode knowledge add-branch --prompt-only $ARGUMENTS
+
+Then read and execute the prompt in:
+  .qode/branches/$(git branch --show-current)/.knowledge-add-branch-prompt.md
 `, cfg.Project.Name),
 	}
 }

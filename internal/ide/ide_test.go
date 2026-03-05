@@ -36,10 +36,24 @@ func TestClaudeSlashCommands_ContainsTicketFetch(t *testing.T) {
 	}
 }
 
-func TestClaudeSlashCommands_HasSixEntries(t *testing.T) {
+func TestClaudeSlashCommands_HasEightEntries(t *testing.T) {
 	cmds := claudeSlashCommands(minimalConfig())
-	if len(cmds) != 6 {
-		t.Errorf("claudeSlashCommands: len = %d, want 6", len(cmds))
+	if len(cmds) != 8 {
+		t.Errorf("claudeSlashCommands: len = %d, want 8", len(cmds))
+	}
+}
+
+func TestClaudeSlashCommands_IncludesKnowledge(t *testing.T) {
+	cmds := claudeSlashCommands(minimalConfig())
+	for _, key := range []string{"qode-knowledge-add-context", "qode-knowledge-add-branch"} {
+		content, ok := cmds[key]
+		if !ok {
+			t.Errorf("claudeSlashCommands: missing key %s", key)
+			continue
+		}
+		if content == "" {
+			t.Errorf("claudeSlashCommands: %s has empty content", key)
+		}
 	}
 }
 
@@ -63,10 +77,24 @@ func TestCursorSlashCommands_ContainsTicketFetch(t *testing.T) {
 	}
 }
 
-func TestCursorSlashCommands_HasSixEntries(t *testing.T) {
+func TestCursorSlashCommands_HasEightEntries(t *testing.T) {
 	cmds := slashCommands(minimalConfig())
-	if len(cmds) != 6 {
-		t.Errorf("slashCommands: len = %d, want 6", len(cmds))
+	if len(cmds) != 8 {
+		t.Errorf("slashCommands: len = %d, want 8", len(cmds))
+	}
+}
+
+func TestCursorSlashCommands_IncludesKnowledge(t *testing.T) {
+	cmds := slashCommands(minimalConfig())
+	for _, key := range []string{"qode-knowledge-add-context", "qode-knowledge-add-branch"} {
+		content, ok := cmds[key]
+		if !ok {
+			t.Errorf("slashCommands: missing key %s", key)
+			continue
+		}
+		if !strings.Contains(content, "description:") {
+			t.Errorf("slashCommands: %s missing YAML frontmatter", key)
+		}
 	}
 }
 
@@ -185,6 +213,27 @@ func TestSetupClaudeCode_CreatesClaudeMDWhenMissing(t *testing.T) {
 	}
 }
 
+func TestSetupClaudeCode_WritesKnowledgeCommands(t *testing.T) {
+	dir := t.TempDir()
+	cfg := minimalConfig()
+
+	if err := SetupClaudeCode(dir, cfg); err != nil {
+		t.Fatalf("SetupClaudeCode: %v", err)
+	}
+
+	for _, name := range []string{"qode-knowledge-add-context", "qode-knowledge-add-branch"} {
+		path := filepath.Join(dir, ".claude", "commands", name+".md")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Errorf("reading %s.md: %v", name, err)
+			continue
+		}
+		if len(data) == 0 {
+			t.Errorf("%s.md is empty", name)
+		}
+	}
+}
+
 // --- SetupCursor integration ---
 
 func TestSetupCursor_WritesTicketFetchCommand(t *testing.T) {
@@ -203,6 +252,27 @@ func TestSetupCursor_WritesTicketFetchCommand(t *testing.T) {
 	content := string(data)
 	if !strings.Contains(content, "qode ticket fetch $ARGUMENTS") {
 		t.Errorf("qode-ticket-fetch.mdc missing command, got:\n%s", content)
+	}
+}
+
+func TestSetupCursor_WritesKnowledgeCommands(t *testing.T) {
+	dir := t.TempDir()
+	cfg := minimalConfig()
+
+	if err := SetupCursor(dir, cfg); err != nil {
+		t.Fatalf("SetupCursor: %v", err)
+	}
+
+	for _, name := range []string{"qode-knowledge-add-context", "qode-knowledge-add-branch"} {
+		path := filepath.Join(dir, ".cursor", "commands", name+".mdc")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Errorf("reading %s.mdc: %v", name, err)
+			continue
+		}
+		if len(data) == 0 {
+			t.Errorf("%s.mdc is empty", name)
+		}
 	}
 }
 

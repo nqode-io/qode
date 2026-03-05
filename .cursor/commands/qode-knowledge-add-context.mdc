@@ -1,0 +1,25 @@
+---
+description: Extract lessons learned from current session for qode
+---
+
+Reflect on the current session and extract actionable lessons learned.
+
+1. First, check existing lessons by running: qode knowledge list
+2. Review the full conversation history of this session
+3. Identify 1-5 actionable, specific lessons (not generic advice)
+4. Write each lesson to its own file at .qode/knowledge/lessons/<kebab-case-title>.md
+
+Each lesson file MUST follow this format:
+```
+### Title in sentence case
+Short description (one paragraph, max 100 words). Be specific.
+
+**Example 1:** What to do or avoid
+Code snippet, pattern, or concrete example.
+```
+
+Rules:
+- Do NOT duplicate existing lessons
+- Do NOT include credentials, API keys, or secrets
+- Focus on: recurring mistakes, non-obvious patterns, project-specific conventions
+- If no actionable lessons can be identified, inform the user

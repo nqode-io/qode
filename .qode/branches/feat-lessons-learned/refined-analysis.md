@@ -1,0 +1,592 @@
+<!-- qode:iteration=3 score=25/25 -->
+
+# Refined Requirements Analysis — Lessons Learned Feature
+
+## 1. Problem Understanding
+
+### Problem Restatement
+qode currently supports a project-wide knowledge base via `qode knowledge add [path]` which copies files into `.qode/knowledge/`. The `knowledge.Load()` function (in `internal/knowledge/knowledge.go`) concatenates all files in that directory and injects them into prompts via the `{{.KB}}` template variable. However, there is no automated way to distill and capture lessons learned from development sessions.
+
+This feature adds two new commands for extracting lessons learned:
+
+1. **`/qode-knowledge-add-context`** — Slash-command only (Claude Code, Cursor, and other IDEs). The AI reflects on the current session conversation, identifies actionable lessons, and writes each one as an individual Markdown file to `.qode/knowledge/lessons/`.
+
+2. **`/qode-knowledge-add-branch [branch1,branch2,...]`** — Works both as a terminal command (`qode knowledge add-branch`) and as slash commands in all IDEs. It reads branch context files (ticket, notes, refined-analysis, spec, code-review, security-review) plus the git diff, summarizes them, and extracts lessons learned.
+
+Each lesson is stored as its own Markdown file with:
+- Filename: kebab-case of title + `.md` (e.g., `avoid-nested-goroutines-in-handlers.md`)
+- Content: `### Title`, description paragraph (≤100 words), and optional `**Example N:**` sections
+
+Lessons must be deduplicated against existing ones using AI-driven semantic comparison.
+
+### User Need & Business Value
+- **Institutional memory** — Teams accumulate project-specific knowledge across sprints without manual documentation.
+- **Reduced rework** — Lessons are auto-injected into future prompts via `{{.KB}}`, helping the AI avoid repeating known mistakes.
+- **Workflow completion** — Closes the feedback loop in qode's plan→implement→review cycle.
+
+### Ambiguities — Resolved
+
+1. **Deduplication strategy** — Use AI-driven comparison: the extraction prompt includes existing lesson titles and summaries, instructing the model to skip semantically overlapping lessons. No programmatic dedup needed.
+
+2. **Storage location** — `.qode/knowledge/lessons/` subdirectory. This requires modifying `listDir()` in `internal/knowledge/knowledge.go` (lines 103-115) because it currently skips directories: `if !e.IsDir()` means subdirectories are not recursed into. Must change to recursive walking.
+
+3. **Branch file scope** — For `add-branch`, read these files from `.qode/branches/$BRANCH/`:
+   - `context/ticket.md` (via `ctx.Ticket`)
+   - `context/notes.md` (via `ctx.Notes`)
+   - `refined-analysis.md` (via `ctx.RefinedAnalysis`)
+   - `spec.md` (via `ctx.Spec`)
+   - `code-review.md` — **NOT currently in the `Context` struct** (lines 21-37 of `internal/context/context.go`). Must be loaded separately.
+   - `security-review.md` — Same as above, not in `Context` struct.
+   - Git diff via `git.DiffFromBase(root, "")` (from `internal/git/git.go:44`).
+
+4. **Session context for `add-context`** — In a slash command, the AI has the full conversation history. The prompt instructs the AI to reflect on the session. No programmatic context extraction needed — this is purely prompt-driven.
+
+5. **`Load()` header conflict** — `knowledge.Load()` (lines 31-35 of `knowledge.go`) prepends `### <filename>` before each file's content. Lesson files already start with `### Title`. This would produce double headings like `### avoid-goroutines.md` followed by `### Avoid nested goroutines`. **Resolution:** Modify `Load()` to skip the `### filename` header for files inside the `lessons/` subdirectory, since those files already contain their own heading. Alternatively, use `####` (h4) for the filename header to distinguish it, but skipping is cleaner.
+
+6. **Argument parsing for `add-branch`** — The terminal command accepts branch names via two mechanisms: (a) multiple positional args (`qode knowledge add-branch feat-a feat-b`) using `cobra.MinimumNArgs(1)`, and (b) comma-separated within a single arg (`qode knowledge add-branch feat-a,feat-b`). The implementation splits each arg on commas and flattens the result. For the slash command, `$ARGUMENTS` passes as a single string, so comma-splitting handles both cases uniformly.
+
+---
+
+## 2. Technical Analysis
+
+### Affected Components (with precise file references)
+
+| Component | Change | Details |
+|---|---|---|
+| `internal/knowledge/knowledge.go:103-115` | **Modify** | `listDir()` must recurse into subdirectories so `Load()` and `List()` discover files in `.qode/knowledge/lessons/`. Currently `!e.IsDir()` skips all subdirectories. |
+| `internal/knowledge/knowledge.go:26-36` | **Modify** | `Load()` must skip the `### filename` header for files inside `lessons/` subdirectory to avoid double headings with lesson files' own `### Title`. |
+| `internal/knowledge/knowledge.go` | **Add functions** | `LessonsDir(root) string`; `ListLessons(root) ([]LessonSummary, error)`; `SaveLesson(root, title, content) error`; `ToKebabCase(s) string`. |
+| `internal/knowledge/knowledge_test.go` | **New** | Tests for new functions + recursive `listDir` + `Load()` header behavior. |
+| `internal/prompt/templates/knowledge/add-context.md.tmpl` | **New** | Prompt template for session-based lesson extraction (full draft below). |
+| `internal/prompt/templates/knowledge/add-branch.md.tmpl` | **New** | Prompt template for branch-based lesson extraction (full draft below). |
+| `internal/prompt/engine.go:44-56` | **Modify** | Add `Lessons string` field to `TemplateData` struct. |
+| `internal/cli/knowledge_cmd.go:18` | **Modify** | Register `newKnowledgeAddBranchCmd()`. |
+| `internal/cli/knowledge_cmd.go` | **Add function** | `newKnowledgeAddBranchCmd()` — Cobra command. |
+| `internal/ide/claudecode.go:98-187` | **Modify** | Add two entries to `claudeSlashCommands()`. |
+| `internal/ide/cursor.go:109-198` | **Modify** | Add two entries to `slashCommands()`. |
+| `internal/ide/claudecode.go:69-77` | **Modify** | Update `buildClaudeMD()` workflow steps. |
+| `CLAUDE.md` | **Modify** | Add recommended lesson-extraction step after reviews. |
+
+### Key Technical Decisions
+
+1. **Recursive `listDir`**: Change `listDir()` to use `filepath.WalkDir()` instead of `os.ReadDir()`. This is a minimal change (lines 103-115) that makes the knowledge system support subdirectories. The existing `dedup()` function handles duplicate paths.
+
+2. **`Load()` header adjustment**: Currently `Load()` wraps each file as `### <filename>\n\n<content>\n\n---`. For files in `lessons/` subdirectory, skip the `### filename` header since lessons already have their own `### Title` as the first line. Detection: check if the file path contains `/lessons/` relative to the knowledge root. This prevents confusing double-heading output like:
+   ```
+   ### avoid-goroutines.md
+
+   ### Avoid nested goroutines in HTTP handlers
+   ...
+   ```
+
+3. **New `TemplateData.Lessons` field**: Add `Lessons string` to `prompt.TemplateData` (line 54 of `engine.go`). Contains a compact listing of existing lesson titles and summaries for dedup. Separate from `KB` (full concatenated content) because dedup only needs titles/summaries, not full examples.
+
+4. **Terminal command uses `--prompt-only` pattern**: `qode knowledge add-branch` follows the same pattern as `qode start` (line 72 of `start.go`) and `qode review code` (line 128 of `review.go`):
+   - Render template → write to `.qode/branches/$BRANCH/.knowledge-add-branch-prompt.md`
+   - Default: dispatch via `dispatch.RunInteractive()`
+   - With `--prompt-only`: write file only
+
+5. **Review files loaded separately**: `context.Context` struct (lines 21-37 of `context.go`) does not include code-review or security-review contents. The `add-branch` command loads them directly using the `readFileOr` pattern (exported or duplicated from `context` package) and concatenates into `TemplateData.Extra`.
+
+6. **Slash command for `add-context`**: Cannot use `qode` CLI because session context exists only in the IDE conversation. The slash command contains inline instructions (same pattern as `/qode-plan-refine` in `claudeSlashCommands()`).
+
+7. **Argument parsing for `add-branch`**: Uses `cobra.MinimumNArgs(1)` with comma-splitting:
+   ```go
+   func parseBranchArgs(args []string) []string {
+       var branches []string
+       for _, arg := range args {
+           for _, b := range strings.Split(arg, ",") {
+               b = strings.TrimSpace(b)
+               if b != "" {
+                   branches = append(branches, b)
+               }
+           }
+       }
+       return branches
+   }
+   ```
+   This handles both `add-branch feat-a feat-b` and `add-branch feat-a,feat-b`. The slash command passes `$ARGUMENTS` as a single string, so comma-splitting works for IDE usage too.
+
+### Patterns & Conventions
+- CLI: Cobra commands in `internal/cli/`, registered via `newXxxCmd()` pattern
+- Templates: `internal/prompt/templates/<category>/base.md.tmpl`, loaded via `engine.Render("<category>/base", data)`
+- Template overrides: `.qode/prompts/<category>/base.md.tmpl`
+- Slash commands: Generated by `claudeSlashCommands()` and `slashCommands()` in `ide` package, deployed via `qode ide setup`
+- Tests: Standard `_test.go`, `t.TempDir()` for filesystem tests
+
+### Dependencies
+- `knowledge.Load()` / `knowledge.List()` — must continue working after changes
+- `context.Load()` — used for branch context; struct unchanged
+- `dispatch.RunInteractive()` — terminal command execution
+- `git.DiffFromBase()` — branch diff for `add-branch`
+- `prompt.NewEngine()` / `engine.Render()` — template rendering
+
+---
+
+## 3. Risk & Edge Cases
+
+### What Could Go Wrong
+
+1. **`listDir` recursion picks up unexpected files** — Nested directories with non-knowledge files.
+   **Mitigation:** `filepath.WalkDir()` with filter: only include files (not dirs), skip hidden files/dirs (starting with `.`). Add test verifying flat-directory behavior preserved.
+
+2. **`Load()` header change breaks existing KB rendering** — Skipping headers for `lessons/` files could confuse prompt structure.
+   **Mitigation:** Only skip for files whose path contains `/lessons/` relative to KB root. Other subdirectories (if any future ones) retain existing behavior. Test both cases.
+
+3. **Duplicate lessons from repeated runs** — Running `add-context` multiple times produces overlapping lessons.
+   **Mitigation:** Prompt includes all existing lesson titles with summaries. Explicit instruction: "Do NOT create a lesson if one with overlapping content already exists. If no new lessons can be identified, inform the user."
+
+4. **AI generates malformed lesson files** — Wrong heading level, filename not kebab-case, description too long.
+   **Mitigation:** Prompt template includes precise format spec with a concrete example. The `SaveLesson()` function (used by terminal command) enforces kebab-case filename programmatically. For slash commands, rely on prompt quality.
+
+5. **Large branch diffs exceed context window** — Branch with hundreds of changed files.
+   **Mitigation:** In the `add-branch` command, truncate diff to 500 lines max. Structured context (ticket, analysis, spec, reviews) is prioritized and included in full. Template uses `{{if .Diff}}` to handle empty/truncated diffs gracefully.
+
+6. **Missing `.qode/knowledge/lessons/` directory** — First run.
+   **Mitigation:** `SaveLesson()` calls `os.MkdirAll()`. Slash command prompt instructs AI to use Write tool which creates parent dirs.
+
+### Edge Cases
+- **No branch context files** — `add-branch` works with git diff alone; template uses `{{if .Ticket}}` guards.
+- **Multiple branches** — Context from all branches concatenated; existing lessons checked once across all.
+- **Filename collision** — `SaveLesson()` checks file existence, appends `-2`, `-3` suffix.
+- **Empty session** — Prompt: "If no actionable lessons can be identified, inform the user that no lessons were extracted."
+- **Non-ASCII titles** — `ToKebabCase()` replaces non-alphanumeric with hyphens, collapses consecutive hyphens, trims.
+- **Branch with slashes** — `feat/my-feature` handled by `filepath.Join` in `context.Load()`.
+- **Concurrent writes** — Unlikely (interactive use); filename collision check provides basic safety.
+
+### Security Considerations
+- Branch names validated against directory traversal (reject `..` components)
+- Prompt instructs model: "Never include credentials, API keys, tokens, or other secrets in lessons."
+- Lesson files are local only, committed at user's discretion
+
+### Performance
+- Lesson listing for dedup: negligible I/O (small files)
+- Git diff: already used by review commands
+- No background processes or network calls
+
+---
+
+## 4. Completeness Check
+
+### Acceptance Criteria
+
+| # | Criterion | Source | Verified |
+|---|---|---|---|
+| AC1 | `/qode-knowledge-add-context` slash command exists for Claude Code | Ticket | Via `claudeSlashCommands()` in `claudecode.go` |
+| AC2 | `/qode-knowledge-add-context` slash command exists for Cursor | Ticket ("equivalents in all IDEs") | Via `slashCommands()` in `cursor.go` |
+| AC3 | `/qode-knowledge-add-context` is NOT a terminal command | Ticket ("only applicable to slash commands") | No CLI subcommand registered |
+| AC4 | `/qode-knowledge-add-context` summarizes session and extracts lessons | Ticket | Prompt template instructs AI (see §5 Task 4) |
+| AC5 | `qode knowledge add-branch <branches>` terminal command exists | Ticket | New Cobra subcommand in `knowledge_cmd.go` |
+| AC6 | `/qode-knowledge-add-branch` slash command exists for Claude Code and Cursor | Ticket | Added to both IDE command maps |
+| AC7 | `add-branch` accepts one or more branch names (comma-separated) | Ticket | `parseBranchArgs()` splits on commas + multiple positional args |
+| AC8 | `add-branch` reads branch context files and extracts lessons | Ticket | Loads ticket, notes, analysis, spec, reviews, diff |
+| AC9 | Lessons deduplicated against existing | Ticket | Existing lessons injected into prompt via `{{.Lessons}}` |
+| AC10 | Each lesson in its own file with kebab-case filename | Ticket | `SaveLesson()` + `ToKebabCase()` + prompt instructions |
+| AC11 | Lesson content follows specified format | Ticket | Format spec in prompt template with example |
+| AC12 | Documentation updated with recommended post-review step | Ticket | `CLAUDE.md` + `buildClaudeMD()` + `workflowRule()` |
+| AC13 | Template prompt(s) added | Ticket | Two `.md.tmpl` files in `templates/knowledge/` |
+
+### Implicit Requirements
+- `knowledge.Load()` discovers lesson files after `listDir` change — verified
+- `knowledge.Load()` does not produce double headings for lesson files — addressed via header skip
+- `qode knowledge list` shows lesson files — automatic after `listDir` fix
+- `qode knowledge search` searches lesson files — automatic after `listDir` fix
+- `qode ide setup` regenerates slash commands — automatic (new entries in command maps)
+- Error handling: missing branches, empty context, filesystem errors
+
+### Out of Scope
+- Automatic lesson extraction without user trigger
+- Lesson categorization, tagging, or quality scoring
+- Lesson editing/deletion commands (filesystem operations)
+- Cross-project lesson sharing
+- VS Code slash command equivalent (no native support)
+
+---
+
+## 5. Actionable Implementation Plan
+
+### Prerequisites
+None — all required infrastructure exists.
+
+### Task 1: Make `listDir` recursive and fix `Load()` headers
+**Files:** `internal/knowledge/knowledge.go`
+**Changes to `listDir` (lines 103-115):**
+```go
+func listDir(dir string) ([]string, error) {
+    var files []string
+    err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+        if err != nil {
+            return nil // skip unreadable entries
+        }
+        if d.IsDir() {
+            if strings.HasPrefix(d.Name(), ".") && path != dir {
+                return filepath.SkipDir
+            }
+            return nil
+        }
+        files = append(files, path)
+        return nil
+    })
+    return files, err
+}
+```
+**Changes to `Load()` (lines 26-36):** Skip `### filename` header for files under a `lessons/` directory:
+```go
+// In the loop body:
+isLesson := strings.Contains(f, string(filepath.Separator)+"lessons"+string(filepath.Separator))
+if !isLesson {
+    sb.WriteString("### ")
+    sb.WriteString(filepath.Base(f))
+    sb.WriteString("\n\n")
+}
+sb.Write(data)
+sb.WriteString("\n\n---\n\n")
+```
+**Test:** `internal/knowledge/knowledge_test.go` — verify subdirectory files discovered; verify flat-dir unchanged; verify `Load()` output has no double headers for lesson files.
+
+### Task 2: Add lesson helper functions to knowledge package
+**Files:** `internal/knowledge/knowledge.go`
+**New types and functions:**
+```go
+type LessonSummary struct {
+    Title   string
+    Path    string
+    Summary string // first paragraph after title
+}
+
+func LessonsDir(root string) string {
+    return filepath.Join(root, config.QodeDir, "knowledge", "lessons")
+}
+
+func ListLessons(root string) ([]LessonSummary, error) {
+    dir := LessonsDir(root)
+    entries, err := os.ReadDir(dir)
+    if err != nil {
+        if os.IsNotExist(err) {
+            return nil, nil
+        }
+        return nil, err
+    }
+    var lessons []LessonSummary
+    for _, e := range entries {
+        if e.IsDir() { continue }
+        data, _ := os.ReadFile(filepath.Join(dir, e.Name()))
+        title, summary := parseLessonHeader(string(data))
+        lessons = append(lessons, LessonSummary{Title: title, Path: filepath.Join(dir, e.Name()), Summary: summary})
+    }
+    return lessons, nil
+}
+
+func SaveLesson(root, title, content string) error {
+    dir := LessonsDir(root)
+    if err := os.MkdirAll(dir, 0755); err != nil {
+        return err
+    }
+    base := ToKebabCase(title) + ".md"
+    dest := filepath.Join(dir, base)
+    // Handle collision
+    for i := 2; fileExists(dest); i++ {
+        dest = filepath.Join(dir, fmt.Sprintf("%s-%d.md", ToKebabCase(title), i))
+    }
+    return os.WriteFile(dest, []byte(content), 0644)
+}
+
+func ToKebabCase(s string) string {
+    s = strings.ToLower(s)
+    // Replace non-alphanumeric with hyphens
+    var result []byte
+    for _, c := range []byte(s) {
+        if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') {
+            result = append(result, c)
+        } else {
+            result = append(result, '-')
+        }
+    }
+    // Collapse consecutive hyphens and trim
+    collapsed := strings.Join(strings.FieldsFunc(string(result), func(r rune) bool { return r == '-' }), "-")
+    return collapsed
+}
+```
+**Test:** `TestSaveLesson`, `TestListLessons`, `TestToKebabCase` (various inputs including non-ASCII), `TestSaveLessonCollision`.
+
+### Task 3: Add `Lessons` field to `TemplateData`
+**Files:** `internal/prompt/engine.go` (line 54)
+**Change:** Add `Lessons string` field after `KB`:
+```go
+type TemplateData struct {
+    // ... existing fields ...
+    KB         string
+    Lessons    string // compact lesson listing for dedup in extraction prompts
+    OutputPath string
+}
+```
+**Impact:** No existing templates reference `{{.Lessons}}`, so zero breakage.
+
+### Task 4: Create prompt templates for lesson extraction
+**File:** `internal/prompt/templates/knowledge/add-context.md.tmpl`
+```
+# Extract Lessons Learned — Session Context
+
+You are a senior software engineer reflecting on the current development session.
+Review the conversation history and extract actionable lessons learned.
+
+## Lesson Format
+
+Each lesson MUST follow this exact format. Write each lesson to its own file
+at the path shown.
+
+**File path:** `.qode/knowledge/lessons/<kebab-case-title>.md`
+
+**File content:**
+` ` `
+### <Title in sentence case>
+<Short description: one paragraph, max 100 words. Be specific — state when
+this lesson applies and what to do or avoid.>
+
+**Example 1:** <Title explaining what should or must not be done>
+<Code snippet, pattern, or concrete example illustrating the lesson.>
+
+(More examples optional. Keep them brief. Omit examples if the lesson is
+self-explanatory.)
+` ` `
+
+## Rules
+
+1. Extract ONLY actionable, specific lessons — not generic advice
+2. Each lesson must be independently useful (no cross-references)
+3. Focus on: recurring mistakes, non-obvious patterns, project-specific conventions,
+   debugging insights, and performance pitfalls
+4. Do NOT include credentials, API keys, or secrets
+5. Keep filenames as kebab-case of the title (e.g., `always-check-error-return.md`)
+
+{{if .Lessons}}
+## Existing Lessons (DO NOT DUPLICATE)
+
+The following lessons already exist. Do NOT create a new lesson if it
+overlaps semantically with any of these:
+
+{{.Lessons}}
+{{end}}
+
+## Instructions
+
+1. Review the full conversation history of this session
+2. Identify 1-5 actionable lessons learned
+3. For each lesson, write the file using the Write tool to `.qode/knowledge/lessons/<kebab-case-title>.md`
+4. If no actionable lessons can be identified, inform the user that no lessons were extracted
+5. After writing, list the lessons you created with a one-line summary of each
+```
+
+**File:** `internal/prompt/templates/knowledge/add-branch.md.tmpl`
+```
+# Extract Lessons Learned — Branch Context
+
+You are a senior software engineer reviewing the development artifacts from
+{{if eq (len .Branch) 0}}a feature branch{{else}}branch `{{.Branch}}`{{end}}.
+Extract actionable lessons learned from the work done.
+
+## Branch Context
+
+{{if .Ticket}}
+### Ticket
+{{.Ticket}}
+{{end}}
+
+{{if .Analysis}}
+### Requirements Analysis
+{{.Analysis}}
+{{end}}
+
+{{if .Spec}}
+### Technical Specification
+{{.Spec}}
+{{end}}
+
+{{if .Extra}}
+### Reviews
+{{.Extra}}
+{{end}}
+
+{{if .Diff}}
+### Code Changes (diff)
+` ` `diff
+{{.Diff}}
+` ` `
+{{end}}
+
+## Lesson Format
+
+Each lesson MUST follow this exact format. Write each lesson to its own file.
+
+**File path:** `.qode/knowledge/lessons/<kebab-case-title>.md`
+
+**File content:**
+` ` `
+### <Title in sentence case>
+<Short description: one paragraph, max 100 words. Be specific — state when
+this lesson applies and what to do or avoid.>
+
+**Example 1:** <Title explaining what should or must not be done>
+<Code snippet, pattern, or concrete example illustrating the lesson.>
+
+(More examples optional. Keep them brief. Omit examples if the lesson is
+self-explanatory.)
+` ` `
+
+## Rules
+
+1. Extract ONLY actionable, specific lessons — not generic advice
+2. Each lesson must be independently useful
+3. Focus on: mistakes found in reviews, patterns that worked well, debugging
+   insights, architectural decisions worth remembering, and common pitfalls
+4. Do NOT include credentials, API keys, or secrets
+5. Filenames: kebab-case of the title (e.g., `validate-input-before-db-query.md`)
+
+{{if .Lessons}}
+## Existing Lessons (DO NOT DUPLICATE)
+
+The following lessons already exist. Do NOT create a new lesson if it
+overlaps semantically with any of these:
+
+{{.Lessons}}
+{{end}}
+
+## Instructions
+
+1. Analyze the branch context above — ticket, analysis, spec, reviews, and diff
+2. Identify 1-5 actionable lessons learned
+3. For each lesson, write the file using the Write tool to `.qode/knowledge/lessons/<kebab-case-title>.md`
+4. If no actionable lessons can be identified, inform the user
+5. After writing, list the lessons you created with a one-line summary of each
+
+{{if .OutputPath}}
+Also write a summary of all lessons to: {{.OutputPath}}
+{{end}}
+```
+
+**Note:** The triple backticks in the template are shown with spaces for readability; the actual template uses real triple backticks.
+
+### Task 5: Add `knowledge add-branch` terminal command
+**Files:** `internal/cli/knowledge_cmd.go`
+**Changes:**
+```go
+func newKnowledgeAddBranchCmd() *cobra.Command {
+    var promptOnly bool
+    cmd := &cobra.Command{
+        Use:   "add-branch [branches...]",
+        Short: "Extract lessons learned from branch context",
+        Long:  "Reads branch artifacts (ticket, spec, reviews, diff) and extracts lessons learned into the knowledge base.",
+        Args:  cobra.MinimumNArgs(1),
+        RunE: func(cmd *cobra.Command, args []string) error {
+            // ... implementation follows start.go pattern
+        },
+    }
+    cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt file without dispatching")
+    return cmd
+}
+
+func parseBranchArgs(args []string) []string {
+    var branches []string
+    for _, arg := range args {
+        for _, b := range strings.Split(arg, ",") {
+            b = strings.TrimSpace(b)
+            if b != "" {
+                branches = append(branches, b)
+            }
+        }
+    }
+    return branches
+}
+```
+**RunE implementation flow:**
+1. `resolveRoot()`, `config.Load(root)`, `prompt.NewEngine(root)`
+2. `parseBranchArgs(args)` to get branch list
+3. For each branch: `context.Load(root, branch)`, load `code-review.md` and `security-review.md` separately, `git.DiffFromBase(root, "")` (truncate to 500 lines)
+4. `knowledge.ListLessons(root)` → format as `Lessons` string
+5. Build `prompt.TemplateData` with all fields populated
+6. `engine.Render("knowledge/add-branch", data)`
+7. Write prompt to `.qode/branches/$BRANCH/.knowledge-add-branch-prompt.md`
+8. If `promptOnly`: print path. Else: `dispatch.RunInteractive()`
+
+**Register:** Add to `newKnowledgeCmd()` line 18: `cmd.AddCommand(newKnowledgeListCmd(), newKnowledgeAddCmd(), newKnowledgeSearchCmd(), newKnowledgeAddBranchCmd())`
+
+### Task 6: Add slash commands to IDE setup
+**Files:**
+- `internal/ide/claudecode.go` — Add to `claudeSlashCommands()`:
+
+**`qode-knowledge-add-context`** (inline prompt, no CLI):
+```go
+"qode-knowledge-add-context": fmt.Sprintf(`# Extract Lessons Learned — %s
+
+First, run:
+  qode knowledge add-branch --prompt-only $(git branch --show-current)
+
+This generates the existing lessons list. Then read and incorporate the
+existing lessons from:
+  .qode/branches/$BRANCH/.knowledge-add-branch-prompt.md
+
+However, instead of analyzing branch files, reflect on YOUR CURRENT SESSION:
+1. Review the conversation history
+2. Identify 1-5 actionable, specific lessons
+3. Write each to .qode/knowledge/lessons/<kebab-case-title>.md using the format below
+
+### Lesson file format:
+` + "```" + `
+### Title in sentence case
+Short description (max 100 words). Be specific.
+
+**Example 1:** What to do or avoid
+Code or pattern example.
+` + "```" + `
+
+Check existing lessons first (run: qode knowledge list) and do NOT duplicate.
+If no lessons found, tell the user.
+`, name),
+```
+
+**`qode-knowledge-add-branch`** (delegates to CLI):
+```go
+"qode-knowledge-add-branch": fmt.Sprintf(`# Extract Lessons from Branch — %s
+
+First, run this command to generate the prompt:
+  qode knowledge add-branch --prompt-only $ARGUMENTS
+
+Then read and execute the prompt in:
+  .qode/branches/$BRANCH/.knowledge-add-branch-prompt.md
+
+Where $BRANCH is the current git branch name.
+`, name),
+```
+
+- `internal/ide/cursor.go` — Add same two entries to `slashCommands()` with Cursor formatting (`.mdc` frontmatter).
+
+### Task 7: Update documentation
+**Files:**
+- `internal/ide/claudecode.go:69-77` — In `buildClaudeMD()`, after line 76 (reviews step), add:
+  ```go
+  sb.WriteString("7. `/qode-knowledge-add-context` — (Recommended) Extract lessons learned\n")
+  ```
+  And renumber subsequent steps (check → 8, ship → 9).
+- `internal/ide/cursor.go:53-83` — In `workflowRule()`, add same step after reviews.
+- `CLAUDE.md` — Manually add between current step 6 (reviews) and step 7 (check):
+  ```
+  7. `/qode-knowledge-add-context` — (Recommended) Extract lessons learned
+  ```
+**Note:** `buildClaudeMD()` only writes if `CLAUDE.md` doesn't exist (lines 21-22 of `claudecode.go`). Generated content update affects new projects only.
+
+### Task 8: Add tests
+**Files:** `internal/knowledge/knowledge_test.go`
+- `TestListDir_Recursive` — create nested dirs, verify all files found
+- `TestListDir_SkipsHiddenDirs` — `.hidden/` dir should be skipped
+- `TestLoad_LessonFilesNoDoubleHeader` — verify lesson files don't get `### filename` prefix
+- `TestLoad_RegularFilesKeepHeader` — verify non-lesson files still get header
+- `TestSaveLesson_WritesCorrectFile` — verify kebab-case filename and content
+- `TestSaveLesson_HandlesCollision` — write two lessons with same title, verify `-2` suffix
+- `TestListLessons_ParsesTitleAndSummary` — verify parsing of `### Title` and first paragraph
+- `TestToKebabCase_VariousInputs` — spaces, uppercase, special chars, non-ASCII
+
+**Files:** `internal/ide/ide_test.go`
+- Verify `claudeSlashCommands()` includes `qode-knowledge-add-context` and `qode-knowledge-add-branch`
+- Verify `slashCommands()` includes same entries
+
+**Test patterns:** Follow `internal/plan/refine_test.go` — `t.TempDir()`, fixture files, assert file contents.
