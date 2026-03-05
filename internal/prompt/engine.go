@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/nqode/qode/internal/config"
@@ -78,20 +80,24 @@ func (e *Engine) Render(name string, data TemplateData) (string, error) {
 // Names are relative paths like "refine/base" (without the .md.tmpl suffix).
 func EmbeddedTemplates() (map[string][]byte, error) {
 	templates := make(map[string][]byte)
-	entries := []string{
-		"refine/base",
-		"scoring/judge_refine",
-		"spec/base",
-		"start/base",
-		"review/code",
-		"review/security",
-	}
-	for _, name := range entries {
-		data, err := embeddedFS.ReadFile("templates/" + name + ".md.tmpl")
-		if err != nil {
-			return nil, fmt.Errorf("reading embedded template %q: %w", name, err)
+	err := fs.WalkDir(embeddedFS, "templates", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
 		}
+		if !strings.HasSuffix(path, ".md.tmpl") {
+			return nil
+		}
+		data, readErr := embeddedFS.ReadFile(path)
+		if readErr != nil {
+			return fmt.Errorf("reading embedded template %q: %w", path, readErr)
+		}
+		name := strings.TrimPrefix(path, "templates/")
+		name = strings.TrimSuffix(name, ".md.tmpl")
 		templates[name] = data
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return templates, nil
 }

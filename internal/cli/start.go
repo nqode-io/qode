@@ -81,7 +81,6 @@ clean code requirements.`,
 
 func startPromptOnly(branch, promptPath string) error {
 	fmt.Printf("Implementation prompt written to:\n  %s\n\n", promptPath)
-	fmt.Println("Paste into Cursor/Claude Code, or use: /qode-start")
 	return nil
 }
 

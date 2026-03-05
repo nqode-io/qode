@@ -122,11 +122,6 @@ func refinePromptOnly(branch, workerPath, judgePath string, out *plan.RefineOutp
 	if judgePath != "" {
 		fmt.Printf("  Judge prompt  (score the worker output):\n    %s\n\n", judgePath)
 	}
-	fmt.Println("Next steps:")
-	fmt.Println("  1. Paste worker prompt into your IDE (or use /qode-plan-refine)")
-	fmt.Printf("  2. Copy the AI's analysis to: .qode/branches/%s/refined-analysis.md\n", branch)
-	fmt.Println("  3. Paste judge prompt, get score → iterate until 25/25")
-	fmt.Println("  4. When done: qode plan spec")
 	return nil
 }
 
@@ -226,8 +221,6 @@ func runPlanSpec(promptOnly bool) error {
 
 func specPromptOnly(branch, promptPath string) error {
 	fmt.Printf("Spec prompt written to:\n  %s\n\n", promptPath)
-	fmt.Println("Paste into your IDE (or use /qode-plan-spec).")
-	fmt.Printf("Save the AI's spec to: .qode/branches/%s/spec.md\n", branch)
 	return nil
 }
 
