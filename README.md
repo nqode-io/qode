@@ -25,6 +25,8 @@ qode branch create feat-user-dashboard
 qode ticket fetch https://company.atlassian.net/browse/ENG-123
 ```
 
+Do note that you will have to configure `.env` file with appropriate ticketing system API key or equivalent as described below.
+
 ## The Workflow
 
 ```
@@ -89,43 +91,44 @@ All configs are stack-aware. Existing files are preserved — qode only adds/upd
 ## Commands
 
 ```
-qode init                      Detect stack, create qode.yaml
-qode init --new                New project wizard
-qode init --workspace          Multi-repo workspace setup
+qode init                                                      Detect stack, create qode.yaml
+qode init --new                                                New project wizard
+qode init --workspace                                          Multi-repo workspace setup
 
-qode branch create <name>      Create feature branch + context folder
-qode branch list               List active branches
-qode branch focus <name>       Switch to branch, show context
-qode branch remove <name>      Clean up branch and context
+qode branch create <name>                                      Create feature branch + context folder
+qode branch list                                               List active branches
+qode branch focus <name>                                       Switch to branch, show context
+qode branch remove <name>                                      Clean up branch and context
 
-qode ticket fetch <url>        Fetch ticket (Jira, Azure DevOps, Linear, GitHub Issues)
+qode ticket fetch <url>                                        Fetch ticket (Jira, Azure DevOps, Linear, GitHub Issues)
 
-qode plan refine               Generate worker + judge prompts (25/25 target)
-qode plan spec                 Generate tech spec from refined analysis
-qode plan status               Show iteration scores for current branch
+qode plan refine                                               Generate worker + judge prompts (25/25 target)
+qode plan spec                                                 Generate tech spec from refined analysis
+qode plan status                                               Show iteration scores for current branch
 
-qode start                     Generate and run implementation prompt interactively
+qode start                                                     Generate and run implementation prompt interactively
 
-qode review code               Code review prompt
-qode review security           Security review prompt
-qode review all                Both reviews
+qode review code                                               Code review prompt
+qode review security                                           Security review prompt
+qode review all                                                Both reviews
 
-qode check                     Run all quality gates per layer
-qode check --layer <name>      Gates for a specific layer only
-qode check --skip-tests        Reviews only, skip test execution
+qode check                                                     Run all quality gates per layer
+qode check --layer <name>                                      Gates for a specific layer only
+qode check --skip-tests                                        Reviews only, skip test execution
 
-qode ide setup                 Generate IDE configs for all enabled IDEs
-qode ide sync                  Regenerate configs from qode.yaml
+qode ide setup                                                 Generate IDE configs for all enabled IDEs
+qode ide sync                                                  Regenerate configs from qode.yaml
 
-qode knowledge add <path>      Add file to knowledge base
-qode knowledge list            List knowledge base files
-qode knowledge search <query>  Search knowledge base
+qode knowledge add <path>                                      Add file to knowledge base
+qode knowledge add-branch <name or comma separated names>      Add file to knowledge base
+qode knowledge list                                            List knowledge base files
+qode knowledge search <query>                                  Search knowledge base
 
-qode config show               Show resolved config
-qode config detect             Show auto-detected stacks
-qode config validate           Validate qode.yaml
+qode config show                                               Show resolved config
+qode config detect                                             Show auto-detected stacks
+qode config validate                                           Validate qode.yaml
 
-qode workflow                  Show full workflow diagram
+qode workflow                                                  Show full workflow diagram
 ```
 
 ## Project Types
