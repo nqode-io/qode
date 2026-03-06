@@ -9,7 +9,11 @@ import (
 	"github.com/nqode/qode/internal/env"
 )
 
+// version is set at build time via ldflags.
+var version = "dev"
+
 func main() {
+	cli.SetVersion(version)
 	loadDotEnv()
 	if err := cli.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)

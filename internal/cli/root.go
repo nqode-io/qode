@@ -14,6 +14,11 @@ var (
 	flagVerbose bool
 )
 
+// SetVersion sets the version string displayed by --version.
+func SetVersion(v string) {
+	rootCmd.Version = v
+}
+
 // Execute runs the root command.
 func Execute() error {
 	return rootCmd.Execute()

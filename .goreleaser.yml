@@ -42,5 +42,5 @@ changelog:
 
 release:
   github:
-    owner: nqode
+    owner: nqode-io
     name: qode

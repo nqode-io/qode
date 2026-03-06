@@ -4,15 +4,44 @@ AI-assisted developer workflow CLI by nQode.
 
 Standardises how developers use AI coding assistants across client projects with varied tech stacks — Next.js+React, .NET+React, Angular+Java, and more.
 
+## Installation
+
+Download the latest binary for your platform from [GitHub Releases](https://github.com/nqode-io/qode/releases).
+
+**macOS (Apple Silicon):**
+```bash
+curl -sL https://github.com/nqode-io/qode/releases/latest/download/qode_darwin_arm64.tar.gz | tar xz
+sudo mv qode /usr/local/bin/
+```
+
+**macOS (Intel):**
+```bash
+curl -sL https://github.com/nqode-io/qode/releases/latest/download/qode_darwin_amd64.tar.gz | tar xz
+sudo mv qode /usr/local/bin/
+```
+
+**Linux (x86_64):**
+```bash
+curl -sL https://github.com/nqode-io/qode/releases/latest/download/qode_linux_amd64.tar.gz | tar xz
+sudo mv qode /usr/local/bin/
+```
+
+**Windows:**
+Download the `.zip` from the [releases page](https://github.com/nqode-io/qode/releases), extract it, and add `qode.exe` to your PATH.
+
+**Alternative — install from source** (requires Go 1.24+):
+```bash
+go install github.com/nqode/qode/cmd/qode@latest
+```
+
+Verify the installation:
+```bash
+qode --version
+```
+
 ## Quick Start
 
 ```bash
-# Install
-go install github.com/nqode/qode/cmd/qode@latest
-
-# Add to PATH if not already
-export PATH="$PATH:$HOME/go/bin"
-
 # Onboard an existing project
 cd your-project
 qode init
@@ -196,6 +225,7 @@ Credentials are auto-loaded from a `.env` file in the project root. See [docs/ho
 
 ## Further Reading
 
+- [docs/versioning.md](docs/versioning.md) — Versioning strategy and release process
 - [docs/how-to-use-ticket-fetch.md](docs/how-to-use-ticket-fetch.md) — Ticket system setup and token scopes
 - [docs/qode-yaml-reference.md](docs/qode-yaml-reference.md) — Full `qode.yaml` configuration reference
 - [docs/how-to-customise-prompts.md](docs/how-to-customise-prompts.md) — Override built-in prompt templates per project
