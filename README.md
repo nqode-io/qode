@@ -10,19 +10,19 @@ Download the latest binary for your platform from [GitHub Releases](https://gith
 
 **macOS (Apple Silicon):**
 ```bash
-curl -sL https://github.com/nqode-io/qode/releases/latest/download/qode_darwin_arm64.tar.gz | tar xz
+curl -sL https://github.com/nqode-io/qode/releases/download/v0.1.0-alpha/qode_0.1.0-alpha_darwin_arm64.tar.gz | tar xz
 sudo mv qode /usr/local/bin/
 ```
 
 **macOS (Intel):**
 ```bash
-curl -sL https://github.com/nqode-io/qode/releases/latest/download/qode_darwin_amd64.tar.gz | tar xz
+curl -sL https://github.com/nqode-io/qode/releases/download/v0.1.0-alpha/qode_0.1.0-alpha_darwin_amd64.tar.gz | tar xz
 sudo mv qode /usr/local/bin/
 ```
 
 **Linux (x86_64):**
 ```bash
-curl -sL https://github.com/nqode-io/qode/releases/latest/download/qode_linux_amd64.tar.gz | tar xz
+curl -sL https://github.com/nqode-io/qode/releases/download/v0.1.0-alpha/qode_0.1.0-alpha_linux_amd64.tar.gz | tar xz
 sudo mv qode /usr/local/bin/
 ```
 
