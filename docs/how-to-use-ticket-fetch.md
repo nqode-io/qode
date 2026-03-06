@@ -62,6 +62,21 @@ Required scope: `repo` (for private repositories; no scope needed for public)
 
 Required permission: `Issues: Read` (for private repositories)
 
+## Notion
+
+Requires a Notion internal integration token. The integration must be shared with the target page or database.
+
+```bash
+export NOTION_API_KEY=your-token
+
+qode ticket fetch https://www.notion.so/workspace/My-Ticket-abc123de1234567890abcdef12345678
+```
+
+**Setup:**
+1. Create an integration at: **[notion.so/my-integrations](https://www.notion.so/my-integrations)**
+2. Copy the **Internal Integration Secret**
+3. Share the target page or database with the integration (click `...` → `Connect to` → select your integration)
+
 ## Using a .env File
 
 Store credentials in a `.env` file at the project root (never commit this file). qode loads it automatically before fetching tickets.
@@ -73,6 +88,7 @@ JIRA_API_TOKEN=your-jira-token
 AZURE_DEVOPS_PAT=your-ado-pat
 LINEAR_API_KEY=your-linear-key
 GITHUB_TOKEN=your-github-token
+NOTION_API_KEY=your-notion-token
 ```
 
 ## IDE Slash Command
@@ -93,6 +109,7 @@ qode ticket fetch https://company.atlassian.net/browse/ENG-1
 qode ticket fetch https://dev.azure.com/org/project/_workitems/edit/1
 qode ticket fetch https://linear.app/team/ENG-1
 qode ticket fetch https://github.com/owner/repo/issues/1
+qode ticket fetch https://www.notion.so/workspace/My-Ticket-abc123de1234567890abcdef12345678
 
 # Output is written to .qode/branches/{branch}/context/ticket.md
 cat .qode/branches/$(git branch --show-current)/context/ticket.md
