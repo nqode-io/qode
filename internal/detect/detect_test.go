@@ -164,6 +164,131 @@ func TestComposite_MonorepoDetection(t *testing.T) {
 	}
 }
 
+func TestComposite_ContainerDirDetection(t *testing.T) {
+	root := t.TempDir()
+
+	// apps/frontend with React.
+	frontendDir := filepath.Join(root, "apps", "frontend")
+	if err := os.MkdirAll(frontendDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeJSONAt(t, frontendDir, `{"dependencies":{"react":"18.0.0"}}`)
+
+	layers, err := Composite(root)
+	if err != nil {
+		t.Fatalf("composite: %v", err)
+	}
+
+	found := false
+	for _, l := range layers {
+		if l.Stack == "react" && l.Path == "./apps/frontend" {
+			found = true
+			if l.Name != "frontend" {
+				t.Errorf("expected layer name 'frontend', got %q", l.Name)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("expected react layer at ./apps/frontend, got %+v", layers)
+	}
+}
+
+func TestComposite_PackagesContainerDir(t *testing.T) {
+	root := t.TempDir()
+
+	sharedDir := filepath.Join(root, "packages", "shared")
+	if err := os.MkdirAll(sharedDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sharedDir, "tsconfig.json"), []byte(`{}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	layers, err := Composite(root)
+	if err != nil {
+		t.Fatalf("composite: %v", err)
+	}
+
+	found := false
+	for _, l := range layers {
+		if l.Stack == "typescript" && l.Path == "./packages/shared" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected typescript layer at ./packages/shared, got %+v", layers)
+	}
+}
+
+func TestComposite_MixedRootAndContainer(t *testing.T) {
+	root := t.TempDir()
+
+	// Root go.mod.
+	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// apps/web with React.
+	webDir := filepath.Join(root, "apps", "web")
+	if err := os.MkdirAll(webDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeJSONAt(t, webDir, `{"dependencies":{"react":"18.0.0"}}`)
+
+	layers, err := Composite(root)
+	if err != nil {
+		t.Fatalf("composite: %v", err)
+	}
+
+	stacks := map[string]bool{}
+	for _, l := range layers {
+		stacks[l.Stack] = true
+	}
+	if !stacks["go"] {
+		t.Error("expected go layer")
+	}
+	if !stacks["react"] {
+		t.Error("expected react layer")
+	}
+}
+
+func TestComposite_ContainerRootDedup(t *testing.T) {
+	root := t.TempDir()
+
+	// apps/ has workspace root package.json + child with package.json.
+	appsDir := filepath.Join(root, "apps")
+	if err := os.MkdirAll(appsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeJSONAt(t, appsDir, `{"dependencies":{"react":"18.0.0"}}`)
+
+	webDir := filepath.Join(appsDir, "web")
+	if err := os.MkdirAll(webDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeJSONAt(t, webDir, `{"dependencies":{"react":"18.0.0"}}`)
+
+	layers, err := Composite(root)
+	if err != nil {
+		t.Fatalf("composite: %v", err)
+	}
+
+	// The child at ./apps/web should be detected; container-level ./apps
+	// should not appear since children were found.
+	childFound := false
+	for _, l := range layers {
+		if l.Path == "./apps/web" && l.Stack == "react" {
+			childFound = true
+		}
+		if l.Path == "./apps" {
+			t.Errorf("expected no layer at ./apps when children exist, but found: %+v", l)
+		}
+	}
+	if !childFound {
+		t.Errorf("expected react layer at ./apps/web, got %+v", layers)
+	}
+}
+
 // helpers
 
 func writeJSON(t *testing.T, dir, content string) {
