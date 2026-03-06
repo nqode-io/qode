@@ -6,28 +6,7 @@ Standardises how developers use AI coding assistants across client projects with
 
 ## Installation
 
-Download the latest binary for your platform from [GitHub Releases](https://github.com/nqode-io/qode/releases).
-
-**macOS (Apple Silicon):**
-```bash
-curl -sL https://github.com/nqode-io/qode/releases/download/v0.1.0-alpha/qode_0.1.0-alpha_darwin_arm64.tar.gz | tar xz
-sudo mv qode /usr/local/bin/
-```
-
-**macOS (Intel):**
-```bash
-curl -sL https://github.com/nqode-io/qode/releases/download/v0.1.0-alpha/qode_0.1.0-alpha_darwin_amd64.tar.gz | tar xz
-sudo mv qode /usr/local/bin/
-```
-
-**Linux (x86_64):**
-```bash
-curl -sL https://github.com/nqode-io/qode/releases/download/v0.1.0-alpha/qode_0.1.0-alpha_linux_amd64.tar.gz | tar xz
-sudo mv qode /usr/local/bin/
-```
-
-**Windows:**
-Download the `.zip` from the [releases page](https://github.com/nqode-io/qode/releases), extract it, and add `qode.exe` to your PATH.
+Download the latest binary for your platform from [GitHub Releases](https://github.com/nqode-io/qode/releases), then extract and add it to your PATH.
 
 **Alternative — install from source** (requires Go 1.24+):
 ```bash
