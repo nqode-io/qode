@@ -97,7 +97,7 @@ func isHex32(s string) bool {
 		return false
 	}
 	for _, c := range s {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
 			return false
 		}
 	}
@@ -288,16 +288,16 @@ func checkNotionResponse(resp *http.Response) error {
 	case http.StatusOK:
 		return nil
 	case http.StatusUnauthorized:
-		return fmt.Errorf("Notion API returned 401 — check NOTION_API_KEY\nSet it with: export NOTION_API_KEY=your-token")
+		return fmt.Errorf("notion API returned 401 — check NOTION_API_KEY\nSet it with: export NOTION_API_KEY=your-token")
 	case http.StatusForbidden:
-		return fmt.Errorf("Notion API returned 403 — ensure the integration has access to this page\nShare the page with your integration at notion.so/my-integrations")
+		return fmt.Errorf("notion API returned 403 — ensure the integration has access to this page\nShare the page with your integration at notion.so/my-integrations")
 	case http.StatusNotFound:
-		return fmt.Errorf("Notion page not found — ensure the page is shared with your integration\nManage integrations at notion.so/my-integrations")
+		return fmt.Errorf("notion page not found — ensure the page is shared with your integration\nManage integrations at notion.so/my-integrations")
 	case http.StatusTooManyRequests:
-		return fmt.Errorf("Notion API rate limited — try again in a few seconds")
+		return fmt.Errorf("notion API rate limited — try again in a few seconds")
 	default:
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
-		return fmt.Errorf("Notion API returned %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("notion API returned %d: %s", resp.StatusCode, string(body))
 	}
 }
 

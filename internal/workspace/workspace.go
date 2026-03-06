@@ -21,6 +21,15 @@ type RepoInfo struct {
 	Path string // Absolute path
 }
 
+var knownContainerDirs = map[string]bool{
+	"apps": true, "packages": true, "libs": true,
+	"libraries": true, "services": true, "projects": true,
+}
+
+var monorepoSignalFiles = []string{
+	"turbo.json", "nx.json", "pnpm-workspace.yaml", "lerna.json",
+}
+
 // Detect determines the workspace topology from root.
 func Detect(root string) (Topology, error) {
 	entries, err := os.ReadDir(root)
@@ -37,27 +46,67 @@ func Detect(root string) (Topology, error) {
 		}
 		subAbs := filepath.Join(root, e.Name())
 
-		// Another git repo in the same parent?
 		if isGitRepo(subAbs) {
 			subRepoCount++
 		}
 
-		// Does this subdirectory look like a project layer?
+		if knownContainerDirs[e.Name()] {
+			techDirCount += countContainerProjects(subAbs)
+			continue
+		}
+
 		if looksLikeProjectDir(subAbs) {
 			techDirCount++
 		}
 	}
 
+	hasSignal := hasMonorepoSignal(root)
+
 	switch {
 	case subRepoCount >= 2:
-		// Parent dir of multiple repos → multi-repo workspace.
 		return TopologyMultirepo, nil
 	case techDirCount >= 2:
-		// One repo with multiple tech subdirectories → monorepo.
+		return TopologyMonorepo, nil
+	case techDirCount >= 1 && hasSignal:
 		return TopologyMonorepo, nil
 	default:
 		return TopologySingle, nil
 	}
+}
+
+// countContainerProjects counts project-like children inside a container dir.
+// If no children look like projects but the container itself does, it counts as 1.
+func countContainerProjects(dir string) int {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return 0
+	}
+
+	count := 0
+	for _, e := range entries {
+		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		if looksLikeProjectDir(filepath.Join(dir, e.Name())) {
+			count++
+		}
+	}
+	if count > 0 {
+		return count
+	}
+	if looksLikeProjectDir(dir) {
+		return 1
+	}
+	return 0
+}
+
+func hasMonorepoSignal(root string) bool {
+	for _, f := range monorepoSignalFiles {
+		if _, err := os.Stat(filepath.Join(root, f)); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 // DetectRepos finds sibling git repositories relative to root.

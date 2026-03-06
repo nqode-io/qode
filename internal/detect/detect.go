@@ -9,6 +9,16 @@ import (
 
 const minConfidence = 0.5
 
+var knownContainerDirs = map[string]bool{
+	"apps": true, "packages": true, "libs": true,
+	"libraries": true, "services": true, "projects": true,
+}
+
+var skipDirs = map[string]bool{
+	"node_modules": true, "vendor": true, "dist": true, "build": true,
+	".git": true, "__pycache__": true, "bin": true, "obj": true,
+}
+
 // Composite scans root and every immediate subdirectory, returning all
 // detected technology layers sorted by path then confidence.
 func Composite(root string) ([]DetectedLayer, error) {
@@ -27,13 +37,23 @@ func Composite(root string) ([]DetectedLayer, error) {
 		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
-		// Skip common non-project directories.
-		switch e.Name() {
-		case "node_modules", "vendor", "dist", "build", ".git", "__pycache__", "bin", "obj":
+		if skipDirs[e.Name()] {
 			continue
 		}
 		subPath := e.Name()
 		subAbs := filepath.Join(root, subPath)
+
+		// Recurse into known container directories.
+		if knownContainerDirs[subPath] {
+			childLayers := detectContainerChildren(subAbs, subPath)
+			if len(childLayers) > 0 {
+				layers = append(layers, childLayers...)
+			} else {
+				layers = append(layers, detectAt(subAbs, "./"+subPath, 1)...)
+			}
+			continue
+		}
+
 		subLayers := detectAt(subAbs, "./"+subPath, 1)
 		layers = append(layers, subLayers...)
 	}
@@ -51,6 +71,28 @@ func Composite(root string) ([]DetectedLayer, error) {
 	})
 
 	return layers, nil
+}
+
+// detectContainerChildren scans children of a container directory (e.g. apps/)
+// and runs detection on each child that looks like a project.
+func detectContainerChildren(containerAbs, containerName string) []DetectedLayer {
+	entries, err := os.ReadDir(containerAbs)
+	if err != nil {
+		return nil
+	}
+	var layers []DetectedLayer
+	for _, e := range entries {
+		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		if skipDirs[e.Name()] {
+			continue
+		}
+		childAbs := filepath.Join(containerAbs, e.Name())
+		childRel := "./" + containerName + "/" + e.Name()
+		layers = append(layers, detectAt(childAbs, childRel, 2)...)
+	}
+	return layers
 }
 
 // detectAt runs all registered detectors against dir and returns layers that

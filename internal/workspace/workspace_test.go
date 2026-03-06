@@ -66,6 +66,108 @@ func TestDetect_Multirepo(t *testing.T) {
 	}
 }
 
+func TestDetect_ContainerDirMonorepo(t *testing.T) {
+	root := t.TempDir()
+	// apps/frontend/package.json + apps/backend/go.mod → monorepo.
+	mkdirWrite(t, root, "apps/frontend", "package.json", `{}`)
+	mkdirWrite(t, root, "apps/backend", "go.mod", `module example`)
+
+	topo, err := Detect(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if topo != TopologyMonorepo {
+		t.Errorf("expected monorepo, got %s", topo)
+	}
+}
+
+func TestDetect_EmptyContainerDir(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "apps"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	topo, err := Detect(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if topo != TopologySingle {
+		t.Errorf("expected single, got %s", topo)
+	}
+}
+
+func TestDetect_ContainerAsProject(t *testing.T) {
+	root := t.TempDir()
+	// apps/ has package.json but no project children → single (1 tech dir).
+	mkdirWrite(t, root, "apps", "package.json", `{}`)
+
+	topo, err := Detect(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if topo != TopologySingle {
+		t.Errorf("expected single, got %s", topo)
+	}
+}
+
+func TestDetect_ContainerWithTechMarkersAndChildren(t *testing.T) {
+	root := t.TempDir()
+	// apps/ has its own package.json (workspace root) AND project children → monorepo.
+	mkdirWrite(t, root, "apps", "package.json", `{}`)
+	mkdirWrite(t, root, "apps/web", "package.json", `{}`)
+	mkdirWrite(t, root, "apps/api", "go.mod", `module api`)
+
+	topo, err := Detect(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if topo != TopologyMonorepo {
+		t.Errorf("expected monorepo, got %s", topo)
+	}
+}
+
+func TestDetect_MonorepoSignalTiebreaker(t *testing.T) {
+	root := t.TempDir()
+	// turbo.json at root + single project in apps/ → monorepo via signal.
+	if err := os.WriteFile(filepath.Join(root, "turbo.json"), []byte(`{}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	mkdirWrite(t, root, "apps/web", "package.json", `{}`)
+
+	topo, err := Detect(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if topo != TopologyMonorepo {
+		t.Errorf("expected monorepo, got %s", topo)
+	}
+}
+
+func TestDetect_FlatMonorepoRegression(t *testing.T) {
+	root := t.TempDir()
+	mkdirWrite(t, root, "frontend", "package.json", `{}`)
+	mkdirWrite(t, root, "backend", "go.mod", `module backend`)
+
+	topo, err := Detect(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if topo != TopologyMonorepo {
+		t.Errorf("expected monorepo, got %s", topo)
+	}
+}
+
+func mkdirWrite(t *testing.T, root, dir, file, content string) {
+	t.Helper()
+	abs := filepath.Join(root, dir)
+	if err := os.MkdirAll(abs, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(abs, file), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestDetectRepos(t *testing.T) {
 	root := t.TempDir()
 	for _, name := range []string{"frontend", "backend", "shared"} {
