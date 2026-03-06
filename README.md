@@ -100,7 +100,7 @@ qode branch list                                               List active branc
 qode branch focus <name>                                       Switch to branch, show context
 qode branch remove <name>                                      Clean up branch and context
 
-qode ticket fetch <url>                                        Fetch ticket (Jira, Azure DevOps, Linear, GitHub Issues)
+qode ticket fetch <url>                                        Fetch ticket (Jira, Azure DevOps, Linear, GitHub Issues, Notion)
 
 qode plan refine                                               Generate worker + judge prompts (25/25 target)
 qode plan spec                                                 Generate tech spec from refined analysis
@@ -186,6 +186,10 @@ qode ticket fetch https://linear.app/team/ENG-123
 
 # GitHub Issues (public repos — no token required)
 qode ticket fetch https://github.com/owner/repo/issues/42
+
+# Notion
+export NOTION_API_KEY=your-token
+qode ticket fetch https://www.notion.so/workspace/My-Ticket-abc123de1234567890abcdef12345678
 ```
 
 Credentials are auto-loaded from a `.env` file in the project root. See [docs/how-to-use-ticket-fetch.md](docs/how-to-use-ticket-fetch.md) for full setup instructions and token scope requirements.

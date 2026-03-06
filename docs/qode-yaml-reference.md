@@ -65,7 +65,7 @@ project:
           min_percentage: 80
 
 ticket_system:
-  type: jira                 # jira | azure-devops | linear | github | manual
+  type: jira                 # jira | azure-devops | linear | github | notion | manual
   url: https://company.atlassian.net
   project_key: ENG
   auth:
@@ -124,6 +124,7 @@ Supported values: `react`, `angular`, `nextjs`, `vue`, `svelte`, `dotnet`, `java
 | `azure-devops` | `AZURE_DEVOPS_PAT` |
 | `linear` | `LINEAR_API_KEY` |
 | `github` | `GITHUB_TOKEN` (private repos only) |
+| `notion` | `NOTION_API_KEY` |
 | `manual` | None — edit `context/ticket.md` directly |
 
 ### `review.min_code_score` / `review.min_security_score`
