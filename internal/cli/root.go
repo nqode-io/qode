@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -38,7 +39,7 @@ Workflow:
   2. /qode-ticket-fetch <url>    (in IDE)       # Fetch ticket
   3. /qode-plan-refine           (in IDE)       # Refine requirements (3-5x → 25/25)
   4. /qode-plan-spec             (in IDE)       # Generate tech spec
-  5. /qode-start                 (in IDE)       # Run implementation
+  5. /qode-start                 (in IDE)       # Run implementation prompt
   6. /qode-review-code           (in IDE)       # Code review
   7. /qode-review-security       (in IDE)       # Security review
   8. /qode-knowledge-add-context (in IDE)       # Capture lessons learned
@@ -84,4 +85,26 @@ func resolveRoot() (string, error) {
 		return "", fmt.Errorf("cannot determine working directory: %w", err)
 	}
 	return wd, nil
+}
+
+// writePromptToFile atomically writes content to path, creating parent dirs as needed.
+// On template render error the caller should return before calling this.
+func writePromptToFile(path, content string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".qode-prompt-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if _, err := tmp.WriteString(content); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
 }

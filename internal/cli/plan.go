@@ -1,18 +1,15 @@
 package cli
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/nqode/qode/internal/config"
 	gocontext "github.com/nqode/qode/internal/context"
-	"github.com/nqode/qode/internal/dispatch"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/plan"
 	"github.com/nqode/qode/internal/prompt"
-	"github.com/nqode/qode/internal/scoring"
 	"github.com/spf13/cobra"
 )
 
@@ -28,52 +25,49 @@ func newPlanCmd() *cobra.Command {
 func newPlanRefineCmd() *cobra.Command {
 	var (
 		iterations int
-		promptOnly bool
+		toFile     bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "refine [ticket-url]",
-		Short: "Refine requirements through iterative AI analysis (target: 25/25)",
-		Long: `Generates and dispatches a requirements refinement prompt.
+		Short: "Generate a requirements refinement prompt (target: 25/25)",
+		Long: `Generates a requirements refinement prompt and writes it to stdout.
 
-By default the prompt is sent to the claude CLI and the
-analysis is saved to .qode/branches/<branch>/refined-analysis.md.
-When two-pass scoring is enabled, a judge prompt is also dispatched.
+The LLM reads the stdout output and executes it as the worker prompt.
+Save your analysis to .qode/branches/<branch>/refined-analysis.md.
 
-Use --prompt-only to write the prompt file without dispatching.`,
+Use --to-file to write the prompt files to disk (worker + judge) for debugging.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ticketURL := ""
 			if len(args) > 0 {
 				ticketURL = args[0]
 			}
-			return runPlanRefine(ticketURL, iterations, promptOnly)
+			return runPlanRefine(ticketURL, iterations, toFile)
 		},
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "refinement iteration number (0 = auto-detect)")
-	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt file without dispatching")
+	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
 	return cmd
 }
 
 func newPlanSpecCmd() *cobra.Command {
-	var promptOnly bool
+	var toFile bool
 	cmd := &cobra.Command{
 		Use:   "spec",
-		Short: "Generate a technical specification from the refined analysis",
-		Long: `Generates and dispatches a tech spec prompt.
+		Short: "Generate a technical specification prompt from the refined analysis",
+		Long: `Generates a tech spec prompt and writes it to stdout.
 
-By default the prompt is sent to the claude CLI and the spec
-is saved to .qode/branches/<branch>/spec.md.
-
-Use --prompt-only to write the prompt file without dispatching.`,
+The LLM reads the stdout output and executes it to produce spec.md.
+Use --to-file to write the prompt to disk for debugging.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPlanSpec(promptOnly)
+			return runPlanSpec(toFile)
 		},
 	}
-	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt file without dispatching")
+	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
 	return cmd
 }
 
-func runPlanRefine(ticketURL string, iterations int, promptOnly bool) error {
+func runPlanRefine(ticketURL string, iterations int, toFile bool) error {
 	root, err := resolveRoot()
 	if err != nil {
 		return err
@@ -105,68 +99,25 @@ func runPlanRefine(ticketURL string, iterations int, promptOnly bool) error {
 		return err
 	}
 
-	workerPath, judgePath, err := plan.SaveIterationFiles(root, branch, out)
-	if err != nil {
-		return err
-	}
-
-	if promptOnly {
-		return refinePromptOnly(branch, workerPath, judgePath, out)
-	}
-	return refineDispatch(root, branch, out, workerPath, judgePath, analysisPath, cfg, engine)
-}
-
-func refinePromptOnly(branch, workerPath, judgePath string, out *plan.RefineOutput) error {
-	fmt.Printf("Iteration %d — prompts ready:\n\n", out.Iteration)
-	fmt.Printf("  Worker prompt (do this first):\n    %s\n\n", workerPath)
-	if judgePath != "" {
-		fmt.Printf("  Judge prompt  (score the worker output):\n    %s\n\n", judgePath)
-	}
-	return nil
-}
-
-func refineDispatch(root, branch string, out *plan.RefineOutput, workerPath, judgePath, analysisPath string, cfg *config.Config, engine *prompt.Engine) error {
-	fmt.Printf("Running refinement (iteration %d)...\n", out.Iteration)
-
-	if err := dispatch.RunInteractive(context.Background(), out.WorkerPrompt, dispatch.Options{WorkingDir: root}); err != nil {
-		return fmt.Errorf("refine worker: %w", err)
-	}
-
-	savedAnalysis, err := os.ReadFile(analysisPath)
-	if err != nil {
-		return fmt.Errorf("refine: analysis file not found after worker session — did Claude write %s? (%w)", analysisPath, err)
-	}
-
-	if out.JudgePrompt == "" || judgePath == "" {
-		fmt.Println("\nRefinement analysis saved.")
-		fmt.Printf("Analysis: %s\n", analysisPath)
-		fmt.Println("Run: qode plan spec")
+	if toFile {
+		workerPath, judgePath, err := plan.SaveIterationFiles(root, branch, out)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stderr, "Iteration %d — prompts ready:\n\n", out.Iteration)
+		fmt.Fprintf(os.Stderr, "  Worker prompt:\n    %s\n\n", workerPath)
+		if judgePath != "" {
+			fmt.Fprintf(os.Stderr, "  Judge prompt:\n    %s\n\n", judgePath)
+		}
 		return nil
 	}
 
-	freshJudge, err := scoring.NewEngine(engine, cfg).BuildJudgePrompt(string(savedAnalysis), scoring.RefineRubric)
-	if err != nil {
-		freshJudge = out.JudgePrompt
-	}
-
-	fmt.Println("Scoring...")
-	if err := dispatch.RunInteractive(context.Background(), freshJudge, dispatch.Options{WorkingDir: root}); err != nil {
-		return fmt.Errorf("refine judge: %w", err)
-	}
-
-	result := scoring.ParseScore("", scoring.RefineRubric)
-	result.TargetScore = 25
-
-	if saveErr := plan.SaveIterationResult(root, branch, out.Iteration, string(savedAnalysis), result); saveErr != nil && flagVerbose {
-		fmt.Fprintf(os.Stderr, "Warning: could not save iteration result: %v\n", saveErr)
-	}
-
-	fmt.Printf("\nRefinement iteration %d complete.\n", out.Iteration)
-	fmt.Println("Run: qode plan refine (to score) or qode plan spec (if done)")
-	return nil
+	fmt.Fprintln(os.Stderr, "# Prompt written to stdout — use --to-file to save.")
+	_, err = fmt.Print(out.WorkerPrompt)
+	return err
 }
 
-func runPlanSpec(promptOnly bool) error {
+func runPlanSpec(toFile bool) error {
 	root, err := resolveRoot()
 	if err != nil {
 		return err
@@ -186,9 +137,8 @@ func runPlanSpec(promptOnly bool) error {
 	}
 
 	if !ctx.HasRefinedAnalysis() {
-		fmt.Println("No refined analysis found.")
-		fmt.Println("Run 'qode plan refine' first and save the AI output to:")
-		fmt.Printf("  .qode/branches/%s/refined-analysis.md\n", branch)
+		fmt.Fprintln(os.Stderr, "No refined analysis found.")
+		fmt.Fprintf(os.Stderr, "Run 'qode plan refine' first and save the AI output to:\n  .qode/branches/%s/refined-analysis.md\n", branch)
 		return fmt.Errorf("no refined analysis")
 	}
 
@@ -206,33 +156,17 @@ func runPlanSpec(promptOnly bool) error {
 		return err
 	}
 
-	if err := os.MkdirAll(branchDir, 0755); err != nil {
-		return err
-	}
-	if err := os.WriteFile(promptPath, []byte(p), 0644); err != nil {
-		return err
-	}
-
-	if promptOnly {
-		return specPromptOnly(branch, promptPath)
-	}
-	return specDispatch(root, p, specPath)
-}
-
-func specPromptOnly(branch, promptPath string) error {
-	fmt.Printf("Spec prompt written to:\n  %s\n\n", promptPath)
-	return nil
-}
-
-func specDispatch(root, p, specPath string) error {
-	if err := dispatch.RunInteractive(context.Background(), p, dispatch.Options{WorkingDir: root}); err != nil {
-		return fmt.Errorf("plan spec: %w", err)
+	if toFile {
+		if err := writePromptToFile(promptPath, p); err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stderr, "Spec prompt saved to:\n  %s\n", promptPath)
+		return nil
 	}
 
-	fmt.Println("\nSpec generated.")
-	fmt.Printf("Spec saved to:\n  %s\n", specPath)
-	fmt.Println("Run: qode start")
-	return nil
+	fmt.Fprintln(os.Stderr, "# Prompt written to stdout — use --to-file to save.")
+	_, err = fmt.Print(p)
+	return err
 }
 
 func newPlanStatusCmd() *cobra.Command {

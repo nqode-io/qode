@@ -31,7 +31,7 @@ qode uses its own workflow for development. Once you have qode installed:
 
 ```bash
 qode branch create feat-my-feature    # Create a feature branch
-qode start                            # Run the implementation prompt
+# /qode-start (in IDE)               # Run the implementation prompt
 qode check                            # Run all quality gates
 ```
 

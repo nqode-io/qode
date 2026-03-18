@@ -71,7 +71,7 @@ func buildClaudeMD(cfg *config.Config) string {
 	sb.WriteString("2. `qode ticket fetch <url>` — Fetch ticket context\n")
 	sb.WriteString("3. `/qode-plan-refine` — Iterate requirements (target 25/25)\n")
 	sb.WriteString("4. `/qode-plan-spec` — Generate tech spec\n")
-	sb.WriteString("5. `/qode-start` — Generate and run implementation prompt\n")
+	sb.WriteString("5. `/qode-start` — Run implementation prompt\n")
 	sb.WriteString("6. `/qode-review-code` + `/qode-review-security` — Reviews\n")
 	sb.WriteString("7. `/qode-knowledge-add-context` — (Recommended) Extract lessons learned\n")
 	sb.WriteString("8. `qode check` — All quality gates\n")
@@ -101,18 +101,18 @@ func claudeSlashCommands(cfg *config.Config) map[string]string {
 	return map[string]string{
 		"qode-plan-refine": fmt.Sprintf(`# Refine Requirements — %s
 
-First, run this command to generate the prompts:
-  qode plan refine --prompt-only
-
 Where $BRANCH is the current git branch name.
 
-**Worker pass:** Read and execute the worker prompt in:
-  .qode/branches/$BRANCH/.refine-prompt.md
+**Worker pass:** Run this command and use its stdout output as your worker prompt:
+  qode plan refine
 
 Save the worker output to:
   .qode/branches/$BRANCH/refined-analysis.md
 
-**Judge pass (scoring):**
+**Judge pass (scoring):** Run this command to generate the prompt files:
+  qode plan refine --to-file
+
+Then:
 1. Read .qode/branches/$BRANCH/.refine-judge-prompt.md
 2. Replace the placeholder line "[Worker output will be pasted here by the user after running the worker prompt above]" with the full content of refined-analysis.md
 3. Execute the modified judge prompt
@@ -125,13 +125,10 @@ Save the worker output to:
 
 		"qode-plan-spec": fmt.Sprintf(`# Generate Technical Specification — %s
 
-First, run this command to generate the prompt:
-  qode plan spec --prompt-only
-
-Then read and execute the prompt in:
-  .qode/branches/$BRANCH/.spec-prompt.md
-
 Where $BRANCH is the current git branch name.
+
+Run this command and use its stdout output as your prompt:
+  qode plan spec
 
 After generating the spec:
 - Save it to: .qode/branches/$BRANCH/spec.md
@@ -140,13 +137,10 @@ After generating the spec:
 
 		"qode-review-code": fmt.Sprintf(`# Code Review — %s
 
-First, run this command to generate the prompt:
-  qode review code --prompt-only
-
-Then read and execute the prompt in:
-  .qode/branches/$BRANCH/.code-review-prompt.md
-
 Where $BRANCH is the current git branch name.
+
+Run this command and use its stdout output as your prompt:
+  qode review code
 
 After completing the review:
 - Save to: .qode/branches/$BRANCH/code-review.md
@@ -156,13 +150,10 @@ After completing the review:
 
 		"qode-review-security": fmt.Sprintf(`# Security Review — %s
 
-First, run this command to generate the prompt:
-  qode review security --prompt-only
-
-Then read and execute the prompt in:
-  .qode/branches/$BRANCH/.security-review-prompt.md
-
 Where $BRANCH is the current git branch name.
+
+Run this command and use its stdout output as your prompt:
+  qode review security
 
 After completing the review:
 - Save to: .qode/branches/$BRANCH/security-review.md
@@ -172,13 +163,10 @@ After completing the review:
 
 		"qode-start": fmt.Sprintf(`# Start Implementation — %s
 
-First, run this command to generate the prompt:
-  qode start --prompt-only
-
-Then read and execute the prompt in:
-  .qode/branches/$BRANCH/.start-prompt.md
-
 Where $BRANCH is the current git branch name.
+
+Run this command and use its stdout output as your prompt:
+  qode start
 
 Execute the prompt as your implementation session.
 `, name),
@@ -214,13 +202,10 @@ Rules:
 
 		"qode-knowledge-add-branch": fmt.Sprintf(`# Extract Lessons from Branch — %s
 
-First, run this command to generate the prompt:
-  qode knowledge add-branch --prompt-only $ARGUMENTS
-
-Then read and execute the prompt in:
-  .qode/branches/$BRANCH/.knowledge-add-branch-prompt.md
-
 Where $BRANCH is the current git branch name.
+
+Run this command and use its stdout output as your prompt:
+  qode knowledge add-branch $ARGUMENTS
 `, name),
 	}
 }

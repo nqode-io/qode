@@ -17,13 +17,6 @@ func Setup(root string, cfg *config.Config) error {
 		generated = append(generated, "Cursor")
 	}
 
-	if cfg.IDE.VSCode.Enabled {
-		if err := SetupVSCode(root, cfg); err != nil {
-			return fmt.Errorf("vscode setup: %w", err)
-		}
-		generated = append(generated, "VS Code")
-	}
-
 	if cfg.IDE.ClaudeCode.Enabled {
 		if err := SetupClaudeCode(root, cfg); err != nil {
 			return fmt.Errorf("claude code setup: %w", err)
@@ -32,7 +25,7 @@ func Setup(root string, cfg *config.Config) error {
 	}
 
 	if len(generated) == 0 {
-		fmt.Println("No IDEs enabled. Set ide.cursor/vscode/claude_code.enabled: true in qode.yaml")
+		fmt.Println("No IDEs enabled. Set ide.cursor/claude_code.enabled: true in qode.yaml")
 		return nil
 	}
 

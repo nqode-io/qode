@@ -1,7 +1,6 @@
 package ide
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,8 +17,6 @@ func minimalConfig() *config.Config {
 	cfg.IDE.ClaudeCode.SlashCommands = true
 	cfg.IDE.ClaudeCode.ClaudeMD = false
 	cfg.IDE.Cursor.Enabled = true
-	cfg.IDE.VSCode.Enabled = true
-	cfg.IDE.VSCode.Tasks = true
 	return cfg
 }
 
@@ -53,6 +50,15 @@ func TestClaudeSlashCommands_IncludesKnowledge(t *testing.T) {
 		}
 		if content == "" {
 			t.Errorf("claudeSlashCommands: %s has empty content", key)
+		}
+	}
+}
+
+func TestClaudeSlashCommands_NoPromptOnly(t *testing.T) {
+	cmds := claudeSlashCommands(minimalConfig())
+	for name, content := range cmds {
+		if strings.Contains(content, "--prompt-only") {
+			t.Errorf("claudeSlashCommands: %s contains --prompt-only", name)
 		}
 	}
 }
@@ -98,55 +104,12 @@ func TestCursorSlashCommands_IncludesKnowledge(t *testing.T) {
 	}
 }
 
-// --- buildTasksJSON ---
-
-func TestBuildTasksJSON_ContainsTicketFetchTask(t *testing.T) {
-	result := buildTasksJSON(minimalConfig())
-
-	tasks, ok := result["tasks"].([]map[string]interface{})
-	if !ok {
-		t.Fatal("buildTasksJSON: tasks not []map[string]interface{}")
-	}
-
-	var found bool
-	for _, task := range tasks {
-		if task["label"] == "qode: fetch ticket" {
-			found = true
-			if task["command"] != "qode ticket fetch ${input:ticketUrl}" {
-				t.Errorf("fetch ticket command = %q, want %q", task["command"], "qode ticket fetch ${input:ticketUrl}")
-			}
-			if task["type"] != "shell" {
-				t.Errorf("fetch ticket type = %q, want %q", task["type"], "shell")
-			}
+func TestCursorSlashCommands_NoPromptOnly(t *testing.T) {
+	cmds := slashCommands(minimalConfig())
+	for name, content := range cmds {
+		if strings.Contains(content, "--prompt-only") {
+			t.Errorf("slashCommands: %s contains --prompt-only", name)
 		}
-	}
-	if !found {
-		t.Error("buildTasksJSON: task 'qode: fetch ticket' not found")
-	}
-}
-
-func TestBuildTasksJSON_ContainsInputsEntry(t *testing.T) {
-	result := buildTasksJSON(minimalConfig())
-
-	inputs, ok := result["inputs"].([]map[string]interface{})
-	if !ok {
-		t.Fatal("buildTasksJSON: inputs not []map[string]interface{}")
-	}
-	if len(inputs) == 0 {
-		t.Fatal("buildTasksJSON: inputs is empty")
-	}
-
-	found := false
-	for _, inp := range inputs {
-		if inp["id"] == "ticketUrl" {
-			found = true
-			if inp["type"] != "promptString" {
-				t.Errorf("ticketUrl input type = %q, want %q", inp["type"], "promptString")
-			}
-		}
-	}
-	if !found {
-		t.Error("buildTasksJSON: input with id 'ticketUrl' not found")
 	}
 }
 
@@ -273,67 +236,5 @@ func TestSetupCursor_WritesKnowledgeCommands(t *testing.T) {
 		if len(data) == 0 {
 			t.Errorf("%s.mdc is empty", name)
 		}
-	}
-}
-
-// --- SetupVSCode integration ---
-
-func TestSetupVSCode_WritesTicketFetchTask(t *testing.T) {
-	dir := t.TempDir()
-	cfg := minimalConfig()
-
-	if err := SetupVSCode(dir, cfg); err != nil {
-		t.Fatalf("SetupVSCode: %v", err)
-	}
-
-	data, err := os.ReadFile(filepath.Join(dir, ".vscode", "tasks.json"))
-	if err != nil {
-		t.Fatalf("reading tasks.json: %v", err)
-	}
-
-	var tasks map[string]interface{}
-	if err := json.Unmarshal(data, &tasks); err != nil {
-		t.Fatalf("parsing tasks.json: %v", err)
-	}
-
-	taskList, ok := tasks["tasks"].([]interface{})
-	if !ok {
-		t.Fatal("tasks.json: tasks field not an array")
-	}
-
-	foundTask := false
-	for _, item := range taskList {
-		task, ok := item.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		if task["label"] == "qode: fetch ticket" {
-			foundTask = true
-			if task["command"] != "qode ticket fetch ${input:ticketUrl}" {
-				t.Errorf("task command = %q, want %q", task["command"], "qode ticket fetch ${input:ticketUrl}")
-			}
-		}
-	}
-	if !foundTask {
-		t.Error("tasks.json: 'qode: fetch ticket' task not found")
-	}
-
-	inputs, ok := tasks["inputs"].([]interface{})
-	if !ok {
-		t.Fatal("tasks.json: inputs field not an array")
-	}
-
-	foundInput := false
-	for _, item := range inputs {
-		inp, ok := item.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		if inp["id"] == "ticketUrl" {
-			foundInput = true
-		}
-	}
-	if !foundInput {
-		t.Error("tasks.json: input 'ticketUrl' not found")
 	}
 }

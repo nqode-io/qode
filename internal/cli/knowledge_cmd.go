@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/nqode/qode/internal/config"
 	gocontext "github.com/nqode/qode/internal/context"
-	"github.com/nqode/qode/internal/dispatch"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/knowledge"
 	"github.com/nqode/qode/internal/prompt"
@@ -120,21 +118,21 @@ func newKnowledgeSearchCmd() *cobra.Command {
 const maxDiffLines = 500
 
 func newKnowledgeAddBranchCmd() *cobra.Command {
-	var promptOnly bool
+	var toFile bool
 	cmd := &cobra.Command{
 		Use:   "add-branch [branches...]",
-		Short: "Extract lessons learned from branch context",
-		Long:  "Reads branch artifacts (ticket, spec, reviews, diff) and extracts lessons learned into the knowledge base.",
+		Short: "Generate a lesson extraction prompt from branch context",
+		Long:  "Reads branch artifacts (ticket, spec, reviews, diff) and writes a lesson extraction prompt to stdout.",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKnowledgeAddBranch(args, promptOnly)
+			return runKnowledgeAddBranch(args, toFile)
 		},
 	}
-	cmd.Flags().BoolVar(&promptOnly, "prompt-only", false, "write prompt file without dispatching")
+	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
 	return cmd
 }
 
-func runKnowledgeAddBranch(args []string, promptOnly bool) error {
+func runKnowledgeAddBranch(args []string, toFile bool) error {
 	root, err := resolveRoot()
 	if err != nil {
 		return err
@@ -153,7 +151,7 @@ func runKnowledgeAddBranch(args []string, promptOnly bool) error {
 	}
 
 	branches := parseBranchArgs(args)
-	fmt.Printf("Extracting lessons from branches: %s\n", strings.Join(branches, ", "))
+	fmt.Fprintf(os.Stderr, "Extracting lessons from branches: %s\n", strings.Join(branches, ", "))
 
 	data, err := buildBranchLessonData(root, cfg, branches)
 	if err != nil {
@@ -165,21 +163,19 @@ func runKnowledgeAddBranch(args []string, promptOnly bool) error {
 		return err
 	}
 
-	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
-	if err := os.MkdirAll(branchDir, 0755); err != nil {
-		return err
-	}
-	promptPath := filepath.Join(branchDir, ".knowledge-add-branch-prompt.md")
-	if err := os.WriteFile(promptPath, []byte(p), 0644); err != nil {
-		return err
-	}
-
-	if promptOnly {
-		fmt.Printf("Lesson extraction prompt written to:\n  %s\n\n", promptPath)
-		fmt.Println("Use slash command: /qode-knowledge-add-branch")
+	if toFile {
+		branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
+		promptPath := filepath.Join(branchDir, ".knowledge-add-branch-prompt.md")
+		if err := writePromptToFile(promptPath, p); err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stderr, "Lesson extraction prompt saved to:\n  %s\n", promptPath)
 		return nil
 	}
-	return dispatch.RunInteractive(context.Background(), p, dispatch.Options{WorkingDir: root})
+
+	fmt.Fprintln(os.Stderr, "# Prompt written to stdout — use --to-file to save.")
+	_, err = fmt.Print(p)
+	return err
 }
 
 func buildBranchLessonData(root string, cfg *config.Config, branches []string) (prompt.TemplateData, error) {
