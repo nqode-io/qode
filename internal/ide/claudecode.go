@@ -101,8 +101,6 @@ func claudeSlashCommands(cfg *config.Config) map[string]string {
 	return map[string]string{
 		"qode-plan-refine": fmt.Sprintf(`# Refine Requirements — %s
 
-Where $BRANCH is the current git branch name.
-
 **Worker pass:** Run this command and use its stdout output as your worker prompt:
   qode plan refine
 
@@ -110,7 +108,7 @@ Save the worker output to:
   .qode/branches/$BRANCH/refined-analysis.md
 
 **Judge pass (scoring):** Run this command to generate the prompt files:
-  qode plan refine --to-file
+  qode plan refine
 
 Then:
 1. Read .qode/branches/$BRANCH/.refine-judge-prompt.md
@@ -125,7 +123,6 @@ Then:
 
 		"qode-plan-spec": fmt.Sprintf(`# Generate Technical Specification — %s
 
-Where $BRANCH is the current git branch name.
 
 Run this command and use its stdout output as your prompt:
   qode plan spec
@@ -137,7 +134,6 @@ After generating the spec:
 
 		"qode-review-code": fmt.Sprintf(`# Code Review — %s
 
-Where $BRANCH is the current git branch name.
 
 Run this command and use its stdout output as your prompt:
   qode review code
@@ -150,7 +146,6 @@ After completing the review:
 
 		"qode-review-security": fmt.Sprintf(`# Security Review — %s
 
-Where $BRANCH is the current git branch name.
 
 Run this command and use its stdout output as your prompt:
   qode review security
@@ -163,7 +158,6 @@ After completing the review:
 
 		"qode-start": fmt.Sprintf(`# Start Implementation — %s
 
-Where $BRANCH is the current git branch name.
 
 Run this command and use its stdout output as your prompt:
   qode start
@@ -202,7 +196,6 @@ Rules:
 
 		"qode-knowledge-add-branch": fmt.Sprintf(`# Extract Lessons from Branch — %s
 
-Where $BRANCH is the current git branch name.
 
 Run this command and use its stdout output as your prompt:
   qode knowledge add-branch $ARGUMENTS

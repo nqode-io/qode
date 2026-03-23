@@ -46,8 +46,7 @@ qode Workflow
 ├─────────────────────────────────────────────────────────────────┤
 │  STEP 5: IMPLEMENT                                              │
 │  /qode-start  (in Cursor/Claude Code)                           │
-│  → Generates implementation prompt with spec + knowledge        │
-│  → Use qode start --to-file to save prompt for debugging        │
+│  → Generates implementation prompt with spec + knowledge        │       │
 ├─────────────────────────────────────────────────────────────────┤
 │  STEP 6: TEST LOCALLY                                           │
 │  → Test the implementation manually                             │

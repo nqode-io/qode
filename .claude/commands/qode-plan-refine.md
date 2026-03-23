@@ -1,7 +1,5 @@
 # Refine Requirements — qode
 
-Where $BRANCH is the current git branch name.
-
 **Worker pass:** Run this command and use its stdout output as your worker prompt:
   qode plan refine
 
@@ -9,7 +7,7 @@ Save the worker output to:
   .qode/branches/$BRANCH/refined-analysis.md
 
 **Judge pass (scoring):** Run this command to generate the prompt files:
-  qode plan refine --to-file
+  qode plan refine
 
 Then:
 1. Read .qode/branches/$BRANCH/.refine-judge-prompt.md

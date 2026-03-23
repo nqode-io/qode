@@ -30,9 +30,21 @@ go install ./cmd/qode/
 qode uses its own workflow for development. Once you have qode installed:
 
 ```bash
-qode branch create feat-my-feature    # Create a feature branch
-# /qode-start (in IDE)               # Run the implementation prompt
-qode check                            # Run all quality gates
+qode branch create feat-my-feature        # Create a feature branch
+# /qode-start (in IDE)                    # Run the implementation prompt
+qode check                                # Run all quality gates
+
+qode branch create <name>                 # Create a feature branch
+qode ticket fetch <url>                   # Fetch ticket into context
+#   /qode-ticket-fetch <url> (in IDE)    
+#   /qode-plan-refine (in IDE)            # Refine requirements—iterate to 25/25
+#   /qode-plan-spec (in IDE)              # Generate tech spec
+#   /qode-start (in IDE)                  # Run implementation prompt
+#   / qode-review-code (in IDE)           # Code review
+#   /qode-review-security (in IDE)        # Security review
+qode check                                # Run all quality gates
+#   /qode-knowledge-add-context` (in IDE) # (Recommended) Extract lessons learned
+10. qode branch remove <name>             # Cleanup
 ```
 
 See the [README](README.md) for the full 9-step workflow.
