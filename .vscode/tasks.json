@@ -36,30 +36,6 @@
         "cwd": "${workspaceFolder}/."
       },
       "type": "shell"
-    },
-    {
-      "command": "qode ticket fetch ${input:ticketUrl}",
-      "group": "build",
-      "label": "qode: fetch ticket",
-      "type": "shell"
-    },
-    {
-      "command": "qode check",
-      "group": "test",
-      "label": "qode: check all",
-      "type": "shell"
-    },
-    {
-      "command": "qode review code",
-      "group": "test",
-      "label": "qode: review code",
-      "type": "shell"
-    },
-    {
-      "command": "qode review security",
-      "group": "test",
-      "label": "qode: review security",
-      "type": "shell"
     }
   ],
   "version": "2.0.0"

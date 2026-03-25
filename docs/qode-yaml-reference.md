@@ -86,7 +86,6 @@ ide:
     enabled: true
   claude_code:
     enabled: true
-  # vscode: no longer supported — VSCode has no AI slash command mechanism
 
 knowledge:
   auto_discover: true
