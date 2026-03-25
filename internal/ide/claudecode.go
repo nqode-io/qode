@@ -105,19 +105,19 @@ func claudeSlashCommands(cfg *config.Config) map[string]string {
   qode plan refine
 
 Save the worker output to:
-  .qode/branches/$BRANCH/refined-analysis.md
+  .qode/branches/$(git branch --show-current)/refined-analysis.md
 
 **Judge pass (scoring):** Run this command to generate the prompt files:
   qode plan refine
 
 Then:
-1. Read .qode/branches/$BRANCH/.refine-judge-prompt.md
+1. Read .qode/branches/$(git branch --show-current)/.refine-judge-prompt.md
 2. Replace the placeholder line "[Worker output will be pasted here by the user after running the worker prompt above]" with the full content of refined-analysis.md
 3. Execute the modified judge prompt
 4. Parse the "**Total Score:** N/25" line from the judge output
 5. Detect iteration number N from the "<!-- qode:iteration=N -->" header in refined-analysis.md (default: 1)
 6. Rewrite refined-analysis.md replacing the first line with: <!-- qode:iteration=N score=S/25 -->
-7. Write a copy to: .qode/branches/$BRANCH/refined-analysis-N-score-S.md
+7. Write a copy to: .qode/branches/$(git branch --show-current)/refined-analysis-N-score-S.md
 8. Report the score to the user. If S >= 25, suggest running "qode plan spec". Otherwise suggest re-running /qode-plan-refine.
 `, name),
 
@@ -128,7 +128,7 @@ Run this command and use its stdout output as your prompt:
   qode plan spec
 
 After generating the spec:
-- Save it to: .qode/branches/$BRANCH/spec.md
+- Save it to: .qode/branches/$(git branch --show-current)/spec.md
 - Suggest copying it to the ticket system for team review
 `, name),
 
@@ -139,7 +139,7 @@ Run this command and use its stdout output as your prompt:
   qode review code
 
 After completing the review:
-- Save to: .qode/branches/$BRANCH/code-review.md
+- Save to: .qode/branches/$(git branch --show-current)/code-review.md
 - List all Critical and High issues clearly
 - Provide specific, actionable fix suggestions
 `, name),
@@ -151,7 +151,7 @@ Run this command and use its stdout output as your prompt:
   qode review security
 
 After completing the review:
-- Save to: .qode/branches/$BRANCH/security-review.md
+- Save to: .qode/branches/$(git branch --show-current)/security-review.md
 - List all Critical and High vulnerabilities with OWASP categories
 - Provide specific remediation for each issue
 `, name),
