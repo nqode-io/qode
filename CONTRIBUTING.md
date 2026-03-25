@@ -44,7 +44,7 @@ qode ticket fetch <url>                 # Fetch ticket into context
 /qode-review-security (in IDE)        # Security review
 qode check                                # Run all quality gates
 /qode-knowledge-add-context` (in IDE) # (Recommended) Extract lessons learned
-10. qode branch remove <name>             # Cleanup
+qode branch remove <name>             # Cleanup
 ```
 
 See the [README](README.md) for the full 9-step workflow.

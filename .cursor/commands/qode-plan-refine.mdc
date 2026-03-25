@@ -9,7 +9,7 @@ Save the worker output to:
   .qode/branches/$(git branch --show-current)/refined-analysis.md
 
 **Judge pass (scoring):** Run this command to generate the prompt files:
-  qode plan refine --to-file
+  qode plan refine
 
 Then:
 1. Read .qode/branches/$(git branch --show-current)/.refine-judge-prompt.md
