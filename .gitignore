@@ -30,6 +30,7 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+.claude/settings.json
 
 # OS generated files
 .DS_Store
