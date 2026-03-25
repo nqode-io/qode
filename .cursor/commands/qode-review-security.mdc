@@ -2,11 +2,8 @@
 description: Security review for qode
 ---
 
-First, run this command to generate the prompt:
-  qode review security --prompt-only
-
-Then read and execute the prompt in:
-  .qode/branches/$(git branch --show-current)/.security-review-prompt.md
+Run this command and use its stdout output as your prompt:
+  qode review security
 
 After completing the review, save it to:
   .qode/branches/$(git branch --show-current)/security-review.md

@@ -2,11 +2,8 @@
 description: Code review for qode
 ---
 
-First, run this command to generate the prompt:
-  qode review code --prompt-only
-
-Then read and execute the prompt in:
-  .qode/branches/$(git branch --show-current)/.code-review-prompt.md
+Run this command and use its stdout output as your prompt:
+  qode review code
 
 After completing the review, save it to:
   .qode/branches/$(git branch --show-current)/code-review.md

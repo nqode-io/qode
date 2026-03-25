@@ -20,21 +20,16 @@ func newIDECmd() *cobra.Command {
 func newIDESetupCmd() *cobra.Command {
 	var (
 		cursor bool
-		vscode bool
 		claude bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "setup",
-		Short: "Generate IDE configs (Cursor, VS Code, Claude Code)",
+		Short: "Generate IDE configs (Cursor, Claude Code)",
 		Long: `Generates IDE-specific configuration files based on qode.yaml.
 
-Cursor:    .cursorrules/*.mdc + .cursor/commands/*.mdc
-VS Code:   .vscode/launch.json, tasks.json, settings.json, extensions.json
-Claude:    CLAUDE.md + .claude/commands/*.md
-
-Existing configs are preserved; qode-managed sections are demarcated with
-// qode:managed-start and // qode:managed-end markers.`,
+Cursor:  .cursorrules/*.mdc + .cursor/commands/*.mdc
+Claude:  CLAUDE.md + .claude/commands/*.md`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := resolveRoot()
 			if err != nil {
@@ -45,23 +40,19 @@ Existing configs are preserved; qode-managed sections are demarcated with
 				return err
 			}
 
-			// If specific IDE flags are set, override config.
 			if cmd.Flags().Changed("cursor") {
 				cfg.IDE.Cursor.Enabled = cursor
-			}
-			if cmd.Flags().Changed("vscode") {
-				cfg.IDE.VSCode.Enabled = vscode
 			}
 			if cmd.Flags().Changed("claude") {
 				cfg.IDE.ClaudeCode.Enabled = claude
 			}
 
+			// TODO: add --force flag before beta to make overwriting opt-in; currently always overwrites.
 			return ide.Setup(root, cfg)
 		},
 	}
 
 	cmd.Flags().BoolVar(&cursor, "cursor", false, "generate Cursor configs only")
-	cmd.Flags().BoolVar(&vscode, "vscode", false, "generate VS Code configs only")
 	cmd.Flags().BoolVar(&claude, "claude", false, "generate Claude Code configs only")
 
 	return cmd
@@ -70,7 +61,7 @@ Existing configs are preserved; qode-managed sections are demarcated with
 func newIDESyncCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "sync",
-		Short: "Regenerate IDE configs from qode.yaml (non-destructive)",
+		Short: "Regenerate IDE configs from qode.yaml",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := resolveRoot()
 			if err != nil {
@@ -80,6 +71,7 @@ func newIDESyncCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// TODO: add --force flag before beta to make overwriting opt-in; currently always overwrites.
 			if err := ide.Setup(root, cfg); err != nil {
 				return err
 			}

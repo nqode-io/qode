@@ -3,10 +3,10 @@ Never run qode via `go run .` or `go run ./cmd/qode` during development sessions
 
 **Example 1:** Incorrect — running from source
 ```bash
-go run ./cmd/qode review code --prompt-only
+go run ./cmd/qode review code
 ```
 
 **Example 2:** Correct — using installed binary
 ```bash
-qode review code --prompt-only
+qode review code
 ```

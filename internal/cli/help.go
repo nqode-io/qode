@@ -45,10 +45,8 @@ qode Workflow
 │  → Tip: copy spec back to Jira/Azure DevOps ticket              │
 ├─────────────────────────────────────────────────────────────────┤
 │  STEP 5: IMPLEMENT                                              │
-│  qode start                                                     │
 │  /qode-start  (in Cursor/Claude Code)                           │
-│  → Generates implementation prompt with spec + knowledge        │
-│  → Runs claude CLI interactively                                │
+│  → Generates implementation prompt with spec + knowledge        │       │
 ├─────────────────────────────────────────────────────────────────┤
 │  STEP 6: TEST LOCALLY                                           │
 │  → Test the implementation manually                             │

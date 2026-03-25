@@ -113,16 +113,16 @@ func slashCommands(cfg *config.Config) map[string]string {
 description: Refine requirements for %s (target 25/25)
 ---
 
-First, run this command to generate the prompts:
-  qode plan refine --prompt-only
-
-**Worker pass:** Read and execute the worker prompt in:
-  .qode/branches/$(git branch --show-current)/.refine-prompt.md
+**Worker pass:** Run this command and use its stdout output as your worker prompt:
+  qode plan refine
 
 Save the worker output to:
   .qode/branches/$(git branch --show-current)/refined-analysis.md
 
-**Judge pass (scoring):**
+**Judge pass (scoring):** Run this command to generate the prompt files:
+  qode plan refine
+
+Then:
 1. Read .qode/branches/$(git branch --show-current)/.refine-judge-prompt.md
 2. Replace the placeholder line "[Worker output will be pasted here by the user after running the worker prompt above]" with the full content of refined-analysis.md
 3. Execute the modified judge prompt
@@ -137,11 +137,8 @@ Save the worker output to:
 description: Generate technical specification for %s
 ---
 
-First, run this command to generate the prompt:
-  qode plan spec --prompt-only
-
-Then read and execute the prompt in:
-  .qode/branches/$(git branch --show-current)/.spec-prompt.md
+Run this command and use its stdout output as your prompt:
+  qode plan spec
 
 After generating the spec, save it to:
   .qode/branches/$(git branch --show-current)/spec.md
@@ -151,11 +148,8 @@ After generating the spec, save it to:
 description: Code review for %s
 ---
 
-First, run this command to generate the prompt:
-  qode review code --prompt-only
-
-Then read and execute the prompt in:
-  .qode/branches/$(git branch --show-current)/.code-review-prompt.md
+Run this command and use its stdout output as your prompt:
+  qode review code
 
 After completing the review, save it to:
   .qode/branches/$(git branch --show-current)/code-review.md
@@ -165,11 +159,8 @@ After completing the review, save it to:
 description: Security review for %s
 ---
 
-First, run this command to generate the prompt:
-  qode review security --prompt-only
-
-Then read and execute the prompt in:
-  .qode/branches/$(git branch --show-current)/.security-review-prompt.md
+Run this command and use its stdout output as your prompt:
+  qode review security
 
 After completing the review, save it to:
   .qode/branches/$(git branch --show-current)/security-review.md
@@ -179,11 +170,8 @@ After completing the review, save it to:
 description: Start implementation session for %s
 ---
 
-First, run this command to generate the prompt:
-  qode start --prompt-only
-
-Then read and execute the prompt in:
-  .qode/branches/$(git branch --show-current)/.start-prompt.md
+Run this command and use its stdout output as your prompt:
+  qode start
 
 Execute the prompt as your implementation session.
 `, cfg.Project.Name),
@@ -227,11 +215,8 @@ Rules:
 description: Extract lessons learned from branch context for %s
 ---
 
-First, run this command to generate the prompt:
-  qode knowledge add-branch --prompt-only $ARGUMENTS
-
-Then read and execute the prompt in:
-  .qode/branches/$(git branch --show-current)/.knowledge-add-branch-prompt.md
+Run this command and use its stdout output as your prompt:
+  qode knowledge add-branch $ARGUMENTS
 `, cfg.Project.Name),
 	}
 }

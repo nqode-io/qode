@@ -84,8 +84,6 @@ scoring:
 ide:
   cursor:
     enabled: true
-  vscode:
-    enabled: true
   claude_code:
     enabled: true
 

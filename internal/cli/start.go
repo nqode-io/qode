@@ -1,14 +1,12 @@
 package cli
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/nqode/qode/internal/config"
 	gocontext "github.com/nqode/qode/internal/context"
-	"github.com/nqode/qode/internal/dispatch"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/knowledge"
 	"github.com/nqode/qode/internal/plan"
@@ -17,17 +15,15 @@ import (
 )
 
 func newStartCmd() *cobra.Command {
+	var toFile bool
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Generate an implementation prompt from the current spec",
 		Long: `Reads spec.md and knowledge base, then generates an implementation prompt.
 
-The prompt is written to .qode/branches/<branch>/.start-prompt.md.
-It includes the full spec, knowledge base fragments, and stack-specific
-clean code requirements.`,
+The prompt is written to stdout for the LLM to execute directly.
+Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md for debugging.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			promptOnly, _ := cmd.Flags().GetBool("prompt-only")
-
 			root, err := resolveRoot()
 			if err != nil {
 				return err
@@ -61,35 +57,20 @@ clean code requirements.`,
 				return err
 			}
 
-			outPath := filepath.Join(root, config.QodeDir, "branches", branch, ".start-prompt.md")
-			if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
-				return err
-			}
-			if err := os.WriteFile(outPath, []byte(p), 0644); err != nil {
-				return err
+			if toFile {
+				outPath := filepath.Join(root, config.QodeDir, "branches", branch, ".start-prompt.md")
+				if err := writePromptToFile(outPath, p); err != nil {
+					return err
+				}
+				fmt.Fprintf(os.Stderr, "Implementation prompt saved to:\n  %s\n", outPath)
+				return nil
 			}
 
-			if promptOnly {
-				return startPromptOnly(branch, outPath)
-			}
-			return startDispatch(root, p)
+			fmt.Fprintln(os.Stderr, "# Prompt written to stdout — use --to-file to save.")
+			_, err = fmt.Print(p)
+			return err
 		},
 	}
-	cmd.Flags().Bool("prompt-only", false, "write prompt file without dispatching")
+	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
 	return cmd
-}
-
-func startPromptOnly(branch, promptPath string) error {
-	fmt.Printf("Implementation prompt written to:\n  %s\n\n", promptPath)
-	return nil
-}
-
-func startDispatch(root, p string) error {
-	if err := dispatch.RunInteractive(context.Background(), p, dispatch.Options{WorkingDir: root}); err != nil {
-		return fmt.Errorf("start: %w", err)
-	}
-
-	fmt.Println("\nImplementation prompt executed.")
-	fmt.Println("Review changes, then run: /qode-review-code")
-	return nil
 }

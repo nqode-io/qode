@@ -17,6 +17,13 @@ Edit the template file directly in `.qode/prompts/`:
 $EDITOR .qode/prompts/refine/base.md.tmpl
 ```
 
+To preview the rendered output after editing, use the `--to-file` flag:
+
+```bash
+qode plan refine --to-file
+# → saves to .qode/branches/<branch>/.refine-prompt.md
+```
+
 ## Template files
 
 All templates are located under `.qode/prompts/`:

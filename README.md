@@ -25,7 +25,7 @@ qode --version
 cd your-project
 qode init
 
-# Set up IDE configs (Cursor + VS Code + Claude Code)
+# Set up IDE configs (Cursor + Claude Code)
 qode ide setup
 
 # Start a feature
@@ -43,8 +43,7 @@ Do note that you will have to configure `.env` file with appropriate ticketing s
    /qode-ticket-fetch <url>      (in IDE)    — or use the slash command
 3. /qode-plan-refine             (in IDE)    Refine requirements — iterate to 25/25
 4. /qode-plan-spec               (in IDE)    Generate tech spec
-5. qode start                                Run implementation prompt interactively
-   /qode-start                   (in IDE)    — or use the slash command
+5. /qode-start                   (in IDE)    Run implementation prompt
 6. /qode-review-code             (in IDE)    Code review
 7. /qode-review-security         (in IDE)    Security review
 8. qode check                                Run all quality gates
@@ -89,12 +88,11 @@ Target: 25/25 before generating a spec.
 | IDE | What's generated |
 |---|---|
 | **Cursor** | `.cursorrules/*.mdc` rules + `.cursor/commands/*.mdc` slash commands |
-| **VS Code** | `.vscode/launch.json`, `tasks.json`, `settings.json`, `extensions.json` |
 | **Claude Code** | `CLAUDE.md` + `.claude/commands/*.md` slash commands |
 
-Slash commands available in all IDEs: `/qode-ticket-fetch`, `/qode-plan-refine`, `/qode-plan-spec`, `/qode-start`, `/qode-review-code`, `/qode-review-security`
+Slash commands available in all IDEs: `/qode-ticket-fetch`, `/qode-plan-refine`, `/qode-plan-spec`, `/qode-start`, `/qode-review-code`, `/qode-review-security`, `/qode-knowledge-add-branch`
 
-All configs are stack-aware. Existing files are preserved — qode only adds/updates its own sections.
+All configs are stack-aware. Use `qode ide sync` to regenerate after updating `qode.yaml`.
 
 ## Commands
 
@@ -110,15 +108,17 @@ qode branch remove <name>                                      Clean up branch a
 
 qode ticket fetch <url>                                        Fetch ticket (Jira, Azure DevOps, Linear, GitHub Issues, Notion)
 
-qode plan refine                                               Generate worker + judge prompts (25/25 target)
-qode plan spec                                                 Generate tech spec from refined analysis
+qode plan refine                                               Generate refinement prompt to stdout (use in IDE via /qode-plan-refine)
+qode plan refine --to-file                                     Save refinement prompt to file for debugging
+qode plan spec                                                 Generate tech spec prompt to stdout (use in IDE via /qode-plan-spec)
+qode plan spec --to-file                                       Save spec prompt to file for debugging
 qode plan status                                               Show iteration scores for current branch
 
-qode start                                                     Generate and run implementation prompt interactively
+qode start                                                     Generate implementation prompt to stdout (use in IDE via /qode-start)
+qode start --to-file                                           Save implementation prompt to file for debugging
 
-qode review code                                               Code review prompt
-qode review security                                           Security review prompt
-qode review all                                                Both reviews
+qode review code                                               Generate code review prompt to stdout (use in IDE via /qode-review-code)
+qode review security                                           Generate security review prompt to stdout (use in IDE via /qode-review-security)
 
 qode check                                                     Run all quality gates per layer
 qode check --layer <name>                                      Gates for a specific layer only
