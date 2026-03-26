@@ -83,6 +83,26 @@ qode uses a **two-pass scoring system** that eliminates self-scoring bias:
 
 Target: 25/25 before generating a spec.
 
+## Reviews
+
+Code and security reviews use hardened prompts designed to prevent shallow outputs:
+
+**Code review** (`/qode-review-code`):
+- Reviewer reads the diff as if writing a post-mortem — find the failure before it ships
+- Each file requires ≥ 3 documented items: defects, flagged concerns, or properties explicitly verified safe
+- Score constraints: Critical finding → total ≤ 5.0 | High finding → total ≤ 7.5
+- Scores ≥ 8.0 must cite specific properties verified, not the absence of bugs
+- Score 10.0 requires justification against typical production-quality code
+
+**Security review** (`/qode-review-security`):
+- Reviewer maps every path from external input to persistent state or sensitive data
+- Adversary Simulation section is required: three named exploit attempts with technique, target, and outcome
+- Same score constraints apply
+- Scores ≥ 8.0 must cite specific controls observed (e.g. parameterized queries at line X)
+- Score 10.0 is not valid — complete security is not provable
+
+Both prompts can be customised via `.qode/prompts/review/` local overrides.
+
 ## IDE Support
 
 | IDE | What's generated |

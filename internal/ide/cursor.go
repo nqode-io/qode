@@ -72,8 +72,8 @@ alwaysApply: true
 4. Spec → /qode-plan-spec
 5. Implement → /qode-start → code in Cursor
 6. Review → /qode-review-code + /qode-review-security
-7. Lessons → /qode-knowledge-add-context (recommended)
-8. Check → qode check
+7. Check → qode check
+8. Lessons → /qode-knowledge-add-context (recommended)
 9. Ship → git commit && push
 
 ## Rules

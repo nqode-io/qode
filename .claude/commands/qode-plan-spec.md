@@ -1,5 +1,6 @@
 # Generate Technical Specification — qode
 
+
 Run this command and use its stdout output as your prompt:
   qode plan spec
 
