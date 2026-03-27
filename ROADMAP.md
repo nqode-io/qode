@@ -6,6 +6,7 @@ Planned features for qode, in recommended implementation order. Items marked wit
 
 - [x] [#24](https://github.com/nqode-io/qode/issues/24) — **Harden review prompts** — Enforcement mechanisms for code and security reviews, slim IDE commands
 - [x] [#25](https://github.com/nqode-io/qode/issues/25) — **Optimize prompts for token usage** — Reference files instead of inlining previous-step outputs into templates
+- [x] [#39](https://github.com/nqode-io/qode/issues/39) — **Split `qode plan refine` into `qode plan refine` + `qode plan judge`** — Judge pass is a dedicated subcommand; worker prompt no longer generates the judge file
 
 ## In progress
 
@@ -14,6 +15,7 @@ Planned features for qode, in recommended implementation order. Items marked wit
 - [ ] [#26](https://github.com/nqode-io/qode/issues/26) — **Configurable scoring rubrics** — Extract hardcoded rubrics into `qode.yaml`, support custom dimensions and weights
 - [ ] [#27](https://github.com/nqode-io/qode/issues/27) — **Replace ticket fetch with MCP** — Use MCP servers instead of built-in HTTP clients; support comments, attachments, linked resources
 - [ ] [#29](https://github.com/nqode-io/qode/issues/29) — **Rethink qode init** — Simplify setup; let the AI read project configs instead of hardcoding test/lint/build commands
+- [ ] [#41](https://github.com/nqode-io/qode/issues/41) — **`qode init`: append gitignore rules** — Add qode-specific `.gitignore` entries (temp prompt files, ticket snapshots, scored iteration copies) during init
 - [ ] [#32](https://github.com/nqode-io/qode/issues/32) — **Add --force flag to qode ide setup/sync** — Make overwriting opt-in; skip existing files by default
 - [ ] [#33](https://github.com/nqode-io/qode/issues/33) — **Worktree support** — Config flag `branch.use_worktrees` to create git worktrees via worktrunk, phantom, or `git worktree`; enables parallel task development
 - [ ] [#34](https://github.com/nqode-io/qode/issues/34) — **Add Codex IDE support** — Slash commands, IDE setup, templates, and documentation for OpenAI Codex, following the same convention as Cursor and Claude Code
@@ -48,6 +50,7 @@ Independent (can run in parallel with any of the above):
  #33 Worktree support
  #34 Codex IDE support
  #35 Auto-commit after completed tasks
+ #41 qode init: append gitignore rules
 
 All of the above → #37 Prepare for public beta release
 ```
