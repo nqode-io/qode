@@ -28,8 +28,6 @@ func newBranchCmd() *cobra.Command {
 	}
 	cmd.AddCommand(
 		newBranchCreateCmd(),
-		newBranchListCmd(),
-		newBranchFocusCmd(),
 		newBranchRemoveCmd(),
 	)
 	return cmd
@@ -90,89 +88,6 @@ func newBranchCreateCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&base, "base", "", "base branch (default: current branch)")
 	return cmd
-}
-
-func newBranchListCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "list",
-		Short: "List feature branches with context folders",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := resolveRoot()
-			if err != nil {
-				return err
-			}
-
-			branchesDir := filepath.Join(root, config.QodeDir, "branches")
-			entries, err := os.ReadDir(branchesDir)
-			if os.IsNotExist(err) {
-				fmt.Println("No feature branches found.")
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-
-			current, _ := git.CurrentBranch(root)
-
-			fmt.Printf("%-40s  %s\n", "Branch", "Context")
-			fmt.Println("----------------------------------------  -------")
-			for _, e := range entries {
-				if !e.IsDir() {
-					continue
-				}
-				marker := "  "
-				if e.Name() == current {
-					marker = "→ "
-				}
-				ctxDir := filepath.Join(branchesDir, e.Name(), "context")
-				files, _ := os.ReadDir(ctxDir)
-				fmt.Printf("%s%-38s  %d file(s)\n", marker, e.Name(), len(files))
-			}
-			return nil
-		},
-	}
-}
-
-func newBranchFocusCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "focus <name>",
-		Short: "Switch to a branch and show its context summary",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := resolveRoot()
-			if err != nil {
-				return err
-			}
-			name := args[0]
-
-			if err := git.CheckoutBranch(root, name); err != nil {
-				return fmt.Errorf("checking out branch: %w", err)
-			}
-
-			branchDir, err := safeBranchDir(root, name)
-			if err != nil {
-				return err
-			}
-			contextDir := filepath.Join(branchDir, "context")
-			files, err := os.ReadDir(contextDir)
-			if err != nil && !os.IsNotExist(err) {
-				return err
-			}
-
-			fmt.Printf("Switched to branch: %s\n\n", name)
-			if len(files) > 0 {
-				fmt.Println("Context files:")
-				for _, f := range files {
-					if !f.IsDir() {
-						fmt.Printf("  %s\n", f.Name())
-					}
-				}
-			} else {
-				fmt.Println("No context files yet. Add them to:", contextDir)
-			}
-			return nil
-		},
-	}
 }
 
 func newBranchRemoveCmd() *cobra.Command {

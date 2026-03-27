@@ -18,7 +18,7 @@ func newPlanCmd() *cobra.Command {
 		Use:   "plan",
 		Short: "Plan and refine feature requirements",
 	}
-	cmd.AddCommand(newPlanRefineCmd(), newPlanJudgeCmd(), newPlanSpecCmd(), newPlanStatusCmd())
+	cmd.AddCommand(newPlanRefineCmd(), newPlanJudgeCmd(), newPlanSpecCmd())
 	return cmd
 }
 
@@ -232,57 +232,4 @@ func runPlanSpec(toFile bool) error {
 
 	_, err = fmt.Print(p)
 	return err
-}
-
-func newPlanStatusCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "status",
-		Short: "Show refinement iterations and scores for the current branch",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := resolveRoot()
-			if err != nil {
-				return err
-			}
-			branch, err := git.CurrentBranch(root)
-			if err != nil {
-				return err
-			}
-
-			ctx, err := gocontext.Load(root, branch)
-			if err != nil {
-				return err
-			}
-
-			fmt.Printf("Branch: %s\n\n", branch)
-
-			if len(ctx.Iterations) == 0 {
-				fmt.Println("No refinement iterations yet.")
-				fmt.Println("Run 'qode plan refine' to start.")
-				return nil
-			}
-
-			fmt.Printf("%-4s  %-8s  %s\n", "Iter", "Score", "File")
-			fmt.Println("----  --------  ----")
-			for _, it := range ctx.Iterations {
-				scoreStr := fmt.Sprintf("%d/25", it.Score)
-				if it.Score == 25 {
-					scoreStr += " ✅"
-				} else if it.Score >= 20 {
-					scoreStr += " 🔄"
-				}
-				fmt.Printf("%-4d  %-8s  %s\n", it.Number, scoreStr, it.File)
-			}
-
-			latest := ctx.LatestScore()
-			if latest > 0 {
-				fmt.Printf("\nLatest score: %d/25", latest)
-				if latest >= 25 {
-					fmt.Println(" — Ready for spec generation! Run: qode plan spec")
-				} else {
-					fmt.Printf(" — Need %d more points. Keep iterating.\n", 25-latest)
-				}
-			}
-			return nil
-		},
-	}
 }

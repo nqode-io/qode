@@ -25,12 +25,6 @@ func CreateBranch(root, name, base string) error {
 	return err
 }
 
-// CheckoutBranch switches to an existing branch.
-func CheckoutBranch(root, name string) error {
-	_, err := run(root, "checkout", name)
-	return err
-}
-
 // DeleteBranch deletes a git branch locally.
 func DeleteBranch(root, name string) error {
 	_, err := run(root, "branch", "-d", name)

@@ -122,8 +122,6 @@ qode init --new                                                New project wizar
 qode init --workspace                                          Multi-repo workspace setup
 
 qode branch create <name>                                      Create feature branch + context folder
-qode branch list                                               List active branches
-qode branch focus <name>                                       Switch to branch, show context
 qode branch remove <name>                                      Clean up branch and context
 
 qode ticket fetch <url>                                        Fetch ticket (Jira, Azure DevOps, Linear, GitHub Issues, Notion)
@@ -134,7 +132,6 @@ qode plan judge                                                Generate judge sc
 qode plan judge --to-file                                      Save judge prompt to file for debugging
 qode plan spec                                                 Generate tech spec prompt to stdout (use in IDE via /qode-plan-spec)
 qode plan spec --to-file                                       Save spec prompt to file for debugging
-qode plan status                                               Show iteration scores for current branch
 
 qode start                                                     Generate implementation prompt to stdout (use in IDE via /qode-start)
 qode start --to-file                                           Save implementation prompt to file for debugging
@@ -153,10 +150,6 @@ qode knowledge add <path>                                      Add file to knowl
 qode knowledge add-branch <name or comma separated names>      Add file to knowledge base
 qode knowledge list                                            List knowledge base files
 qode knowledge search <query>                                  Search knowledge base
-
-qode config show                                               Show resolved config
-qode config detect                                             Show auto-detected stacks
-qode config validate                                           Validate qode.yaml
 
 qode workflow                                                  Show full workflow diagram
 ```

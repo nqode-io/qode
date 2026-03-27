@@ -39,3 +39,4 @@ go.work.sum
 .qode/branches/*/.*.md
 .qode/branches/*/context/ticket.md
 .qode/branches/*/refined-analysis-*-score-*.md
+.qode/branches/*/diff.md
