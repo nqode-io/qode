@@ -81,7 +81,6 @@ Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md fo
 				return nil
 			}
 
-			fmt.Fprintln(os.Stderr, "# Prompt written to stdout — use --to-file to save.")
 			_, err = fmt.Print(p)
 			return err
 		},

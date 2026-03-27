@@ -136,3 +136,15 @@ field. It has been removed from both `prompt.TemplateData` and `context.Context`
 
 The `refine/base.md.tmpl` template still instructs the AI to read
 `{{.BranchDir}}/context/notes.md` directly, so the notes file is still effective.
+
+## Design Decision: Remove "Prompt written to stdout" stderr Banner
+
+The `# Prompt written to stdout — use --to-file to save.` message was printed to stderr
+by every command that outputs a prompt to stdout (plan refine, plan judge, plan spec,
+review code, review security, start, knowledge add-branch).
+
+It has been removed from all six call sites in `internal/cli/`.
+
+**Why:** The message is noise. Developers know they can redirect stdout; they do not need
+a reminder on every invocation. The `--to-file` flag is documented in `--help` output.
+The banner also pollutes piped output in scripts and IDE slash commands that consume stdout.

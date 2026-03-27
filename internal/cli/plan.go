@@ -132,7 +132,6 @@ func runPlanJudge(toFile bool) error {
 		return nil
 	}
 
-	fmt.Fprintln(os.Stderr, "# Prompt written to stdout — use --to-file to save.")
 	_, err = fmt.Print(p)
 	return err
 }
@@ -178,7 +177,6 @@ func runPlanRefine(ticketURL string, iterations int, toFile bool) error {
 		return nil
 	}
 
-	fmt.Fprintln(os.Stderr, "# Prompt written to stdout — use --to-file to save.")
 	_, err = fmt.Print(out.WorkerPrompt)
 	return err
 }
@@ -232,7 +230,6 @@ func runPlanSpec(toFile bool) error {
 		return nil
 	}
 
-	fmt.Fprintln(os.Stderr, "# Prompt written to stdout — use --to-file to save.")
 	_, err = fmt.Print(p)
 	return err
 }
