@@ -37,7 +37,6 @@ qode Workflow
 │  → AI reads context + researches codebase                       │
 │  → Judge independently scores 5 dimensions × 5 points           │
 │  → Iterate: answer open questions, re-run until 25/25           │
-│  → Check status: qode plan status                               │
 ├─────────────────────────────────────────────────────────────────┤
 │  STEP 4: GENERATE SPEC                                          │
 │  /qode-plan-spec  (in Cursor/Claude Code)                       │

@@ -34,3 +34,9 @@ go.work.sum
 
 # OS generated files
 .DS_Store
+
+# qode temp files
+.qode/branches/*/.*.md
+.qode/branches/*/context/ticket.md
+.qode/branches/*/refined-analysis-*-score-*.md
+.qode/branches/*/diff.md
