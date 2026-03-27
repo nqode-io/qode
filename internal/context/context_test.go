@@ -1,8 +1,10 @@
 package context
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -184,5 +186,55 @@ func TestLoad_NoAnalysisMd(t *testing.T) {
 	}
 	if len(ctx.Iterations) != 1 {
 		t.Errorf("want 1 iteration from glob, got %d", len(ctx.Iterations))
+	}
+}
+
+func TestWarnMissingPredecessors_Start_NoSpec(t *testing.T) {
+	ctx := &Context{}
+	var buf bytes.Buffer
+	ctx.WarnMissingPredecessors("start", &buf)
+	if !strings.Contains(buf.String(), "spec.md") {
+		t.Errorf("expected warning about spec.md, got: %q", buf.String())
+	}
+}
+
+func TestWarnMissingPredecessors_Start_HasSpec(t *testing.T) {
+	root, branchDir := setupBranchDir(t)
+	writeFile(t, filepath.Join(branchDir, "spec.md"), "spec content")
+	ctx, err := Load(root, "test-branch")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	var buf bytes.Buffer
+	ctx.WarnMissingPredecessors("start", &buf)
+	if buf.Len() != 0 {
+		t.Errorf("expected no warning when spec exists, got: %q", buf.String())
+	}
+}
+
+func TestWarnMissingPredecessors_Review_NoSpec(t *testing.T) {
+	ctx := &Context{}
+	var buf bytes.Buffer
+	ctx.WarnMissingPredecessors("review", &buf)
+	if !strings.Contains(buf.String(), "spec.md") {
+		t.Errorf("expected warning about spec.md, got: %q", buf.String())
+	}
+}
+
+func TestWarnMissingPredecessors_Spec_NoAnalysis(t *testing.T) {
+	ctx := &Context{}
+	var buf bytes.Buffer
+	ctx.WarnMissingPredecessors("spec", &buf)
+	if !strings.Contains(buf.String(), "refined-analysis.md") {
+		t.Errorf("expected warning about refined-analysis.md, got: %q", buf.String())
+	}
+}
+
+func TestWarnMissingPredecessors_Unknown_NoOutput(t *testing.T) {
+	ctx := &Context{}
+	var buf bytes.Buffer
+	ctx.WarnMissingPredecessors("unknown-step", &buf)
+	if buf.Len() != 0 {
+		t.Errorf("expected no output for unknown step, got: %q", buf.String())
 	}
 }

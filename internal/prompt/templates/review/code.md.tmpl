@@ -22,17 +22,13 @@ Before scoring, interrogate each file:
 {{range .Layers}}- **{{.Name}}** ({{.Stack}}) at `{{.Path}}`
 {{end}}
 
-{{if .Spec}}
 ## Spec Summary
 
-{{.Spec}}
-{{end}}
+Read the technical specification from `{{.BranchDir}}/spec.md`.
 
 ## Changes to Review
 
-```diff
-{{.Diff}}
-```
+Read the diff from `{{.BranchDir}}/diff.md`.
 
 ## Review Criteria
 

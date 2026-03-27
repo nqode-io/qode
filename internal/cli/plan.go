@@ -136,6 +136,8 @@ func runPlanSpec(toFile bool) error {
 		return err
 	}
 
+	ctx.WarnMissingPredecessors("spec", os.Stderr)
+
 	if !ctx.HasRefinedAnalysis() {
 		fmt.Fprintln(os.Stderr, "No refined analysis found.")
 		fmt.Fprintf(os.Stderr, "Run 'qode plan refine' first and save the AI output to:\n  .qode/branches/%s/refined-analysis.md\n", branch)

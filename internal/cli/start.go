@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/nqode/qode/internal/config"
 	gocontext "github.com/nqode/qode/internal/context"
@@ -42,9 +43,23 @@ Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md fo
 				return err
 			}
 
-			kb, err := knowledge.Load(root, cfg)
-			if err != nil && flagVerbose {
-				fmt.Fprintf(os.Stderr, "Warning: knowledge base: %v\n", err)
+			ctx.WarnMissingPredecessors("start", os.Stderr)
+
+			paths, listErr := knowledge.List(root, cfg)
+			if listErr != nil && flagVerbose {
+				fmt.Fprintf(os.Stderr, "Warning: knowledge base: %v\n", listErr)
+			}
+			var kb string
+			refs := make([]string, 0, len(paths))
+			for _, p := range paths {
+				rel, relErr := filepath.Rel(root, p)
+				if relErr != nil {
+					rel = p
+				}
+				refs = append(refs, "- "+rel)
+			}
+			if len(refs) > 0 {
+				kb = "Read the following knowledge base files:\n" + strings.Join(refs, "\n")
 			}
 
 			engine, err := prompt.NewEngine(root)

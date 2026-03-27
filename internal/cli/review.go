@@ -76,21 +76,29 @@ func runReview(kind string, toFile bool) error {
 		return err
 	}
 
+	ctx.WarnMissingPredecessors("review", os.Stderr)
+
+	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
+
+	diffPath := filepath.Join(branchDir, "diff.md")
+	if err := os.WriteFile(diffPath, []byte(diff), 0644); err != nil {
+		return fmt.Errorf("saving diff snapshot: %w", err)
+	}
+
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
 		return err
 	}
 
-	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
 	outputPath := filepath.Join(branchDir, fmt.Sprintf("%s-review.md", kind))
 	promptPath := filepath.Join(branchDir, fmt.Sprintf(".%s-review-prompt.md", kind))
 
 	var p string
 	switch kind {
 	case "code":
-		p, err = review.BuildCodePrompt(engine, cfg, ctx, diff, outputPath)
+		p, err = review.BuildCodePrompt(engine, cfg, ctx, outputPath)
 	case "security":
-		p, err = review.BuildSecurityPrompt(engine, cfg, ctx, diff, outputPath)
+		p, err = review.BuildSecurityPrompt(engine, cfg, ctx, outputPath)
 	}
 	if err != nil {
 		return err

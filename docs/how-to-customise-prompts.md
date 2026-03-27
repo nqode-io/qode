@@ -39,18 +39,34 @@ All templates are located under `.qode/prompts/`:
 
 ## Template variables
 
-Templates use Go's `text/template` syntax. The data struct passed in has these fields:
+Templates use Go's `text/template` syntax. The following fields are available on the data struct:
 
 | Field | Type | Description |
 |---|---|---|
-| `Project` | `config.ProjectConfig` | Project name, topology |
-| `Layers` | `[]config.LayerConfig` | Stack layers from qode.yaml |
+| `Project` | `config.ProjectConfig` | Project name and topology from `qode.yaml` |
+| `Layers` | `[]config.LayerConfig` | Stack layers from `qode.yaml` |
 | `Branch` | `string` | Current git branch name |
-| `Ticket` | `string` | Contents of context/ticket.md |
-| `Notes` | `string` | Contents of context/notes.md |
-| `Analysis` | `string` | Current refined analysis |
-| `Spec` | `string` | Generated spec |
-| `KB` | `string` | Knowledge base fragments |
+| `BranchDir` | `string` | Absolute path to `.qode/branches/<branch>/` — use this to reference context files |
+| `OutputPath` | `string` | When set, templates should append file-write instructions so the AI saves its output directly |
+| `KB` | `string` | Knowledge base file references (set for `start` only) |
+| `Extra` | `string` | Assembled extra context such as code reviews (set for `refine` and `knowledge/add-branch`) |
+| `Lessons` | `string` | Existing lesson summaries for deduplication (set for `knowledge/add-branch` only) |
+| `Ticket` | `string` | Ticket content inlined (set for `knowledge/add-branch` only) |
+| `Analysis` | `string` | Refined analysis inlined (set for `knowledge/add-branch` and scoring judge) |
+| `Spec` | `string` | Spec content inlined (set for `knowledge/add-branch` only) |
+| `Diff` | `string` | Git diff inlined (set for `knowledge/add-branch` only) |
+
+### Referencing context files
+
+For the main workflow templates (`refine`, `spec`, `start`, `review`) the AI reads context files directly rather than having content inlined. Use `BranchDir` to construct paths:
+
+```
+Read the ticket from `{{.BranchDir}}/context/ticket.md`.
+Read the notes from `{{.BranchDir}}/context/notes.md` (if the file exists).
+Read the refined analysis from `{{.BranchDir}}/refined-analysis.md`.
+Read the spec from `{{.BranchDir}}/spec.md`.
+Read the diff from `{{.BranchDir}}/diff.md`.
+```
 
 ## Committing overrides
 

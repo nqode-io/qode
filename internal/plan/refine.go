@@ -36,10 +36,8 @@ func BuildRefinePromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx 
 		Project:    cfg.Project,
 		Layers:     cfg.Layers(),
 		Branch:     ctx.Branch,
-		Ticket:     ctx.Ticket,
-		Notes:      ctx.Notes,
-		Analysis:   ctx.RefinedAnalysis,
 		OutputPath: outputPath,
+		BranchDir:  ctx.ContextDir,
 	}
 	for _, e := range ctx.Extra {
 		data.Extra += e + "\n\n"
@@ -82,8 +80,8 @@ func BuildSpecPromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx *c
 		Project:    cfg.Project,
 		Layers:     cfg.Layers(),
 		Branch:     ctx.Branch,
-		Analysis:   ctx.RefinedAnalysis,
 		OutputPath: outputPath,
+		BranchDir:  ctx.ContextDir,
 	}
 	return engine.Render("spec/base", data)
 }
@@ -91,11 +89,11 @@ func BuildSpecPromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx *c
 // BuildStartPrompt generates the implementation kickoff prompt.
 func BuildStartPrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Context, kb string) (string, error) {
 	data := prompt.TemplateData{
-		Project: cfg.Project,
-		Layers:  cfg.Layers(),
-		Branch:  ctx.Branch,
-		Spec:    ctx.Spec,
-		KB:      kb,
+		Project:   cfg.Project,
+		Layers:    cfg.Layers(),
+		Branch:    ctx.Branch,
+		KB:        kb,
+		BranchDir: ctx.ContextDir,
 	}
 	return engine.Render("start/base", data)
 }
