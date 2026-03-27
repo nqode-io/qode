@@ -137,7 +137,7 @@ func TestBuildStartPrompt_OmitsSpec(t *testing.T) {
 	}
 }
 
-func TestBuildJudgePrompt_InlinesRefinedAnalysis(t *testing.T) {
+func TestBuildJudgePrompt_ReferencesRefinedAnalysis(t *testing.T) {
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
@@ -145,14 +145,6 @@ func TestBuildJudgePrompt_InlinesRefinedAnalysis(t *testing.T) {
 	}
 
 	branchDir := filepath.Join(root, ".qode", "branches", "test-branch")
-	if err := os.MkdirAll(branchDir, 0755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	analysisContent := "<!-- qode:iteration=1 -->\n\nanalysis sentinel content"
-	if err := os.WriteFile(filepath.Join(branchDir, "refined-analysis.md"), []byte(analysisContent), 0644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-
 	ctx := &context.Context{
 		Branch:     "test-branch",
 		ContextDir: branchDir,
@@ -162,26 +154,11 @@ func TestBuildJudgePrompt_InlinesRefinedAnalysis(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildJudgePrompt: %v", err)
 	}
-	if !strings.Contains(got, "analysis sentinel content") {
-		t.Error("judge prompt must inline refined-analysis.md content")
+	if !strings.Contains(got, branchDir) {
+		t.Errorf("judge prompt must reference branch dir %q, got:\n%s", branchDir, got)
 	}
-}
-
-func TestBuildJudgePrompt_ErrorsIfNoRefinedAnalysis(t *testing.T) {
-	root := t.TempDir()
-	engine, err := prompt.NewEngine(root)
-	if err != nil {
-		t.Fatalf("NewEngine: %v", err)
-	}
-
-	ctx := &context.Context{
-		Branch:     "test-branch",
-		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
-	}
-
-	_, err = BuildJudgePrompt(engine, &config.Config{}, ctx)
-	if err == nil {
-		t.Error("expected error when refined-analysis.md is absent")
+	if !strings.Contains(got, "refined-analysis.md") {
+		t.Error("judge prompt must reference refined-analysis.md")
 	}
 }
 

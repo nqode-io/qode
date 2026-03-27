@@ -56,10 +56,10 @@ func NewEngine(pe *prompt.Engine, cfg *config.Config) *Engine {
 	return &Engine{promptEngine: pe, cfg: cfg}
 }
 
-// BuildJudgePrompt generates the judge prompt for a given worker output and rubric.
-func (e *Engine) BuildJudgePrompt(workerOutput string, rubric Rubric) (string, error) {
+// BuildJudgePrompt generates the judge prompt for a given branch dir and rubric.
+func (e *Engine) BuildJudgePrompt(branchDir string, rubric Rubric) (string, error) {
 	data := prompt.TemplateData{
-		Analysis: workerOutput,
+		BranchDir: branchDir,
 	}
 	templateName := fmt.Sprintf("scoring/judge_%s", rubric.Kind)
 	return e.promptEngine.Render(templateName, data)

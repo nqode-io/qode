@@ -101,16 +101,11 @@ func SaveIterationFiles(root, branch string, out *RefineOutput) (workerPath stri
 	return workerPath, nil
 }
 
-// BuildJudgePrompt generates the judge scoring prompt from the current refined analysis.
-// It reads refined-analysis.md from ctx.ContextDir and passes it inline to the judge template.
+// BuildJudgePrompt generates the judge scoring prompt.
+// The template references refined-analysis.md by path; no file read is performed here.
 func BuildJudgePrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Context) (string, error) {
-	analysisPath := filepath.Join(ctx.ContextDir, "refined-analysis.md")
-	data, err := os.ReadFile(analysisPath)
-	if err != nil {
-		return "", fmt.Errorf("reading refined-analysis.md: %w", err)
-	}
 	scoreEngine := scoring.NewEngine(engine, cfg)
-	return scoreEngine.BuildJudgePrompt(string(data), scoring.RefineRubric)
+	return scoreEngine.BuildJudgePrompt(ctx.ContextDir, scoring.RefineRubric)
 }
 
 // SaveIterationResult writes iteration files using a pre-computed score result.

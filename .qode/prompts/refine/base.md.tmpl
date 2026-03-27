@@ -13,26 +13,16 @@ Work through this systematically. Do NOT score your own output.
 
 ## Ticket / Feature Description
 
-{{if .Ticket}}
-{{.Ticket}}
-{{else}}
-*(No ticket provided. Infer requirements from branch name and notes.)*
-{{end}}
+Read `{{.BranchDir}}/context/ticket.md` if it exists. If the file is absent, stop execution immediately with an error message `Ticket file not found`.
 
-{{if .Notes}}
 ## Additional Notes
 
-{{.Notes}}
-{{end}}
+Read `{{.BranchDir}}/context/notes.md` if it exists.
 
-{{if .Analysis}}
-## Previous Analysis (Iteration N-1)
+## Previous Analysis
 
-{{.Analysis}}
-
----
-*Continue from the above analysis. Improve weak areas identified in the previous score.*
-{{end}}
+If you have already refined this analysis in a previous iteration, read
+`{{.BranchDir}}/refined-analysis.md` for context. Otherwise begin fresh.
 
 {{if .Extra}}
 ## Extra Context

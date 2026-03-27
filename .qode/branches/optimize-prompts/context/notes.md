@@ -148,3 +148,26 @@ It has been removed from all six call sites in `internal/cli/`.
 **Why:** The message is noise. Developers know they can redirect stdout; they do not need
 a reminder on every invocation. The `--to-file` flag is documented in `--help` output.
 The banner also pollutes piped output in scripts and IDE slash commands that consume stdout.
+
+## Design Decision: Judge Prompt Uses File Reference, Not Inline Content
+
+`qode plan judge` previously read `refined-analysis.md` from disk and pasted the full
+content inline into `{{.Analysis}}` in the judge template. It now emits a file-read
+instruction (`Read the refined analysis from <path>/refined-analysis.md`) instead.
+
+**Why:** The impartiality argument for inlining does not hold in practice. The judge
+always runs in the same Claude Code session as the worker, so the model already has the
+analysis in its context window — inlining it again just duplicates input tokens with no
+scoring-quality benefit. The "You did NOT produce the analysis below" instruction is a
+best-effort nudge that applies equally whether the content is inlined or referenced.
+
+**Changes:**
+- `internal/prompt/templates/scoring/judge_refine.md.tmpl` — `{{.Analysis}}` replaced
+  with `Read the refined analysis from \`{{.BranchDir}}/refined-analysis.md\``
+- `internal/scoring/scoring.go` (`Engine.BuildJudgePrompt`) — takes `branchDir string`
+  instead of `workerOutput string`; sets `BranchDir` in template data
+- `internal/plan/refine.go` (`BuildJudgePrompt`) — no longer reads the file; passes
+  `ctx.ContextDir` to the scoring engine
+- `internal/plan/refine_test.go` — `TestBuildJudgePrompt_InlinesRefinedAnalysis` renamed
+  to `TestBuildJudgePrompt_ReferencesRefinedAnalysis` with updated assertion;
+  `TestBuildJudgePrompt_ErrorsIfNoRefinedAnalysis` removed (file is no longer read here)
