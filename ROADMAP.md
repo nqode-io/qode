@@ -5,10 +5,9 @@ Planned features for qode, in recommended implementation order. Items marked wit
 ## Done
 
 - [x] [#24](https://github.com/nqode-io/qode/issues/24) — **Harden review prompts** — Enforcement mechanisms for code and security reviews, slim IDE commands
+- [x] [#25](https://github.com/nqode-io/qode/issues/25) — **Optimize prompts for token usage** — Reference files instead of inlining previous-step outputs into templates
 
 ## In progress
-
-- [ ] [#25](https://github.com/nqode-io/qode/issues/25) — **Optimize prompts for token usage** — Reference files instead of inlining previous-step outputs into templates
 
 ## Up Next (parallel — start after #24)
 
