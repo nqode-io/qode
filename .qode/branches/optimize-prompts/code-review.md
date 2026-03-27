@@ -2,133 +2,90 @@
 
 ## Reviewer Stance
 
-**What this code assumes:**
-- `ctx.ContextDir` is always an absolute path — confirmed: `context.Load` uses `filepath.Join(root, ...)` where `root` comes from `filepath.Abs(os.Getwd())`.
-- `branchDir` exists when `diff.md` is written in `cli/review.go` — confirmed: `context.Load` calls `os.MkdirAll(<branchDir>/context/, 0755)` which creates `<branchDir>` as a side effect.
-- `branches[0]` is always set in `buildBranchLessonData` — confirmed: guarded by `cobra.MinimumNArgs(1)`.
-- `kind` in `runReview` is always "code" or "security" — hardcoded at both call sites.
+**Assumptions verified:**
+- `ctx.HasRefinedAnalysis()` and `BuildJudgePrompt`'s `os.ReadFile` both target `ctx.ContextDir/refined-analysis.md` — path is identical.
+- `branchDir` in `runPlanJudge` equals `ctx.ContextDir` — both use `filepath.Join(root, config.QodeDir, "branches", branch)`.
+- `.gitignore` glob `.qode/branches/*/.*.md` excludes only dotfiles — does not affect committed files (`spec.md`, `code-review.md`, `refined-analysis.md`).
+- `qode plan judge` is usable regardless of `cfg.Scoring.TwoPass` — behavioral change from before; see Medium issue.
 
-**Earliest silent failure point:** If `BranchDir` is empty in a rendered template, file-path references become bare filenames. All callers set `BranchDir: ctx.ContextDir`, and `ctx.ContextDir` is always set by `context.Load`. Not a current risk, but relevant for future external callers.
+**Earliest silent failure point:** `runPlanJudge` guards on `ctx.HasRefinedAnalysis()` at load time, but the file could be deleted before `BuildJudgePrompt` reads it. Purely theoretical; `BuildJudgePrompt`'s `os.ReadFile` error still surfaces the failure with context.
 
 ---
 
 ## Issues
 
-**Severity:** Low
-**File:** `internal/plan/refine_test.go:140-165`
-**Issue:** `TestBuildRefinePromptWithOutput_OmitsAnalysisAndTicket` only asserts the negative (no inline content) but does not assert the positive (that file-path references to `ticket.md` and `refined-analysis.md` appear). Compare to `TestBuildSpecPromptWithOutput_OmitsAnalysis` (checks both sentinel absence and `refined-analysis.md` presence) and `TestBuildCodePrompt_OmitsDiffAndSpec` (checks both `spec.md` and `diff.md` references).
-**Suggestion:** Add two assertions:
-```go
-if !strings.Contains(out.WorkerPrompt, "ticket.md") {
-    t.Error("prompt must reference ticket.md")
-}
-if !strings.Contains(out.WorkerPrompt, "refined-analysis.md") {
-    t.Error("prompt must reference refined-analysis.md")
-}
-```
+**Severity:** Medium
+**File:** `internal/plan/refine.go:110-116` (`BuildJudgePrompt`)
+**Issue:** `BuildJudgePrompt` no longer checks `cfg.Scoring.TwoPass`. Previously, judge prompts were only generated when `two_pass: true`. Now `qode plan judge` works unconditionally. Projects that explicitly set `two_pass: false` can now run the judge command without any indication that it is intended to be disabled.
+**Impact:** Low in practice — the slash command has always included both passes regardless of `TwoPass`, so users were not blocked before. But the config flag's meaning is now inconsistent: it no longer controls whether judge prompts can be generated.
+**Suggestion:** Two valid paths: (a) add a guard in `runPlanJudge` — `if !cfg.Scoring.TwoPass { return fmt.Errorf("two-pass scoring is disabled; set scoring.two_pass: true in qode.yaml") }` — OR (b) accept that the flag only gated the old automatic judge generation (now removed) and document that `qode plan judge` is always available. The slash command evidence favours (b). Whichever is chosen, document it.
 
 ---
 
 **Severity:** Nit
-**File:** `internal/cli/knowledge_cmd.go:238-240`
-**Issue:** Alignment inconsistency in struct literal introduced when `BranchDir` and `Lessons` were added: `Lessons:   lessonsStr` uses 3 spaces after the colon while `Analysis:    allAnalysis.String()` uses 4 spaces.
-**Suggestion:** Align consistently — `Lessons:     lessonsStr,` / `BranchDir:   branchDir,`.
+**File:** `internal/cli/plan.go:120` (`runPlanJudge`)
+**Issue:** `branchDir := filepath.Join(root, config.QodeDir, "branches", branch)` is computed but equals `ctx.ContextDir`. Not wrong — consistent with `runPlanSpec` and `runReview`.
+**Suggestion:** No change needed; consistency with surrounding functions outweighs the minor redundancy.
 
 ---
 
 ## File-by-File Evidence
 
-### `internal/prompt/engine.go`
-1. **Verified safe:** `TemplateData` fields correctly documented with inline comments naming callers. `BranchDir` added with clear description. `ContextMode` constants and field cleanly removed — no dead code left.
-2. **Verified safe:** `Notes string` field removed. Notes are referenced via template file-read instruction, not inlined. No template references `{{.Notes}}`.
-3. **Verified safe:** Remaining content fields (`Ticket`, `Analysis`, `Spec`, `Diff`) retained correctly — still used by `knowledge/add-branch.md.tmpl` and `scoring/judge_refine.md.tmpl`.
-
-### `internal/context/context.go`
-1. **Verified safe:** `WarnMissingPredecessors` uses `_, _ = fmt.Fprintln(w, ...)` — satisfies errcheck linter. Warning text for each case is specific and actionable.
-2. **Verified safe:** All three cases match exactly where the method is called: `"spec"` in `runPlanSpec`, `"start"` in `runStart`, `"review"` in `runReview`.
-3. **Verified safe:** `notes.md` excluded from Extra scan (lines 61-62) — correct, notes are referenced by path in templates, not aggregated.
-
 ### `internal/plan/refine.go`
-1. **Verified safe:** `BuildRefinePromptWithOutput` omits Ticket and Analysis — sets only `Extra`, `Branch`, `OutputPath`, `BranchDir`. Correct for reference mode.
-2. **Verified safe:** `BuildSpecPromptWithOutput` omits Analysis; `BuildStartPrompt` omits Spec. Both set `BranchDir: ctx.ContextDir`.
-3. **Verified safe:** Zero-arity wrappers `BuildRefinePrompt` and `BuildSpecPrompt` preserved with original signatures.
-
-### `internal/review/review.go`
-1. **Verified safe:** Both builders omit Spec and Diff; set `Branch`, `OutputPath`, `BranchDir`. `outputPath` is always non-empty at the call site — ensures AI writes output to the review file regardless of `--to-file`.
-2. **Verified safe:** `diff string` and `contextMode string` parameters fully removed — no dead parameters remain.
-
-### `internal/cli/review.go`
-1. **Verified safe:** `ctx.WarnMissingPredecessors("review", os.Stderr)` called at line 79, before prompt building.
-2. **Verified safe:** `diff.md` written unconditionally (line 84) — not conditional on any flag. Always exists when the review prompt's file-read instruction fires.
-3. **Verified safe:** Empty diff guard (lines 69-72) returns early before `diff.md` write — no empty file written.
+1. **Verified safe:** `RefineOutput.JudgePrompt` removed cleanly; no remaining references in file.
+2. **Verified safe:** `SaveIterationFiles` return signature reduced from `(workerPath, judgePath string, err error)` to `(workerPath string, err error)`. Only caller (`internal/cli/plan.go:runPlanRefine`) updated correctly.
+3. **Verified safe:** `BuildJudgePrompt` reads `refined-analysis.md` from `ctx.ContextDir`, passes content inline to scoring engine. Path is identical to what `HasRefinedAnalysis` checks. `os.ReadFile` error wrapped with context.
+4. **Verified safe:** `scoring` import still needed — `BuildJudgePrompt`, `ParseIterationFromOutput`, `SaveIterationResult` all use it.
+5. **Verified safe:** `fmt` still needed — `BuildJudgePrompt` error wrap, `buildAnalysisHeader`.
 
 ### `internal/cli/plan.go`
-1. **Verified safe:** `ctx.WarnMissingPredecessors("spec", os.Stderr)` called at line 139 — before the hard-error guard. Correct order: warn first, then hard-fail if blocking.
-2. **Verified safe:** `contextMode` computation removed cleanly from both `runPlanRefine` and `runPlanSpec`.
+1. **Verified safe:** `newPlanJudgeCmd` pattern matches `newPlanSpecCmd` exactly — same `Use`/`Short`/`Long`/`RunE`/`--to-file` structure.
+2. **Verified safe:** `runPlanJudge` load sequence: root → cfg → branch → ctx → guard → engine → prompt → output. Same sequence as `runPlanSpec`.
+3. **Verified safe:** Guard error message matches `runPlanSpec` pattern — actionable, names the expected file and how to produce it.
+4. **Verified safe:** `--to-file` path saves to `branchDir/.refine-judge-prompt.md` via `writePromptToFile` — same helper used by all other `--to-file` commands.
+5. **Verified safe:** `runPlanRefine --to-file` single-line stderr message correct after `SaveIterationFiles` signature change.
 
-### `internal/cli/start.go`
-1. **Verified safe:** `ctx.WarnMissingPredecessors("start", os.Stderr)` called before KB loading and prompt building.
-2. **Verified safe:** KB loading uses `knowledge.List` + `filepath.Rel` unconditionally. If list errors and `flagVerbose` is false, `kb` stays empty; `{{if .KB}}` guard handles this correctly.
-
-### `internal/cli/knowledge_cmd.go`
-1. **Verified safe:** `buildBranchLessonData` correctly sets inline content for `knowledge/add-branch` — this template still needs inline content, not reference mode.
-2. **Defect (Nit):** Alignment inconsistency noted above.
+### `internal/ide/claudecode.go` and `cursor.go`
+1. **Verified safe:** Judge pass changed from "run qode plan refine → read file → replace placeholder → execute modified prompt" to "run qode plan judge, use stdout as prompt". Three fewer manual steps; placeholder replacement eliminated.
+2. **Verified safe:** Step numbering updated from 8 to 5 steps. Count is correct.
+3. **Verified safe:** Both files are symmetric — same intent, same step count.
 
 ### `internal/plan/refine_test.go`
-1. **Verified safe:** All three tests correctly verify reference mode: no inline sentinel, file path reference present. Pattern is consistent with other test files.
-2. **Defect (Low):** `TestBuildRefinePromptWithOutput_OmitsAnalysisAndTicket` missing positive assertions — noted above.
+1. **Verified safe:** `TestBuildJudgePrompt_InlinesRefinedAnalysis` — creates `refined-analysis.md`, calls `BuildJudgePrompt`, asserts sentinel content appears in output. Correct.
+2. **Verified safe:** `TestBuildJudgePrompt_ErrorsIfNoRefinedAnalysis` — no file, asserts error returned. Correct.
+3. **Verified safe:** All existing tests unaffected — `RefineOutput.WorkerPrompt` and `Iteration` unchanged; `SaveIterationResult` and `ParseIterationFromOutput` signatures unchanged.
 
-### `internal/review/review_test.go` (new)
-1. **Verified safe:** `TestBuildCodePrompt_OmitsDiffAndSpec` checks three things: spec sentinel not inlined, `spec.md` referenced, `diff.md` referenced. Complete.
-2. **Verified safe:** `TestBuildSecurityPrompt_OmitsDiff` checks `diff.md` referenced. Correct.
+### `.gitignore`
+1. **Verified safe:** `.qode/branches/*/.*.md` matches only dotfiles under branch dirs. Committed files (`spec.md`, `code-review.md`, `refined-analysis.md`) are unaffected. All debug prompt files (`.refine-prompt.md`, `.refine-judge-prompt.md`, `.spec-prompt.md`, `.code-review-prompt.md`, `.security-review-prompt.md`) are correctly excluded.
 
-### `internal/context/context_test.go`
-1. **Verified safe:** 5 `WarnMissingPredecessors` tests cover: start with no spec (warns), start with spec (silent), review with no spec (warns), spec with no analysis (warns), unknown step (silent). All cases match the implementation.
-
-### Templates
-1. **Verified safe:** `refine/base.md.tmpl` — ticket.md has fallback: "If the file is absent, infer requirements from the branch name and notes." Notes and analysis use soft phrasing. No hard file-read dependency.
-2. **Verified safe:** `spec/base.md.tmpl` — references `{{.BranchDir}}/refined-analysis.md`. ✓
-3. **Verified safe:** `start/base.md.tmpl` — references `{{.BranchDir}}/spec.md`. ✓
-4. **Verified safe:** `review/code.md.tmpl` — references `{{.BranchDir}}/spec.md` and `{{.BranchDir}}/diff.md`. ✓
-5. **Verified safe:** `review/security.md.tmpl` — references `{{.BranchDir}}/diff.md`. ✓
-
-### `docs/how-to-customise-prompts.md`
-1. **Verified safe:** Table updated — `Notes` removed, `BranchDir` added with accurate description. Inline fields documented as `knowledge/add-branch`-only.
-2. **Verified safe:** New "Referencing context files" section gives concrete examples for all five reference paths.
-
-### `.qode/branches/optimize-prompts/spec.md`
-1. **Verified safe:** Design change note prepended accurately describes that ContextMode was removed mid-implementation and references `context/notes.md` for rationale.
+### `README.md` and `docs/how-to-customise-prompts.md`
+1. **Verified safe:** `qode plan judge` and `qode plan judge --to-file` added to command reference with correct descriptions and prerequisite noted.
+2. **Verified safe:** How-to-customise example shows `--to-file` usage in the correct code block.
 
 ---
 
 ## Summary
 
 **Issues by severity:**
-- Low: 1 (missing positive assertions in refine test)
-- Nit: 1 (alignment inconsistency in knowledge_cmd.go struct literal)
+- Critical: 0
+- High: 0
+- Medium: 1 (`TwoPass` flag semantics inconsistency in `BuildJudgePrompt`)
+- Nit: 1 (`branchDir` redundancy — acceptable as consistent with surrounding code)
 
-No Critical or High findings.
-
-**Top 3 before merging:**
-1. Add positive assertions to `TestBuildRefinePromptWithOutput_OmitsAnalysisAndTicket` to match the testing pattern established by the other builders (Low — does not affect correctness but closes a gap in verification).
-2. Fix alignment in `buildBranchLessonData` struct literal (Nit).
-3. No blockers — both items are minor and do not affect correctness or runtime behavior.
+**Overall:** The split is implemented cleanly and correctly. The core change — moving judge prompt generation into a dedicated `BuildJudgePrompt` function and `qode plan judge` command — is consistent with the existing builder pattern. The slash command simplification (stdout instead of file-read-replace-execute) is the most significant UX improvement. All tests pass; build is clean.
 
 ---
 
 ## Rating
 
-A score is a shipping recommendation. Score from what you found,
-not from what you didn't look for.
-
-| Dimension      | Score (0-2) | What you verified (not what you assumed) |
+| Dimension      | Score (0-2) | What you verified |
 |----------------|-------------|------------------------------------------|
-| Correctness    | 2           | All 5 builders verified to set BranchDir and omit inline content; WarnMissingPredecessors wired to all three commands; diff.md written unconditionally; branchDir existence guaranteed by context.Load; ticket.md fallback present in template |
-| Code Quality   | 1           | Alignment inconsistency in knowledge_cmd.go struct literal (new to this branch); all functions well under 50 lines; dead code (ContextMode, Notes field) cleanly removed |
-| Architecture   | 2           | ContextMode removed cleanly across 12+ files with no dead code; CLI/builder/template layer separation preserved; diff.md write correctly placed in CLI layer; knowledge/add-branch correctly exempted from reference mode |
-| Error Handling | 2           | `_, _ = fmt.Fprintln` satisfies errcheck throughout WarnMissingPredecessors; error wrapping with %w in review.go diff write; empty-diff early return prevents writing empty file; filepath.Rel fallback to absolute path present |
-| Testing        | 2           | 5 new WarnMissingPredecessors tests cover all switch cases; 2 new review_test.go tests verify positive and negative for each builder; 3 refine tests verify reference mode; one minor gap (missing positive assertions in refine test) does not undermine overall coverage |
+| Correctness    | 2           | `HasRefinedAnalysis` and `BuildJudgePrompt` use identical path; `SaveIterationFiles` signature updated at all call sites; `--to-file` saves via `writePromptToFile` helper; slash commands updated symmetrically in both IDE generators |
+| Code Quality   | 1           | `TwoPass` behavioral change not addressed or documented; `branchDir` redundancy (acceptable per consistency); test missing negative assertion for judge inlining |
+| Architecture   | 2           | Judge cleanly decoupled from worker; builder function signature consistent with spec/start/review builders; slash command reduced from 8 manual steps to 5; `.gitignore` glob correctly scoped |
+| Error Handling | 2           | Pre-check guard in `runPlanJudge` gives actionable error message; `BuildJudgePrompt` wraps `os.ReadFile` error with context string |
+| Testing        | 2           | Two new tests cover happy path and absent-file error path; existing tests unaffected; build and `go test ./internal/plan/... ./internal/ide/...` pass clean |
 
 **Total Score: 9.0/10**
 
-Constraints check: No Critical or High findings — no score cap applies. Score ≥ 8.0 justified by: Correctness fully verified for all modified builders, CLI commands, and templates; Architecture cleanly removes ContextMode with no residue; Error Handling satisfies linter constraints explicitly. Deduction on Code Quality for the alignment inconsistency introduced in the new `BranchDir`/`Lessons` fields in `knowledge_cmd.go`.
+Constraints check: No Critical or High findings — no score cap applies. Score ≥ 8.0 justified by: Correctness verified by reading all call sites and tracing path construction; Architecture verified by comparing builder function signatures across the package; Error Handling verified by tracing both CLI guard and function-level error wrap. Deduction on Code Quality for the `TwoPass` flag semantic inconsistency (Medium finding) and minor test coverage gap.

@@ -78,11 +78,9 @@ type ReviewConfig struct {
 	MinSecurityScore float64 `yaml:"min_security_score,omitempty"`
 }
 
-// ScoringConfig controls the two-pass scoring engine.
+// ScoringConfig controls the scoring engine.
 type ScoringConfig struct {
-	TwoPass             bool `yaml:"two_pass,omitempty"`
-	MaxRefineIterations int  `yaml:"max_refine_iterations,omitempty"`
-	RefineTargetScore   int  `yaml:"refine_target_score,omitempty"`
+	RefineTargetScore int `yaml:"refine_target_score,omitempty"`
 }
 
 // IDEConfig controls which IDE integrations are generated.

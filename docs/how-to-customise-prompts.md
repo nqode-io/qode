@@ -22,6 +22,10 @@ To preview the rendered output after editing, use the `--to-file` flag:
 ```bash
 qode plan refine --to-file
 # → saves to .qode/branches/<branch>/.refine-prompt.md
+
+qode plan judge --to-file
+# → saves to .qode/branches/<branch>/.refine-judge-prompt.md
+# requires refined-analysis.md to exist in the branch directory
 ```
 
 ## Template files

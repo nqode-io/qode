@@ -77,8 +77,6 @@ review:
   min_security_score: 8.0
 
 scoring:
-  two_pass: true
-  max_refine_iterations: 5
   refine_target_score: 25
 
 ide:

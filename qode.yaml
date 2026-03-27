@@ -13,8 +13,6 @@ review:
     min_code_score: 8
     min_security_score: 8
 scoring:
-    two_pass: true
-    max_refine_iterations: 5
     refine_target_score: 25
 ide:
     cursor:
