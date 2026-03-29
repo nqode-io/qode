@@ -69,3 +69,8 @@ Scores are parsed from saved markdown files in the branch context folder.
 - Minimum refined analysis score: 20/25
 - Minimum code review score: 8.0/10
 - Minimum security review score: 8.0/10
+
+## Additional instructions
+
+- If asked by the the user to add something to `notes` or `notes.md` file, always append it to the `.qode/branches/$(git branch --show-current)/context/notes.md` file
+- Never change `CLAUDE.md` file
