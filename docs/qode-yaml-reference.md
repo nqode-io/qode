@@ -125,7 +125,7 @@ Supported values: `react`, `angular`, `nextjs`, `vue`, `svelte`, `dotnet`, `java
 
 ### `review.min_code_score` / `review.min_security_score`
 
-Minimum scores (0–10) required for `qode check` to pass. Default: `8.0`.
+Minimum scores (0–10) for code and security reviews. Default: `8.0`. Will be enforced by strict mode (see [#30](https://github.com/nqode-io/qode/issues/30)).
 
 ### `scoring.refine_target_score`
 

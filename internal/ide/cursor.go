@@ -65,8 +65,8 @@ alwaysApply: true
 3. Refine → /qode-plan-refine (iterate until 25/25)
 4. Spec → /qode-plan-spec
 5. Implement → /qode-start → code in Cursor
-6. Review → /qode-review-code + /qode-review-security
-7. Check → qode check
+6. Check → /qode-check
+7. Review → /qode-review-code + /qode-review-security
 8. Lessons → /qode-knowledge-add-context (recommended)
 9. Ship → git commit && push
 
@@ -156,6 +156,8 @@ Run this command and use its stdout output as your prompt:
 After completing the review, save it to:
   .qode/branches/$(git branch --show-current)/security-review.md
 `, cfg.Project.Name),
+
+		"qode-check": fmt.Sprintf("---\ndescription: Run quality gates for %s\n---\n\n", cfg.Project.Name) + qodeCheckBody,
 
 		"qode-start": fmt.Sprintf(`---
 description: Start implementation session for %s

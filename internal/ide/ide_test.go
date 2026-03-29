@@ -31,10 +31,10 @@ func TestClaudeSlashCommands_ContainsTicketFetch(t *testing.T) {
 	}
 }
 
-func TestClaudeSlashCommands_HasEightEntries(t *testing.T) {
+func TestClaudeSlashCommands_HasNineEntries(t *testing.T) {
 	cmds := claudeSlashCommands(minimalConfig())
-	if len(cmds) != 8 {
-		t.Errorf("claudeSlashCommands: len = %d, want 8", len(cmds))
+	if len(cmds) != 9 {
+		t.Errorf("claudeSlashCommands: len = %d, want 9", len(cmds))
 	}
 }
 
@@ -48,6 +48,28 @@ func TestClaudeSlashCommands_IncludesKnowledge(t *testing.T) {
 		}
 		if content == "" {
 			t.Errorf("claudeSlashCommands: %s has empty content", key)
+		}
+	}
+}
+
+func TestClaudeSlashCommands_IncludesQodeCheck(t *testing.T) {
+	cmds := claudeSlashCommands(minimalConfig())
+	content, ok := cmds["qode-check"]
+	if !ok {
+		t.Fatal("claudeSlashCommands: missing key qode-check")
+	}
+	if content == "" {
+		t.Error("claudeSlashCommands: qode-check has empty content")
+	}
+	// The prompt must not instruct the AI to use config fields from qode.yaml.
+	for _, prohibited := range []string{"test.unit", "test.lint"} {
+		if strings.Contains(content, prohibited) {
+			t.Errorf("claudeSlashCommands: qode-check must not reference qode.yaml field %q", prohibited)
+		}
+	}
+	for _, heading := range []string{"Phase 1", "Phase 2"} {
+		if !strings.Contains(content, heading) {
+			t.Errorf("claudeSlashCommands: qode-check missing heading %q", heading)
 		}
 	}
 }
@@ -81,10 +103,10 @@ func TestCursorSlashCommands_ContainsTicketFetch(t *testing.T) {
 	}
 }
 
-func TestCursorSlashCommands_HasEightEntries(t *testing.T) {
+func TestCursorSlashCommands_HasNineEntries(t *testing.T) {
 	cmds := slashCommands(minimalConfig())
-	if len(cmds) != 8 {
-		t.Errorf("slashCommands: len = %d, want 8", len(cmds))
+	if len(cmds) != 9 {
+		t.Errorf("slashCommands: len = %d, want 9", len(cmds))
 	}
 }
 
@@ -98,6 +120,29 @@ func TestCursorSlashCommands_IncludesKnowledge(t *testing.T) {
 		}
 		if !strings.Contains(content, "description:") {
 			t.Errorf("slashCommands: %s missing YAML frontmatter", key)
+		}
+	}
+}
+
+func TestCursorSlashCommands_IncludesQodeCheck(t *testing.T) {
+	cfg := minimalConfig()
+	cmds := slashCommands(cfg)
+	content, ok := cmds["qode-check"]
+	if !ok {
+		t.Fatal("slashCommands: missing key qode-check")
+	}
+	if !strings.Contains(content, "description:") {
+		t.Error("slashCommands: qode-check missing YAML frontmatter")
+	}
+	// The prompt must not instruct the AI to use config fields from qode.yaml.
+	for _, prohibited := range []string{"test.unit", "test.lint"} {
+		if strings.Contains(content, prohibited) {
+			t.Errorf("slashCommands: qode-check must not reference qode.yaml field %q", prohibited)
+		}
+	}
+	for _, heading := range []string{"Phase 1", "Phase 2"} {
+		if !strings.Contains(content, heading) {
+			t.Errorf("slashCommands: qode-check missing heading %q", heading)
 		}
 	}
 }

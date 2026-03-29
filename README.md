@@ -44,9 +44,9 @@ Do note that you will have to configure `.env` file with appropriate ticketing s
 3. /qode-plan-refine             (in IDE)    Refine requirements — iterate to 25/25
 4. /qode-plan-spec               (in IDE)    Generate tech spec
 5. /qode-start                   (in IDE)    Run implementation prompt
-6. /qode-review-code             (in IDE)    Code review
-7. /qode-review-security         (in IDE)    Security review
-8. qode check                                Run all quality gates
+6. /qode-check                   (in IDE)    Run quality gates (tests + lint)
+7. /qode-review-code             (in IDE)    Code review
+8. /qode-review-security         (in IDE)    Security review
 9. `/qode-knowledge-add-context` (in IDE)    (Recommended) Extract lessons learned
 10. qode branch remove <name>                Cleanup
 ```
@@ -110,7 +110,7 @@ Both prompts can be customised via `.qode/prompts/review/` local overrides.
 | **Cursor** | `.cursorrules/*.mdc` rules + `.cursor/commands/*.mdc` slash commands |
 | **Claude Code** | `.claude/commands/*.md` slash commands |
 
-Slash commands available in all IDEs: `/qode-ticket-fetch`, `/qode-plan-refine`, `/qode-plan-spec`, `/qode-start`, `/qode-review-code`, `/qode-review-security`, `/qode-knowledge-add-branch`
+Slash commands available in all IDEs: `/qode-ticket-fetch`, `/qode-plan-refine`, `/qode-plan-spec`, `/qode-start`, `/qode-review-code`, `/qode-review-security`, `/qode-check`, `/qode-knowledge-add-branch`
 
 All configs are stack-aware. Use `qode ide sync` to regenerate after updating `qode.yaml`.
 
@@ -136,8 +136,6 @@ qode start --to-file                                           Save implementati
 
 qode review code                                               Generate code review prompt to stdout (use in IDE via /qode-review-code)
 qode review security                                           Generate security review prompt to stdout (use in IDE via /qode-review-security)
-
-qode check                                                     Run all quality gates per layer
 
 qode ide setup                                                 Generate IDE configs for all enabled IDEs
 qode ide sync                                                  Regenerate configs from qode.yaml

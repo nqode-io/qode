@@ -45,28 +45,31 @@ qode Workflow
 ├─────────────────────────────────────────────────────────────────┤
 │  STEP 5: IMPLEMENT                                              │
 │  /qode-start  (in Cursor/Claude Code)                           │
-│  → Generates implementation prompt with spec + knowledge        │       │
+│  → Generates implementation prompt with spec + knowledge        │
 ├─────────────────────────────────────────────────────────────────┤
 │  STEP 6: TEST LOCALLY                                           │
 │  → Test the implementation manually                             │
 │  → Use Cursor Chat / Claude Code chat for tweaks                │
 ├─────────────────────────────────────────────────────────────────┤
-│  STEP 7: REVIEW + QUALITY GATES                                 │
+│  STEP 7: QUALITY GATES                                          │
+│  /qode-check  (in Cursor/Claude Code)                           │
+│  → AI detects test runner + linter from project structure       │
+│  → Runs tests, then lint; proposes fixes on failure             │
+├─────────────────────────────────────────────────────────────────┤
+│  STEP 8: REVIEW                                                 │
 │  /qode-review-code       (in Cursor/Claude Code)                │
 │  /qode-review-security   (in Cursor/Claude Code)                │
-│  — or —                                                         │
-│  qode check    (runs tests + lint + both reviews per layer)     │
 │  → Apply suggested fixes; re-run until all gates pass           │
 ├─────────────────────────────────────────────────────────────────┤
-│  STEP 8: CAPTURE LESSONS LEARNED                                │
+│  STEP 9: CAPTURE LESSONS LEARNED                                │
 │  /qode-knowledge-add-context (in Cursor/Claude Code)            │
 │  → Capture insights and best practices from context             │
 ├─────────────────────────────────────────────────────────────────┤
-│  STEP 9: SHIP                                                   │
+│  STEP 10: SHIP                                                  │
 │  git add . && git commit && git push                            │
 │  gh pr create  (or az repos pr create)                          │
 ├─────────────────────────────────────────────────────────────────┤
-│  STEP 10: CLEANUP                                               │
+│  STEP 11: CLEANUP                                               │
 │  qode branch remove feat-user-dashboard                         │
 └─────────────────────────────────────────────────────────────────┘
 
