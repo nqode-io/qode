@@ -38,10 +38,10 @@ Workflow:
   3. /qode-plan-refine           (in IDE)       # Refine requirements (3-5x → 25/25)
   4. /qode-plan-spec             (in IDE)       # Generate tech spec
   5. /qode-start                 (in IDE)       # Run implementation prompt
-  6. /qode-review-code           (in IDE)       # Code review
-  7. /qode-review-security       (in IDE)       # Security review
-  8. /qode-knowledge-add-context (in IDE)       # Capture lessons learned
-  9. qode check                                 # Run all quality gates
+  6. /qode-check                 (in IDE)       # Run quality gates (tests + lint)
+  7. /qode-review-code           (in IDE)       # Code review
+  8. /qode-review-security       (in IDE)       # Security review
+  9. /qode-knowledge-add-context (in IDE)       # Capture lessons learned
  10. qode branch remove <name>                  # Cleanup
 
 See 'qode workflow' for the full diagram.`,
@@ -61,7 +61,6 @@ See 'qode workflow' for the full diagram.`,
 		newPlanCmd(),
 		newStartCmd(),
 		newReviewCmd(),
-		newCheckCmd(),
 		newBranchCmd(),
 		newIDECmd(),
 		newTicketCmd(),

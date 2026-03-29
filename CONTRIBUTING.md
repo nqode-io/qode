@@ -30,24 +30,20 @@ go install ./cmd/qode/
 qode uses its own workflow for development. Once you have qode installed:
 
 ```bash
-qode branch create feat-my-feature      # Create a feature branch
-/qode-start (in IDE)                    # Run the implementation prompt
-qode check                              # Run all quality gates
-
 qode branch create <name>               # Create a feature branch
 qode ticket fetch <url>                 # Fetch ticket into context
-/qode-ticket-fetch <url> (in IDE)    
+/qode-ticket-fetch <url> (in IDE)
 /qode-plan-refine (in IDE)              # Refine requirements—iterate to 25/25
 /qode-plan-spec (in IDE)                # Generate tech spec
 /qode-start (in IDE)                    # Run implementation prompt
-/ qode-review-code (in IDE)             # Code review
+/qode-check (in IDE)                    # Run quality gates (tests + lint)
+/qode-review-code (in IDE)              # Code review
 /qode-review-security (in IDE)          # Security review
-qode check                              # Run all quality gates
-/qode-knowledge-add-context` (in IDE)   # (Recommended) Extract lessons learned
+/qode-knowledge-add-context (in IDE)    # (Recommended) Extract lessons learned
 qode branch remove <name>               # Cleanup
 ```
 
-See the [README](README.md) for the full 9-step workflow.
+See the [README](README.md) for the full workflow.
 
 ## Quality Gates
 
@@ -61,7 +57,7 @@ All contributions must pass these checks:
 | Code review score | Minimum 8.0/10 |
 | Security review score | Minimum 8.0/10 |
 
-Run `qode check` to execute all gates at once.
+Run `/qode-check` (in IDE) to execute all gates interactively.
 
 ## Code Style
 
@@ -76,7 +72,7 @@ Run `qode check` to execute all gates at once.
 1. Fork the repository
 2. Create a feature branch (`qode branch create feat-description` or `git checkout -b feat-description`)
 3. Make your changes
-4. Ensure all quality gates pass (`qode check`)
+4. Ensure all quality gates pass (`/qode-check` in IDE)
 5. Open a pull request against `main`
 
 ## Reporting Issues
