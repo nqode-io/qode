@@ -6,7 +6,7 @@ qode ships with built-in prompt templates embedded in the binary. When you run `
 
 `qode init` copies all built-in templates into `.qode/prompts/`. qode checks this directory first when rendering prompts — if a file exists there, it is used instead of the built-in version.
 
-Existing files are never overwritten, so running `qode init` again is safe.
+Existing files are always overwritten on each `qode init` run to keep them in sync with the embedded defaults. Back up or commit any local edits before re-running `qode init`.
 
 ## Customise a template
 

@@ -108,7 +108,7 @@ Both prompts can be customised via `.qode/prompts/review/` local overrides.
 | IDE | What's generated |
 |---|---|
 | **Cursor** | `.cursorrules/*.mdc` rules + `.cursor/commands/*.mdc` slash commands |
-| **Claude Code** | `CLAUDE.md` + `.claude/commands/*.md` slash commands |
+| **Claude Code** | `.claude/commands/*.md` slash commands |
 
 Slash commands available in all IDEs: `/qode-ticket-fetch`, `/qode-plan-refine`, `/qode-plan-spec`, `/qode-start`, `/qode-review-code`, `/qode-review-security`, `/qode-knowledge-add-branch`
 

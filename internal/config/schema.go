@@ -110,7 +110,6 @@ type VSCodeIDEConfig struct {
 // ClaudeCodeIDEConfig controls Claude Code integration.
 type ClaudeCodeIDEConfig struct {
 	Enabled       bool `yaml:"enabled,omitempty"`
-	ClaudeMD      bool `yaml:"claude_md,omitempty"`
 	SlashCommands bool `yaml:"slash_commands,omitempty"`
 }
 

@@ -114,7 +114,7 @@ func runInitExisting(root string) error {
 
 // copyEmbeddedTemplates writes all built-in prompt templates into
 // .qode/prompts/ so users can edit them directly. Existing files are
-// not overwritten.
+// overwritten so projects stay in sync with the embedded defaults.
 func copyEmbeddedTemplates(root string) error {
 	templates, err := prompt.EmbeddedTemplates()
 	if err != nil {
@@ -122,9 +122,6 @@ func copyEmbeddedTemplates(root string) error {
 	}
 	for name, content := range templates {
 		dst := filepath.Join(root, config.QodeDir, "prompts", name+".md.tmpl")
-		if _, err := os.Stat(dst); err == nil {
-			continue // already exists — do not overwrite
-		}
 		if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 			return err
 		}

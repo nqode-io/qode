@@ -16,7 +16,6 @@ Planned features for qode, in recommended implementation order. Items marked wit
 - [ ] [#27](https://github.com/nqode-io/qode/issues/27) — **Replace ticket fetch with MCP** — Use MCP servers instead of built-in HTTP clients; support comments, attachments, linked resources
 - [ ] [#29](https://github.com/nqode-io/qode/issues/29) — **Rethink qode init** — Simplify setup; let the AI read project configs instead of hardcoding test/lint/build commands
 - [ ] [#41](https://github.com/nqode-io/qode/issues/41) — **`qode init`: append gitignore rules** — Add qode-specific `.gitignore` entries (temp prompt files, ticket snapshots, scored iteration copies) during init
-- [ ] [#32](https://github.com/nqode-io/qode/issues/32) — **Add --force flag to qode ide setup/sync** — Make overwriting opt-in; skip existing files by default
 - [ ] [#33](https://github.com/nqode-io/qode/issues/33) — **Worktree support** — Config flag `branch.use_worktrees` to create git worktrees via worktrunk, phantom, or `git worktree`; enables parallel task development
 - [ ] [#34](https://github.com/nqode-io/qode/issues/34) — **Add Codex IDE support** — Slash commands, IDE setup, templates, and documentation for OpenAI Codex, following the same convention as Cursor and Claude Code
 - [ ] [#35](https://github.com/nqode-io/qode/issues/35) — **Auto-commit after completed tasks** — Config flag `workflow.auto_commit`; instructs AI to commit after each task in `qode start`, after review fixes, and after PR comment resolution
@@ -46,7 +45,6 @@ Planned features for qode, in recommended implementation order. Items marked wit
  └── #29 Rethink qode init
 
 Independent (can run in parallel with any of the above):
- #32 --force flag for qode ide setup/sync
  #33 Worktree support
  #34 Codex IDE support
  #35 Auto-commit after completed tasks

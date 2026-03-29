@@ -24,7 +24,7 @@ func newIDESetupCmd() *cobra.Command {
 		Long: `Generates IDE-specific configuration files based on qode.yaml.
 
 Cursor:  .cursorrules/*.mdc + .cursor/commands/*.mdc
-Claude:  CLAUDE.md + .claude/commands/*.md`,
+Claude:  .claude/commands/*.md`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := resolveRoot()
 			if err != nil {
@@ -52,7 +52,6 @@ func newIDESyncCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			// TODO: add --force flag before beta to make overwriting opt-in; currently always overwrites.
 			if err := ide.Setup(root, cfg); err != nil {
 				return err
 			}
