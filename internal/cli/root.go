@@ -9,10 +9,8 @@ import (
 )
 
 var (
-	rootCmd *cobra.Command
-	// GlobalFlags shared across commands
-	flagRoot    string
-	flagVerbose bool
+	rootCmd  *cobra.Command
+	flagRoot string
 )
 
 // SetVersion sets the version string displayed by --version.
@@ -57,7 +55,6 @@ See 'qode workflow' for the full diagram.`,
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	rootCmd.PersistentFlags().StringVar(&flagRoot, "root", "", "project root directory (default: auto-detected)")
-	rootCmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "verbose output")
 
 	rootCmd.AddCommand(
 		newInitCmd(),

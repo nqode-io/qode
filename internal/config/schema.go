@@ -10,6 +10,7 @@ type Config struct {
 	Workspace    WorkspaceConfig    `yaml:"workspace,omitempty"`
 	Knowledge    KnowledgeConfig    `yaml:"knowledge,omitempty"`
 	Architecture ArchitectureConfig `yaml:"architecture,omitempty"`
+	Branch       BranchConfig       `yaml:"branch,omitempty"`
 }
 
 // ProjectConfig describes the project and its tech layers.
@@ -109,7 +110,6 @@ type VSCodeIDEConfig struct {
 // ClaudeCodeIDEConfig controls Claude Code integration.
 type ClaudeCodeIDEConfig struct {
 	Enabled       bool `yaml:"enabled,omitempty"`
-	ClaudeMD      bool `yaml:"claude_md,omitempty"`
 	SlashCommands bool `yaml:"slash_commands,omitempty"`
 }
 
@@ -130,6 +130,11 @@ type RepoRef struct {
 type KnowledgeConfig struct {
 	AutoDiscover bool     `yaml:"auto_discover,omitempty"`
 	Paths        []string `yaml:"paths,omitempty"`
+}
+
+// BranchConfig controls branch lifecycle behaviour.
+type BranchConfig struct {
+	KeepBranchContext bool `yaml:"keep_branch_context,omitempty"`
 }
 
 // ArchitectureConfig enforces coding standards.

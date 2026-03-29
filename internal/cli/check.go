@@ -10,11 +10,6 @@ import (
 )
 
 func newCheckCmd() *cobra.Command {
-	var (
-		skipTests bool
-		layerName string
-	)
-
 	cmd := &cobra.Command{
 		Use:   "check",
 		Short: "Run all quality gates (test → lint → code review → security review)",
@@ -42,17 +37,7 @@ Fails if any mandatory gate does not meet the configured minimum score.`,
 				return err
 			}
 
-			layers := cfg.Layers()
-			if layerName != "" {
-				layers = filterLayers(layers, layerName)
-				if len(layers) == 0 {
-					return fmt.Errorf("layer %q not found in qode.yaml", layerName)
-				}
-			}
-
-			results := runner.RunCheck(root, branch, cfg, layers, runner.CheckOptions{
-				SkipTests: skipTests,
-			})
+			results := runner.RunCheck(root, branch, cfg, cfg.Layers())
 
 			printCheckResults(results, cfg)
 
@@ -65,19 +50,7 @@ Fails if any mandatory gate does not meet the configured minimum score.`,
 		},
 	}
 
-	cmd.Flags().BoolVar(&skipTests, "skip-tests", false, "skip test execution, only run reviews")
-	cmd.Flags().StringVar(&layerName, "layer", "", "run gates for a specific layer only")
-
 	return cmd
-}
-
-func filterLayers(layers []config.LayerConfig, name string) []config.LayerConfig {
-	for _, l := range layers {
-		if l.Name == name {
-			return []config.LayerConfig{l}
-		}
-	}
-	return nil
 }
 
 func printCheckResults(results []runner.LayerResult, cfg *config.Config) {

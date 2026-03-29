@@ -34,17 +34,23 @@ func newBranchCmd() *cobra.Command {
 }
 
 func newBranchCreateCmd() *cobra.Command {
-	var base string
 	cmd := &cobra.Command{
-		Use:   "create <name>",
+		Use:   "create <name> [base]",
 		Short: "Create a feature branch with a context folder",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := resolveRoot()
 			if err != nil {
 				return err
 			}
 			name := args[0]
+			base := ""
+			if len(args) > 1 {
+				base = args[1]
+				if len(base) > 0 && base[0] == '-' {
+					return fmt.Errorf("invalid base branch %q: must not start with '-'", base)
+				}
+			}
 
 			// Create git branch.
 			if err := git.CreateBranch(root, name, base); err != nil {
@@ -86,18 +92,21 @@ func newBranchCreateCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&base, "base", "", "base branch (default: current branch)")
 	return cmd
 }
 
 func newBranchRemoveCmd() *cobra.Command {
-	var keepBranch bool
+	var keepBranchCtx bool
 	cmd := &cobra.Command{
 		Use:   "remove <name>",
-		Short: "Remove branch context folder (optionally delete git branch)",
+		Short: "Remove branch context folder and delete git branch",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := resolveRoot()
+			if err != nil {
+				return err
+			}
+			cfg, err := config.Load(root)
 			if err != nil {
 				return err
 			}
@@ -107,21 +116,23 @@ func newBranchRemoveCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := os.RemoveAll(branchDir); err != nil && !os.IsNotExist(err) {
-				return fmt.Errorf("removing context: %w", err)
-			}
-			fmt.Printf("Removed context for branch: %s\n", name)
 
-			if !keepBranch {
-				if err := git.DeleteBranch(root, name); err != nil {
-					fmt.Fprintf(os.Stderr, "Warning: could not delete git branch: %v\n", err)
-				} else {
-					fmt.Printf("Deleted git branch: %s\n", name)
+			keepCtx := cfg.Branch.KeepBranchContext || keepBranchCtx
+			if !keepCtx {
+				if err := os.RemoveAll(branchDir); err != nil && !os.IsNotExist(err) {
+					return fmt.Errorf("removing context: %w", err)
 				}
+				fmt.Printf("Removed context for branch: %s\n", name)
+			}
+
+			if err := git.DeleteBranch(root, name); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: could not delete git branch: %v\n", err)
+			} else {
+				fmt.Printf("Deleted git branch: %s\n", name)
 			}
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&keepBranch, "keep-branch", false, "keep the git branch, only remove context folder")
+	cmd.Flags().BoolVar(&keepBranchCtx, "keep-branch-context", false, "keep the .qode/branches/ context folder")
 	return cmd
 }

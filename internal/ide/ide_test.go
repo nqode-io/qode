@@ -15,7 +15,6 @@ func minimalConfig() *config.Config {
 	cfg.Project.Topology = "single"
 	cfg.IDE.ClaudeCode.Enabled = true
 	cfg.IDE.ClaudeCode.SlashCommands = true
-	cfg.IDE.ClaudeCode.ClaudeMD = false
 	cfg.IDE.Cursor.Enabled = true
 	return cfg
 }
@@ -130,49 +129,6 @@ func TestSetupClaudeCode_WritesTicketFetchCommand(t *testing.T) {
 	}
 	if string(data) != "!qode ticket fetch $ARGUMENTS" {
 		t.Errorf("qode-ticket-fetch.md content = %q, want %q", string(data), "!qode ticket fetch $ARGUMENTS")
-	}
-}
-
-func TestSetupClaudeCode_DoesNotOverwriteExistingClaudeMD(t *testing.T) {
-	dir := t.TempDir()
-	cfg := minimalConfig()
-	cfg.IDE.ClaudeCode.ClaudeMD = true
-
-	claudeMDPath := filepath.Join(dir, "CLAUDE.md")
-	existingContent := "# Custom CLAUDE.md\n\nUser-maintained content.\n"
-	if err := os.WriteFile(claudeMDPath, []byte(existingContent), 0644); err != nil {
-		t.Fatalf("writing existing CLAUDE.md: %v", err)
-	}
-
-	if err := SetupClaudeCode(dir, cfg); err != nil {
-		t.Fatalf("SetupClaudeCode: %v", err)
-	}
-
-	data, err := os.ReadFile(claudeMDPath)
-	if err != nil {
-		t.Fatalf("reading CLAUDE.md: %v", err)
-	}
-	if string(data) != existingContent {
-		t.Errorf("CLAUDE.md was overwritten.\ngot:\n%s\nwant:\n%s", string(data), existingContent)
-	}
-}
-
-func TestSetupClaudeCode_CreatesClaudeMDWhenMissing(t *testing.T) {
-	dir := t.TempDir()
-	cfg := minimalConfig()
-	cfg.IDE.ClaudeCode.ClaudeMD = true
-
-	if err := SetupClaudeCode(dir, cfg); err != nil {
-		t.Fatalf("SetupClaudeCode: %v", err)
-	}
-
-	claudeMDPath := filepath.Join(dir, "CLAUDE.md")
-	data, err := os.ReadFile(claudeMDPath)
-	if err != nil {
-		t.Fatalf("reading CLAUDE.md: %v", err)
-	}
-	if !strings.Contains(string(data), cfg.Project.Name) {
-		t.Errorf("CLAUDE.md missing project name %q, got:\n%s", cfg.Project.Name, string(data))
 	}
 }
 

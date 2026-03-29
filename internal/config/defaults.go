@@ -16,7 +16,7 @@ func DefaultConfig() Config {
 		IDE: IDEConfig{
 			Cursor:     CursorIDEConfig{Enabled: true, RulesDir: ".cursorrules", CommandsDir: ".cursor/commands"},
 			VSCode:     VSCodeIDEConfig{Enabled: true, Launch: true, Tasks: true, Settings: true, Extensions: true},
-			ClaudeCode: ClaudeCodeIDEConfig{Enabled: true, ClaudeMD: true, SlashCommands: true},
+			ClaudeCode: ClaudeCodeIDEConfig{Enabled: true, SlashCommands: true},
 		},
 		Knowledge: KnowledgeConfig{
 			AutoDiscover: true,
@@ -25,6 +25,7 @@ func DefaultConfig() Config {
 			DRYRules:  DRYRulesConfig{Enabled: true, MaxRepetitions: 3},
 			CleanCode: CleanCodeConfig{MaxFunctionLines: 50},
 		},
+		Branch: BranchConfig{KeepBranchContext: false},
 	}
 }
 

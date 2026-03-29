@@ -23,10 +23,7 @@ func newPlanCmd() *cobra.Command {
 }
 
 func newPlanRefineCmd() *cobra.Command {
-	var (
-		iterations int
-		toFile     bool
-	)
+	var toFile bool
 
 	cmd := &cobra.Command{
 		Use:   "refine [ticket-url]",
@@ -42,10 +39,9 @@ Use --to-file to write the prompt files to disk (worker + judge) for debugging.`
 			if len(args) > 0 {
 				ticketURL = args[0]
 			}
-			return runPlanRefine(ticketURL, iterations, toFile)
+			return runPlanRefine(ticketURL, toFile)
 		},
 	}
-	cmd.Flags().IntVar(&iterations, "iterations", 0, "refinement iteration number (0 = auto-detect)")
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
 	return cmd
 }
@@ -136,7 +132,7 @@ func runPlanJudge(toFile bool) error {
 	return err
 }
 
-func runPlanRefine(ticketURL string, iterations int, toFile bool) error {
+func runPlanRefine(ticketURL string, toFile bool) error {
 	root, err := resolveRoot()
 	if err != nil {
 		return err
@@ -163,7 +159,7 @@ func runPlanRefine(ticketURL string, iterations int, toFile bool) error {
 	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
 	analysisPath := filepath.Join(branchDir, "refined-analysis.md")
 
-	out, err := plan.BuildRefinePromptWithOutput(engine, cfg, ctx, ticketURL, iterations, analysisPath)
+	out, err := plan.BuildRefinePromptWithOutput(engine, cfg, ctx, ticketURL, 0, analysisPath)
 	if err != nil {
 		return err
 	}

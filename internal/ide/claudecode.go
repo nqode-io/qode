@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/nqode/qode/internal/config"
 )
@@ -16,15 +15,6 @@ func SetupClaudeCode(root string, cfg *config.Config) error {
 		return err
 	}
 
-	if cfg.IDE.ClaudeCode.ClaudeMD {
-		claudeMDPath := filepath.Join(root, "CLAUDE.md")
-		if _, err := os.Stat(claudeMDPath); os.IsNotExist(err) {
-			if err := writeFile(claudeMDPath, buildClaudeMD(cfg)); err != nil {
-				return err
-			}
-		}
-	}
-
 	if cfg.IDE.ClaudeCode.SlashCommands {
 		cmds := claudeSlashCommands(cfg)
 		for name, content := range cmds {
@@ -34,66 +24,8 @@ func SetupClaudeCode(root string, cfg *config.Config) error {
 		}
 	}
 
-	fmt.Printf("  Claude Code: CLAUDE.md + %d slash commands\n", len(claudeSlashCommands(cfg)))
+	fmt.Printf("  Claude Code: %d slash commands\n", len(claudeSlashCommands(cfg)))
 	return nil
-}
-
-func buildClaudeMD(cfg *config.Config) string {
-	var sb strings.Builder
-
-	fmt.Fprintf(&sb, "# %s — Project Context\n\n", cfg.Project.Name)
-
-	if cfg.Project.Description != "" {
-		sb.WriteString(cfg.Project.Description + "\n\n")
-	}
-
-	sb.WriteString("## Tech Stack\n\n")
-	for _, l := range cfg.Layers() {
-		fmt.Fprintf(&sb, "- **%s** (%s): `%s`\n", l.Name, l.Stack, l.Path)
-	}
-	sb.WriteString("\n")
-
-	sb.WriteString("## Project Structure\n\n")
-	fmt.Fprintf(&sb, "Topology: %s\n\n", cfg.Project.Topology)
-	for _, l := range cfg.Layers() {
-		fmt.Fprintf(&sb, "- `%s/` — %s (%s)\n", l.Path, l.Name, l.Stack)
-	}
-	sb.WriteString("\n")
-
-	sb.WriteString("## Quality Standards\n\n")
-	fmt.Fprintf(&sb, "- Minimum code review score: %.1f/10\n", cfg.Review.MinCodeScore)
-	fmt.Fprintf(&sb, "- Minimum security review score: %.1f/10\n", cfg.Review.MinSecurityScore)
-	fmt.Fprintf(&sb, "- Max function length: %d lines\n", cfg.Architecture.CleanCode.MaxFunctionLines)
-	sb.WriteString("\n")
-
-	sb.WriteString("## Development Workflow\n\n")
-	sb.WriteString("1. `qode branch create <name>` — Create feature branch\n")
-	sb.WriteString("2. `qode ticket fetch <url>` — Fetch ticket context\n")
-	sb.WriteString("3. `/qode-plan-refine` — Iterate requirements (target 25/25)\n")
-	sb.WriteString("4. `/qode-plan-spec` — Generate tech spec\n")
-	sb.WriteString("5. `/qode-start` — Run implementation prompt\n")
-	sb.WriteString("6. `/qode-review-code` + `/qode-review-security` — Reviews\n")
-	sb.WriteString("7. `/qode-knowledge-add-context` — (Recommended) Extract lessons learned\n")
-	sb.WriteString("8. `qode check` — All quality gates\n")
-	sb.WriteString("9. `git commit && git push` — Ship\n\n")
-
-	sb.WriteString("## Clean Code Rules\n\n")
-	sb.WriteString("- Read existing code before writing new code\n")
-	sb.WriteString("- Follow patterns in existing files — do not introduce new patterns\n")
-	sb.WriteString("- Functions max 50 lines, single responsibility\n")
-	sb.WriteString("- Handle all errors explicitly\n")
-	sb.WriteString("- No magic numbers — use named constants\n")
-	sb.WriteString("- No TODO comments in committed code\n\n")
-
-	if cfg.TicketSystem.Type != "" && cfg.TicketSystem.Type != "manual" {
-		fmt.Fprintf(&sb, "## Ticket System\n\nType: %s\n", cfg.TicketSystem.Type)
-		if cfg.TicketSystem.URL != "" {
-			fmt.Fprintf(&sb, "URL: %s\n", cfg.TicketSystem.URL)
-		}
-		sb.WriteString("\n")
-	}
-
-	return sb.String()
 }
 
 func claudeSlashCommands(cfg *config.Config) map[string]string {
@@ -198,8 +130,4 @@ Run this command and use its stdout output as your prompt:
   qode knowledge add-branch $ARGUMENTS
 `, name),
 	}
-}
-
-func init() {
-	_ = os.Getenv // suppress unused import if needed
 }
