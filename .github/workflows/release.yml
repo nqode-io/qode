@@ -2,7 +2,6 @@ name: Release
 
 on:
   push:
-    branches: [main]
     tags: ["v*"]
 
 permissions:
@@ -19,61 +18,6 @@ jobs:
           go-version-file: go.mod
 
       - run: go test ./...
-
-  # Runs on every merge to main (but not on tags — the release job handles those).
-  snapshot:
-    if: github.ref == 'refs/heads/main'
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - name: Derive version from latest tag
-        id: version
-        run: |
-          TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo "v0.1.0-alpha")
-          echo "tag=${TAG}+${{ github.run_number }}" >> "$GITHUB_OUTPUT"
-          echo "base=${TAG}" >> "$GITHUB_OUTPUT"
-
-      - uses: goreleaser/goreleaser-action@v6
-        with:
-          version: "~> v2"
-          args: release --snapshot --clean
-        env:
-          GORELEASER_CURRENT_TAG: ${{ steps.version.outputs.tag }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: qode-snapshot-${{ github.run_number }}
-          path: dist/qode_*
-          retention-days: 30
-
-      - name: Publish latest pre-release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Delete existing latest release if it exists
-          gh release delete latest --yes 2>/dev/null || true
-          git push origin :refs/tags/latest 2>/dev/null || true
-
-          # Create new latest release with all archives
-          gh release create latest \
-            --title "Latest Build (#${{ github.run_number }})" \
-            --notes "Development build from \`main\` branch.
-
-          **Version:** ${{ steps.version.outputs.tag }}
-          **Commit:** ${{ github.sha }}
-
-          > This pre-release is automatically updated on every merge to main." \
-            --prerelease \
-            dist/qode_*.tar.gz dist/qode_*.zip dist/checksums.txt
 
   # Runs only when a version tag (v*) is pushed.
   release:
