@@ -18,12 +18,7 @@ func newIDECmd() *cobra.Command {
 }
 
 func newIDESetupCmd() *cobra.Command {
-	var (
-		cursor bool
-		claude bool
-	)
-
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:   "setup",
 		Short: "Generate IDE configs (Cursor, Claude Code)",
 		Long: `Generates IDE-specific configuration files based on qode.yaml.
@@ -39,23 +34,9 @@ Claude:  CLAUDE.md + .claude/commands/*.md`,
 			if err != nil {
 				return err
 			}
-
-			if cmd.Flags().Changed("cursor") {
-				cfg.IDE.Cursor.Enabled = cursor
-			}
-			if cmd.Flags().Changed("claude") {
-				cfg.IDE.ClaudeCode.Enabled = claude
-			}
-
-			// TODO: add --force flag before beta to make overwriting opt-in; currently always overwrites.
 			return ide.Setup(root, cfg)
 		},
 	}
-
-	cmd.Flags().BoolVar(&cursor, "cursor", false, "generate Cursor configs only")
-	cmd.Flags().BoolVar(&claude, "claude", false, "generate Claude Code configs only")
-
-	return cmd
 }
 
 func newIDESyncCmd() *cobra.Command {

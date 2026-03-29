@@ -45,10 +45,7 @@ Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md fo
 
 			ctx.WarnMissingPredecessors("start", os.Stderr)
 
-			paths, listErr := knowledge.List(root, cfg)
-			if listErr != nil && flagVerbose {
-				fmt.Fprintf(os.Stderr, "Warning: knowledge base: %v\n", listErr)
-			}
+			paths, _ := knowledge.List(root, cfg)
 			var kb string
 			refs := make([]string, 0, len(paths))
 			for _, p := range paths {

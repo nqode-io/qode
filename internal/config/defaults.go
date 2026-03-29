@@ -25,6 +25,7 @@ func DefaultConfig() Config {
 			DRYRules:  DRYRulesConfig{Enabled: true, MaxRepetitions: 3},
 			CleanCode: CleanCodeConfig{MaxFunctionLines: 50},
 		},
+		Branch: BranchConfig{KeepBranchContext: false},
 	}
 }
 

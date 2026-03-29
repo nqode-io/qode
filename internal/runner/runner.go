@@ -29,23 +29,18 @@ type LayerResult struct {
 	Passed         bool
 }
 
-// CheckOptions controls which gates to run.
-type CheckOptions struct {
-	SkipTests bool
-}
-
 // RunCheck executes quality gates for all given layers.
 // branch is the current git branch name, used to locate saved review files.
-func RunCheck(root, branch string, cfg *config.Config, layers []config.LayerConfig, opts CheckOptions) []LayerResult {
+func RunCheck(root, branch string, cfg *config.Config, layers []config.LayerConfig) []LayerResult {
 	results := make([]LayerResult, 0, len(layers))
 	for _, l := range layers {
-		r := runLayerCheck(root, branch, cfg, l, opts)
+		r := runLayerCheck(root, branch, cfg, l)
 		results = append(results, r)
 	}
 	return results
 }
 
-func runLayerCheck(root, branch string, cfg *config.Config, layer config.LayerConfig, opts CheckOptions) LayerResult {
+func runLayerCheck(root, branch string, cfg *config.Config, layer config.LayerConfig) LayerResult {
 	layerRoot := filepath.Join(root, layer.Path)
 	result := LayerResult{
 		Layer: layer.Name,
@@ -53,7 +48,7 @@ func runLayerCheck(root, branch string, cfg *config.Config, layer config.LayerCo
 	}
 
 	// Tests.
-	if opts.SkipTests || layer.Test.Unit == "" {
+	if layer.Test.Unit == "" {
 		result.Tests = GateResult{Skipped: true, Detail: "no test command"}
 	} else {
 		result.Tests = runCommand(layerRoot, layer.Test.Unit)

@@ -218,10 +218,7 @@ func buildBranchLessonData(root string, cfg *config.Config, branches []string) (
 		diff = truncateLines(d, maxDiffLines)
 	}
 
-	lessons, err := knowledge.ListLessons(root)
-	if err != nil && flagVerbose {
-		fmt.Fprintf(os.Stderr, "Warning: listing lessons: %v\n", err)
-	}
+	lessons, _ := knowledge.ListLessons(root)
 	lessonsStr := formatLessonsList(lessons)
 
 	branchDir := filepath.Join(root, config.QodeDir, "branches", branches[0])

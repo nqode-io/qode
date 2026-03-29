@@ -3,7 +3,10 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -80,6 +83,43 @@ func TestSave_Load(t *testing.T) {
 	}
 	if len(loaded.Project.Layers) != 1 {
 		t.Errorf("expected 1 layer, got %d", len(loaded.Project.Layers))
+	}
+}
+
+func TestDefaultConfig_BranchKeepBranchContext(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.Branch.KeepBranchContext != false {
+		t.Error("expected Branch.KeepBranchContext false by default")
+	}
+}
+
+func TestBranchConfig_YAMLRoundTrip(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Branch.KeepBranchContext = true
+
+	data, err := yaml.Marshal(&cfg)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	var loaded Config
+	if err := yaml.Unmarshal(data, &loaded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !loaded.Branch.KeepBranchContext {
+		t.Error("expected Branch.KeepBranchContext true after round-trip")
+	}
+}
+
+func TestBranchConfig_OmitEmpty(t *testing.T) {
+	cfg := DefaultConfig()
+	// KeepBranchContext is false — field is omitempty, so it should not appear in YAML.
+	data, err := yaml.Marshal(&cfg)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if strings.Contains(string(data), "keep_branch_context") {
+		t.Error("expected keep_branch_context to be omitted when false")
 	}
 }
 
