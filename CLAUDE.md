@@ -6,59 +6,66 @@ qode is an AI-assisted developer workflow CLI written in Go. It standardises how
 
 - **default** (go): `.`
 
-## Key Packages
+# CLAUDE.md
 
-| Package | Purpose |
-|---|---|
-| `internal/cli/` | Cobra command implementations |
-| `internal/dispatch/` | Prompt dispatch — runs `claude` CLI interactively |
-| `internal/prompt/` | Template engine — embedded templates with per-project `.qode/prompts/` overrides |
-| `internal/config/` | `qode.yaml` loading and merging |
-| `internal/ticket/` | Ticket provider integrations (Jira, Azure DevOps, Linear, GitHub) |
-| `internal/runner/` | Quality gate execution (tests, lint, AI reviews) |
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Structure
+## Commands
 
-Topology: single
+```bash
+# Build
+go build ./...
 
-- `./` — default (go)
+# Run all tests
+go test ./...
 
-## Development Workflow
+# Run a single test
+go test ./internal/<package>/... -run TestFunctionName
 
-**Terminal commands:**
-1. `qode branch create <name>` — Create feature branch
-2. `qode ticket fetch <url>` — Fetch ticket context
+# Lint
+golangci-lint run
 
-**IDE slash commands (Cursor / Claude Code):**
-3. `/qode-plan-refine` — Iterate requirements (target 25/25)
-4. `/qode-plan-spec` — Generate tech spec
+# Install binary locally
+go install ./cmd/qode/
+```
 
-**Either terminal or IDE:**
-5. `qode start` / `/qode-start` — Run implementation prompt (launches interactive Claude session)
-6. `/qode-review-code` + `/qode-review-security` — Reviews
+## Architecture
 
+**qode** is a Go CLI (`cmd/qode/main.go` → `internal/cli`) that generates structured AI prompts for a standardized feature development workflow. It does not run AI itself — it assembles context and renders prompt templates that developers paste into their AI IDE (Cursor, Claude Code, etc.).
 
-**Terminal commands:**
-7. `qode check` — All quality gates
+### Core data flow
 
-**Either terminal or IDE:**
-8. `/qode-knowledge-add-context` — (Recommended) Capture lessons learned from context
+1. **Config** (`internal/config`) — loads `qode.yaml` from the project root. `Config.Layers()` normalizes both shorthand (`stack:`) and multi-layer (`layers:[]`) forms into `[]LayerConfig`.
 
-**Terminal commands:**
-9. `git commit && git push` — Ship
-10. `qode branch remove <name>` — Cleanup
+2. **Branch context** (`internal/context`) — each feature branch gets a folder at `.qode/branches/<branch>/`. Files here (ticket.md, refined-analysis.md, spec.md, code-review.md, security-review.md) are the stateful inputs that get injected into prompts.
+
+3. **Prompt engine** (`internal/prompt/engine.go`) — `Engine.Render(name, data)` resolves templates with a local-override-first strategy: checks `.qode/prompts/<name>.md.tmpl` before falling back to embedded templates (`//go:embed templates`). `TemplateData` is the single struct passed to every template.
+
+4. **CLI commands** (`internal/cli`) — each command loads config, resolves branch context, populates `TemplateData`, and calls the engine. Rendered prompts are either printed to stdout or written to `.qode/branches/<branch>/.refine-prompt.md` via `writePromptToFile` (atomic rename).
+
+### Two-pass scoring
+
+Reviews use a worker/judge split to eliminate AI self-scoring bias:
+- **Worker pass** (`/qode-review-code`, `/qode-review-security`): produces analysis without a score
+- **Judge pass** (separate template): scores the analysis against a rubric independently
+
+Scores are parsed from saved markdown files in the branch context folder.
+
+### Key directories
+
+- `internal/prompt/templates/` — embedded Go templates (`.md.tmpl`) organized by workflow step: `refine/`, `spec/`, `start/`, `review/`, `scoring/`, `knowledge/`
+
+## Code standards
+
+- Read existing code before writing new code
+- Functions ≤ 50 lines, single responsibility
+- Named constants — no magic numbers
+- Explicit error handling — never swallow errors
+- No TODO comments in committed code
+- Follow existing patterns; do not introduce new ones
 
 ## Quality Standards
 
+- Minimum refined analysis score: 20/25
 - Minimum code review score: 8.0/10
 - Minimum security review score: 8.0/10
-- Max function length: 50 lines
-
-## Clean Code Rules
-
-- Read existing code before writing new code
-- Follow patterns in existing files — do not introduce new patterns
-- Functions max 50 lines, single responsibility
-- Handle all errors explicitly
-- No magic numbers — use named constants
-- No TODO comments in committed code
