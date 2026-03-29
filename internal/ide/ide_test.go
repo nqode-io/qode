@@ -14,7 +14,6 @@ func minimalConfig() *config.Config {
 	cfg.Project.Name = "testproject"
 	cfg.Project.Topology = "single"
 	cfg.IDE.ClaudeCode.Enabled = true
-	cfg.IDE.ClaudeCode.SlashCommands = true
 	cfg.IDE.Cursor.Enabled = true
 	return cfg
 }

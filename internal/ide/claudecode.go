@@ -15,16 +15,14 @@ func SetupClaudeCode(root string, cfg *config.Config) error {
 		return err
 	}
 
-	if cfg.IDE.ClaudeCode.SlashCommands {
-		cmds := claudeSlashCommands(cfg)
-		for name, content := range cmds {
-			if err := writeFile(filepath.Join(commandsDir, name+".md"), content); err != nil {
-				return err
-			}
+	cmds := claudeSlashCommands(cfg)
+	for name, content := range cmds {
+		if err := writeFile(filepath.Join(commandsDir, name+".md"), content); err != nil {
+			return err
 		}
 	}
 
-	fmt.Printf("  Claude Code: %d slash commands\n", len(claudeSlashCommands(cfg)))
+	fmt.Printf("  Claude Code: %d slash commands\n", len(cmds))
 	return nil
 }
 

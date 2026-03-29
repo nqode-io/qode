@@ -9,44 +9,38 @@ import (
 	"github.com/nqode/qode/internal/config"
 )
 
+const cursorRulesDir = ".cursorrules"
+const cursorCommandsDir = ".cursor/commands"
+
 // SetupCursor generates Cursor IDE configuration files.
 func SetupCursor(root string, cfg *config.Config) error {
-	rulesDir := cfg.IDE.Cursor.RulesDir
-	if rulesDir == "" {
-		rulesDir = ".cursorrules"
-	}
-	commandsDir := cfg.IDE.Cursor.CommandsDir
-	if commandsDir == "" {
-		commandsDir = ".cursor/commands"
-	}
-
-	if err := os.MkdirAll(filepath.Join(root, rulesDir), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, cursorRulesDir), 0755); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(root, commandsDir), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, cursorCommandsDir), 0755); err != nil {
 		return err
 	}
 
 	// Workflow rule.
-	if err := writeFile(filepath.Join(root, rulesDir, "qode-workflow.mdc"), workflowRule(cfg)); err != nil {
+	if err := writeFile(filepath.Join(root, cursorRulesDir, "qode-workflow.mdc"), workflowRule(cfg)); err != nil {
 		return err
 	}
 
 	// Clean code rule.
-	if err := writeFile(filepath.Join(root, rulesDir, "qode-clean-code.mdc"), cleanCodeRule(cfg)); err != nil {
+	if err := writeFile(filepath.Join(root, cursorRulesDir, "qode-clean-code.mdc"), cleanCodeRule(cfg)); err != nil {
 		return err
 	}
 
 	// Slash commands.
 	cmds := slashCommands(cfg)
 	for name, content := range cmds {
-		p := filepath.Join(root, commandsDir, name+".mdc")
+		p := filepath.Join(root, cursorCommandsDir, name+".mdc")
 		if err := writeFile(p, content); err != nil {
 			return err
 		}
 	}
 
-	fmt.Printf("  Cursor: %s/ (%d rules, %d commands)\n", rulesDir, 2, len(cmds))
+	fmt.Printf("  Cursor: %s/ (%d rules, %d commands)\n", cursorRulesDir, 2, len(cmds))
 	return nil
 }
 

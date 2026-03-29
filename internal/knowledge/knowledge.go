@@ -45,27 +45,15 @@ func Load(root string, cfg *config.Config) (string, error) {
 func List(root string, cfg *config.Config) ([]string, error) {
 	var files []string
 
-	// Explicit paths from config.
-	for _, p := range cfg.Knowledge.Paths {
-		abs := filepath.Join(root, p)
-		info, err := os.Stat(abs)
-		if err != nil {
-			continue
-		}
-		if info.IsDir() {
-			dirFiles, _ := listDir(abs)
-			files = append(files, dirFiles...)
-		} else {
-			files = append(files, abs)
-		}
+	kbPath := cfg.Knowledge.Path
+	if kbPath == "" {
+		kbPath = filepath.Join(config.QodeDir, "knowledge")
 	}
-
-	// Auto-discover from .qode/knowledge/.
-	kbDir := filepath.Join(root, config.QodeDir, "knowledge")
+	kbDir := filepath.Join(root, kbPath)
 	kbFiles, _ := listDir(kbDir)
 	files = append(files, kbFiles...)
 
-	return dedup(files), nil
+	return files, nil
 }
 
 // Search searches knowledge base files for a query string.
@@ -225,14 +213,3 @@ func isLessonFile(path string) bool {
 	return strings.Contains(path, string(filepath.Separator)+"lessons"+string(filepath.Separator))
 }
 
-func dedup(files []string) []string {
-	seen := map[string]bool{}
-	result := files[:0]
-	for _, f := range files {
-		if !seen[f] {
-			seen[f] = true
-			result = append(result, f)
-		}
-	}
-	return result
-}

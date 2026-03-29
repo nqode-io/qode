@@ -9,7 +9,6 @@ type Config struct {
 	IDE          IDEConfig          `yaml:"ide,omitempty"`
 	Workspace    WorkspaceConfig    `yaml:"workspace,omitempty"`
 	Knowledge    KnowledgeConfig    `yaml:"knowledge,omitempty"`
-	Architecture ArchitectureConfig `yaml:"architecture,omitempty"`
 	Branch       BranchConfig       `yaml:"branch,omitempty"`
 }
 
@@ -87,30 +86,17 @@ type ScoringConfig struct {
 // IDEConfig controls which IDE integrations are generated.
 type IDEConfig struct {
 	Cursor     CursorIDEConfig     `yaml:"cursor,omitempty"`
-	VSCode     VSCodeIDEConfig     `yaml:"vscode,omitempty"`
 	ClaudeCode ClaudeCodeIDEConfig `yaml:"claude_code,omitempty"`
 }
 
 // CursorIDEConfig controls Cursor IDE integration.
 type CursorIDEConfig struct {
-	Enabled     bool   `yaml:"enabled,omitempty"`
-	RulesDir    string `yaml:"rules_dir,omitempty"`
-	CommandsDir string `yaml:"commands_dir,omitempty"`
-}
-
-// VSCodeIDEConfig controls VS Code integration.
-type VSCodeIDEConfig struct {
-	Enabled    bool `yaml:"enabled,omitempty"`
-	Launch     bool `yaml:"launch,omitempty"`
-	Tasks      bool `yaml:"tasks,omitempty"`
-	Settings   bool `yaml:"settings,omitempty"`
-	Extensions bool `yaml:"extensions,omitempty"`
+	Enabled bool `yaml:"enabled,omitempty"`
 }
 
 // ClaudeCodeIDEConfig controls Claude Code integration.
 type ClaudeCodeIDEConfig struct {
-	Enabled       bool `yaml:"enabled,omitempty"`
-	SlashCommands bool `yaml:"slash_commands,omitempty"`
+	Enabled bool `yaml:"enabled,omitempty"`
 }
 
 // WorkspaceConfig links multiple repos in a multi-repo workspace.
@@ -128,30 +114,12 @@ type RepoRef struct {
 
 // KnowledgeConfig controls the knowledge base.
 type KnowledgeConfig struct {
-	AutoDiscover bool     `yaml:"auto_discover,omitempty"`
-	Paths        []string `yaml:"paths,omitempty"`
+	Path string `yaml:"path,omitempty"`
 }
 
 // BranchConfig controls branch lifecycle behaviour.
 type BranchConfig struct {
 	KeepBranchContext bool `yaml:"keep_branch_context,omitempty"`
-}
-
-// ArchitectureConfig enforces coding standards.
-type ArchitectureConfig struct {
-	DRYRules  DRYRulesConfig  `yaml:"dry_rules,omitempty"`
-	CleanCode CleanCodeConfig `yaml:"clean_code,omitempty"`
-}
-
-// DRYRulesConfig controls DRY enforcement.
-type DRYRulesConfig struct {
-	Enabled        bool `yaml:"enabled,omitempty"`
-	MaxRepetitions int  `yaml:"max_repetitions,omitempty"`
-}
-
-// CleanCodeConfig controls code quality limits.
-type CleanCodeConfig struct {
-	MaxFunctionLines int `yaml:"max_function_lines,omitempty"`
 }
 
 // Layers returns the effective layers for the project. If only the shorthand

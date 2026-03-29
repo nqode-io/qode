@@ -21,9 +21,6 @@ func TestDefaultConfig(t *testing.T) {
 	if !cfg.IDE.Cursor.Enabled {
 		t.Error("expected Cursor enabled by default")
 	}
-	if !cfg.IDE.VSCode.Enabled {
-		t.Error("expected VSCode enabled by default")
-	}
 	if !cfg.IDE.ClaudeCode.Enabled {
 		t.Error("expected ClaudeCode enabled by default")
 	}

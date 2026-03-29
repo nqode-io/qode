@@ -17,22 +17,7 @@ scoring:
 ide:
     cursor:
         enabled: true
-        rules_dir: .cursorrules
-        commands_dir: .cursor/commands
-    vscode:
-        enabled: true
-        launch: true
-        tasks: true
-        settings: true
-        extensions: true
     claude_code:
         enabled: true
-        slash_commands: true
 knowledge:
-    auto_discover: true
-architecture:
-    dry_rules:
-        enabled: true
-        max_repetitions: 3
-    clean_code:
-        max_function_lines: 50
+    path: .qode/knowledge

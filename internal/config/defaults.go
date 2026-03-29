@@ -14,16 +14,11 @@ func DefaultConfig() Config {
 			RefineTargetScore: 25,
 		},
 		IDE: IDEConfig{
-			Cursor:     CursorIDEConfig{Enabled: true, RulesDir: ".cursorrules", CommandsDir: ".cursor/commands"},
-			VSCode:     VSCodeIDEConfig{Enabled: true, Launch: true, Tasks: true, Settings: true, Extensions: true},
-			ClaudeCode: ClaudeCodeIDEConfig{Enabled: true, SlashCommands: true},
+			Cursor:     CursorIDEConfig{Enabled: true},
+			ClaudeCode: ClaudeCodeIDEConfig{Enabled: true},
 		},
 		Knowledge: KnowledgeConfig{
-			AutoDiscover: true,
-		},
-		Architecture: ArchitectureConfig{
-			DRYRules:  DRYRulesConfig{Enabled: true, MaxRepetitions: 3},
-			CleanCode: CleanCodeConfig{MaxFunctionLines: 50},
+			Path: ".qode/knowledge",
 		},
 		Branch: BranchConfig{KeepBranchContext: false},
 	}
