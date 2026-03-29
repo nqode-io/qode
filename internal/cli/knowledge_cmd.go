@@ -173,7 +173,6 @@ func runKnowledgeAddBranch(args []string, toFile bool) error {
 		return nil
 	}
 
-	fmt.Fprintln(os.Stderr, "# Prompt written to stdout — use --to-file to save.")
 	_, err = fmt.Print(p)
 	return err
 }
@@ -225,16 +224,19 @@ func buildBranchLessonData(root string, cfg *config.Config, branches []string) (
 	}
 	lessonsStr := formatLessonsList(lessons)
 
+	branchDir := filepath.Join(root, config.QodeDir, "branches", branches[0])
+
 	return prompt.TemplateData{
-		Project:  cfg.Project,
-		Layers:   cfg.Layers(),
-		Branch:   branches[0],
-		Ticket:   allTicket.String(),
-		Analysis: allAnalysis.String(),
-		Spec:     allSpec.String(),
-		Diff:     diff,
-		Extra:    allExtra.String(),
-		Lessons:  lessonsStr,
+		Project:     cfg.Project,
+		Layers:      cfg.Layers(),
+		Branch:      branches[0],
+		Ticket:      allTicket.String(),
+		Analysis:    allAnalysis.String(),
+		Spec:        allSpec.String(),
+		Diff:        diff,
+		Extra:       allExtra.String(),
+		Lessons:   lessonsStr,
+		BranchDir: branchDir,
 	}, nil
 }
 

@@ -45,15 +45,15 @@ type TemplateData struct {
 	Project    config.ProjectConfig
 	Layers     []config.LayerConfig
 	Branch     string
-	Ticket     string
-	Notes      string
-	Analysis   string
-	Spec       string
-	Diff       string
-	Extra      string
-	KB         string
-	Lessons    string // compact lesson listing for dedup in extraction prompts
+	Ticket     string // inline content; set only for knowledge/add-branch
+	Analysis   string // inline content; set for knowledge/add-branch and scoring judge
+	Spec       string // inline content; set only for knowledge/add-branch
+	Diff       string // inline content; set only for knowledge/add-branch
+	Extra      string // inline content; set for knowledge/add-branch and refine (reviews, notes)
+	KB         string // knowledge base file references; set for start
+	Lessons    string // existing lesson summaries for deduplication; set for knowledge/add-branch
 	OutputPath string // when set, templates append file-write instructions
+	BranchDir  string // absolute path to .qode/branches/<branch>/; used by templates for file-path references
 }
 
 // Render renders a named template (e.g. "refine/base") with the given data.

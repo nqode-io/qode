@@ -2,6 +2,7 @@ package context
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -24,7 +25,6 @@ type Context struct {
 
 	// Content files.
 	Ticket  string
-	Notes   string
 	Mockups []string // paths to image files
 	Extra   []string // other text file contents
 
@@ -49,7 +49,6 @@ func Load(root, branch string) (*Context, error) {
 	_ = os.MkdirAll(ctxSubDir, 0755)
 
 	ctx.Ticket = readFileOr(filepath.Join(ctxSubDir, "ticket.md"), "")
-	ctx.Notes = readFileOr(filepath.Join(ctxSubDir, "notes.md"), "")
 
 	// Scan for extra context files.
 	entries, _ := os.ReadDir(ctxSubDir)
@@ -128,6 +127,25 @@ func (c *Context) LatestScore() int {
 		}
 	}
 	return latestScore
+}
+
+// WarnMissingPredecessors writes a warning to w if required predecessor files
+// for the given step are absent. It does not block execution.
+func (c *Context) WarnMissingPredecessors(step string, w io.Writer) {
+	switch step {
+	case "spec":
+		if !c.HasRefinedAnalysis() {
+			_, _ = fmt.Fprintln(w, "Warning: no refined-analysis.md — spec quality may be low. Run 'qode plan refine' first.")
+		}
+	case "start":
+		if !c.HasSpec() {
+			_, _ = fmt.Fprintln(w, "Warning: no spec.md — run 'qode plan spec' first.")
+		}
+	case "review":
+		if !c.HasSpec() {
+			_, _ = fmt.Fprintln(w, "Warning: no spec.md — code review proceeds without spec context.")
+		}
+	}
 }
 
 func readFileOr(path, fallback string) string {

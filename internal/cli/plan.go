@@ -18,7 +18,7 @@ func newPlanCmd() *cobra.Command {
 		Use:   "plan",
 		Short: "Plan and refine feature requirements",
 	}
-	cmd.AddCommand(newPlanRefineCmd(), newPlanSpecCmd())
+	cmd.AddCommand(newPlanRefineCmd(), newPlanJudgeCmd(), newPlanSpecCmd())
 	return cmd
 }
 
@@ -67,6 +67,75 @@ Use --to-file to write the prompt to disk for debugging.`,
 	return cmd
 }
 
+func newPlanJudgeCmd() *cobra.Command {
+	var toFile bool
+	cmd := &cobra.Command{
+		Use:   "judge",
+		Short: "Generate the judge scoring prompt from the current refined analysis",
+		Long: `Generates the judge scoring prompt and writes it to stdout.
+
+The LLM reads the stdout output and scores the refined analysis.
+Requires refined-analysis.md to exist in the branch directory.
+
+Use --to-file to write the prompt to disk for debugging the judge template.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runPlanJudge(toFile)
+		},
+	}
+	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
+	return cmd
+}
+
+func runPlanJudge(toFile bool) error {
+	root, err := resolveRoot()
+	if err != nil {
+		return err
+	}
+	cfg, err := config.Load(root)
+	if err != nil {
+		return err
+	}
+	branch, err := git.CurrentBranch(root)
+	if err != nil {
+		return err
+	}
+
+	ctx, err := gocontext.Load(root, branch)
+	if err != nil {
+		return err
+	}
+
+	if !ctx.HasRefinedAnalysis() {
+		fmt.Fprintln(os.Stderr, "No refined analysis found.")
+		fmt.Fprintf(os.Stderr, "Run 'qode plan refine' first and save the AI output to:\n  .qode/branches/%s/refined-analysis.md\n", branch)
+		return fmt.Errorf("no refined analysis")
+	}
+
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		return err
+	}
+
+	p, err := plan.BuildJudgePrompt(engine, cfg, ctx)
+	if err != nil {
+		return err
+	}
+
+	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
+	promptPath := filepath.Join(branchDir, ".refine-judge-prompt.md")
+
+	if toFile {
+		if err := writePromptToFile(promptPath, p); err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stderr, "Judge prompt saved to:\n  %s\n", promptPath)
+		return nil
+	}
+
+	_, err = fmt.Print(p)
+	return err
+}
+
 func runPlanRefine(ticketURL string, iterations int, toFile bool) error {
 	root, err := resolveRoot()
 	if err != nil {
@@ -100,19 +169,14 @@ func runPlanRefine(ticketURL string, iterations int, toFile bool) error {
 	}
 
 	if toFile {
-		workerPath, judgePath, err := plan.SaveIterationFiles(root, branch, out)
+		workerPath, err := plan.SaveIterationFiles(root, branch, out)
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "Iteration %d — prompts ready:\n\n", out.Iteration)
-		fmt.Fprintf(os.Stderr, "  Worker prompt:\n    %s\n\n", workerPath)
-		if judgePath != "" {
-			fmt.Fprintf(os.Stderr, "  Judge prompt:\n    %s\n\n", judgePath)
-		}
+		fmt.Fprintf(os.Stderr, "Iteration %d — worker prompt saved to:\n  %s\n", out.Iteration, workerPath)
 		return nil
 	}
 
-	fmt.Fprintln(os.Stderr, "# Prompt written to stdout — use --to-file to save.")
 	_, err = fmt.Print(out.WorkerPrompt)
 	return err
 }
@@ -135,6 +199,8 @@ func runPlanSpec(toFile bool) error {
 	if err != nil {
 		return err
 	}
+
+	ctx.WarnMissingPredecessors("spec", os.Stderr)
 
 	if !ctx.HasRefinedAnalysis() {
 		fmt.Fprintln(os.Stderr, "No refined analysis found.")
@@ -164,7 +230,6 @@ func runPlanSpec(toFile bool) error {
 		return nil
 	}
 
-	fmt.Fprintln(os.Stderr, "# Prompt written to stdout — use --to-file to save.")
 	_, err = fmt.Print(p)
 	return err
 }

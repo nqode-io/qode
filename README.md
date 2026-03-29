@@ -126,8 +126,10 @@ qode branch remove <name>                                      Clean up branch a
 
 qode ticket fetch <url>                                        Fetch ticket (Jira, Azure DevOps, Linear, GitHub Issues, Notion)
 
-qode plan refine                                               Generate refinement prompt to stdout (use in IDE via /qode-plan-refine)
-qode plan refine --to-file                                     Save refinement prompt to file for debugging
+qode plan refine                                               Generate worker refinement prompt to stdout (use in IDE via /qode-plan-refine)
+qode plan refine --to-file                                     Save worker prompt to file for debugging
+qode plan judge                                                Generate judge scoring prompt to stdout (requires refined-analysis.md)
+qode plan judge --to-file                                      Save judge prompt to file for debugging
 qode plan spec                                                 Generate tech spec prompt to stdout (use in IDE via /qode-plan-spec)
 qode plan spec --to-file                                       Save spec prompt to file for debugging
 

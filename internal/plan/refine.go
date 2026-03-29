@@ -12,15 +12,13 @@ import (
 	"github.com/nqode/qode/internal/scoring"
 )
 
-// RefineOutput holds both the worker prompt and the judge prompt for one iteration.
+// RefineOutput holds the worker prompt for one iteration.
 type RefineOutput struct {
 	WorkerPrompt string
-	JudgePrompt  string
 	Iteration    int
 }
 
 // BuildRefinePrompt generates the worker refinement prompt.
-// If cfg.Scoring.TwoPass is true, it also generates the judge prompt.
 func BuildRefinePrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Context, ticketURL string, iteration int) (*RefineOutput, error) {
 	return BuildRefinePromptWithOutput(engine, cfg, ctx, ticketURL, iteration, "")
 }
@@ -36,10 +34,8 @@ func BuildRefinePromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx 
 		Project:    cfg.Project,
 		Layers:     cfg.Layers(),
 		Branch:     ctx.Branch,
-		Ticket:     ctx.Ticket,
-		Notes:      ctx.Notes,
-		Analysis:   ctx.RefinedAnalysis,
 		OutputPath: outputPath,
+		BranchDir:  ctx.ContextDir,
 	}
 	for _, e := range ctx.Extra {
 		data.Extra += e + "\n\n"
@@ -53,18 +49,6 @@ func BuildRefinePromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx 
 	out := &RefineOutput{
 		WorkerPrompt: workerPrompt,
 		Iteration:    iteration,
-	}
-
-	if cfg.Scoring.TwoPass {
-		scoreEngine := scoring.NewEngine(engine, cfg)
-		judgePrompt, err := scoreEngine.BuildJudgePrompt(
-			"[Worker output will be pasted here by the user after running the worker prompt above]",
-			scoring.RefineRubric,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("building judge prompt: %w", err)
-		}
-		out.JudgePrompt = judgePrompt
 	}
 
 	return out, nil
@@ -82,8 +66,8 @@ func BuildSpecPromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx *c
 		Project:    cfg.Project,
 		Layers:     cfg.Layers(),
 		Branch:     ctx.Branch,
-		Analysis:   ctx.RefinedAnalysis,
 		OutputPath: outputPath,
+		BranchDir:  ctx.ContextDir,
 	}
 	return engine.Render("spec/base", data)
 }
@@ -91,40 +75,37 @@ func BuildSpecPromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx *c
 // BuildStartPrompt generates the implementation kickoff prompt.
 func BuildStartPrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Context, kb string) (string, error) {
 	data := prompt.TemplateData{
-		Project: cfg.Project,
-		Layers:  cfg.Layers(),
-		Branch:  ctx.Branch,
-		Spec:    ctx.Spec,
-		KB:      kb,
+		Project:   cfg.Project,
+		Layers:    cfg.Layers(),
+		Branch:    ctx.Branch,
+		KB:        kb,
+		BranchDir: ctx.ContextDir,
 	}
 	return engine.Render("start/base", data)
 }
 
-// SaveIterationFiles writes worker and judge prompts to the branch context dir
-// and returns the path of the worker prompt file.
-func SaveIterationFiles(root, branch string, out *RefineOutput) (workerPath, judgePath string, err error) {
+// SaveIterationFiles writes the worker prompt to the branch context dir
+// and returns its path.
+func SaveIterationFiles(root, branch string, out *RefineOutput) (workerPath string, err error) {
 	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
 	if err := os.MkdirAll(branchDir, 0755); err != nil {
-		return "", "", err
+		return "", err
 	}
 
 	// Primary "current" prompt — always overwritten.
 	workerPath = filepath.Join(branchDir, ".refine-prompt.md")
 	if err := os.WriteFile(workerPath, []byte(out.WorkerPrompt), 0644); err != nil {
-		return "", "", err
+		return "", err
 	}
 
-	if out.JudgePrompt != "" {
-		judgePath = filepath.Join(branchDir, ".refine-judge-prompt.md")
-		header := fmt.Sprintf("# Judge Scoring — Iteration %d\n\n"+
-			"**Instructions:** Paste the worker's analysis below the separator, then run this prompt.\n\n"+
-			"---\n\n", out.Iteration)
-		if err := os.WriteFile(judgePath, []byte(header+out.JudgePrompt), 0644); err != nil {
-			return workerPath, "", err
-		}
-	}
+	return workerPath, nil
+}
 
-	return workerPath, judgePath, nil
+// BuildJudgePrompt generates the judge scoring prompt.
+// The template references refined-analysis.md by path; no file read is performed here.
+func BuildJudgePrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Context) (string, error) {
+	scoreEngine := scoring.NewEngine(engine, cfg)
+	return scoreEngine.BuildJudgePrompt(ctx.ContextDir, scoring.RefineRubric)
 }
 
 // SaveIterationResult writes iteration files using a pre-computed score result.

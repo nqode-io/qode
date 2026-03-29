@@ -39,20 +39,20 @@ func DiffFromBase(root, baseBranch string) (string, error) {
 	base, err := resolveBase(root, baseBranch)
 	if err != nil {
 		// Fall back to staged + unstaged changes.
-		out, err2 := run(root, "diff", "HEAD")
+		out, err2 := run(root, "diff", "HEAD", "--", ":(exclude).qode/")
 		if err2 != nil {
 			return "", err
 		}
 		return out, nil
 	}
-	out, err := run(root, "diff", base+"...HEAD")
+	out, err := run(root, "diff", base+"...HEAD", "--", ":(exclude).qode/")
 	if err != nil {
 		return "", err
 	}
 	// When merge-base == HEAD the branch hasn't diverged (e.g. we're on main).
 	// Fall back to the last commit so the review still has something to analyse.
 	if strings.TrimSpace(out) == "" {
-		out, err = run(root, "diff", "HEAD~1..HEAD")
+		out, err = run(root, "diff", "HEAD~1..HEAD", "--", ":(exclude).qode/")
 		if err != nil {
 			return "", err
 		}

@@ -11,9 +11,7 @@ func DefaultConfig() Config {
 			MinSecurityScore: 8.0,
 		},
 		Scoring: ScoringConfig{
-			TwoPass:             true,
-			MaxRefineIterations: 5,
-			RefineTargetScore:   25,
+			RefineTargetScore: 25,
 		},
 		IDE: IDEConfig{
 			Cursor:     CursorIDEConfig{Enabled: true, RulesDir: ".cursorrules", CommandsDir: ".cursor/commands"},
