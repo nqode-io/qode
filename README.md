@@ -118,8 +118,6 @@ All configs are stack-aware. Use `qode ide sync` to regenerate after updating `q
 
 ```
 qode init                                                      Detect stack, create qode.yaml
-qode init --new                                                New project wizard
-qode init --workspace                                          Multi-repo workspace setup
 
 qode branch create <name>                                      Create feature branch + context folder
 qode branch remove <name>                                      Clean up branch and context
@@ -140,8 +138,6 @@ qode review code                                               Generate code rev
 qode review security                                           Generate security review prompt to stdout (use in IDE via /qode-review-security)
 
 qode check                                                     Run all quality gates per layer
-qode check --layer <name>                                      Gates for a specific layer only
-qode check --skip-tests                                        Reviews only, skip test execution
 
 qode ide setup                                                 Generate IDE configs for all enabled IDEs
 qode ide sync                                                  Regenerate configs from qode.yaml
