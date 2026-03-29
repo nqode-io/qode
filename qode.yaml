@@ -27,7 +27,6 @@ ide:
         extensions: true
     claude_code:
         enabled: true
-        claude_md: true
         slash_commands: true
 knowledge:
     auto_discover: true
