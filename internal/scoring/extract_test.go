@@ -17,6 +17,8 @@ func TestExtractScore(t *testing.T) {
 		{"bold markdown", "**Total Score: 9.0/10**", 9.0},
 		{"extra whitespace", "Total  Score:  6.5 / 10", 6.5},
 		{"case insensitive", "total score: 5/10", 5.0},
+		{"dynamic denominator", "**Total Score: 18/20**", 18.0},
+		{"dynamic denominator 25", "Total Score: 22/25", 22.0},
 		{"no match", "no score here", 0},
 		{"empty", "", 0},
 	}

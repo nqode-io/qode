@@ -207,6 +207,50 @@ func TestBuildJudgePrompt_CustomRubric(t *testing.T) {
 	}
 }
 
+func TestParseIterationFromOutput_TargetScoreOverride(t *testing.T) {
+	root, branchDir := setupRefineDir(t)
+	if err := os.MkdirAll(branchDir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	analysisText := "<!-- qode:iteration=1 -->\n\n**Total Score:** 18/25\n\nsome analysis"
+	cfg := &config.Config{
+		Scoring: config.ScoringConfig{
+			TargetScore: 20,
+		},
+	}
+
+	result, err := ParseIterationFromOutput(root, "test-branch", 1, analysisText, cfg)
+	if err != nil {
+		t.Fatalf("ParseIterationFromOutput: %v", err)
+	}
+	if result.TargetScore != 20 {
+		t.Errorf("expected TargetScore 20 from cfg override, got %d", result.TargetScore)
+	}
+	if result.TotalScore != 18 {
+		t.Errorf("expected TotalScore 18, got %d", result.TotalScore)
+	}
+}
+
+func TestParseIterationFromOutput_TargetScoreDefaultsToRubricTotal(t *testing.T) {
+	root, branchDir := setupRefineDir(t)
+	if err := os.MkdirAll(branchDir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	analysisText := "<!-- qode:iteration=1 -->\n\n**Total Score:** 22/25\n\nsome analysis"
+	// TargetScore == 0 → should default to rubric.Total() == 25
+	cfg := &config.Config{}
+
+	result, err := ParseIterationFromOutput(root, "test-branch", 1, analysisText, cfg)
+	if err != nil {
+		t.Fatalf("ParseIterationFromOutput: %v", err)
+	}
+	if result.TargetScore != 25 {
+		t.Errorf("expected TargetScore 25 (rubric total), got %d", result.TargetScore)
+	}
+}
+
 func TestBuildRefinePromptWithOutput_OmitsAnalysisAndTicket(t *testing.T) {
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)

@@ -100,6 +100,56 @@ func TestDefaultReviewRubricHasPerformance(t *testing.T) {
 	}
 }
 
+func TestBuildRubric_ReviewOverride(t *testing.T) {
+	cfg := &config.Config{
+		Scoring: config.ScoringConfig{
+			Rubrics: map[string]config.RubricConfig{
+				"review": {
+					Dimensions: []config.DimensionConfig{
+						{Name: "Reliability", Weight: 4, Description: "no crashes"},
+						{Name: "Perf", Weight: 6, Description: "fast"},
+					},
+				},
+			},
+		},
+	}
+	rubric := BuildRubric(RubricReview, cfg)
+	if rubric.Kind != RubricReview {
+		t.Errorf("expected RubricReview kind, got %q", rubric.Kind)
+	}
+	if len(rubric.Dimensions) != 2 {
+		t.Fatalf("expected 2 dimensions, got %d", len(rubric.Dimensions))
+	}
+	if rubric.Dimensions[0].Name != "Reliability" {
+		t.Errorf("expected 'Reliability', got %q", rubric.Dimensions[0].Name)
+	}
+	if rubric.Total() != 10 {
+		t.Errorf("expected total 10, got %d", rubric.Total())
+	}
+}
+
+func TestBuildRubric_DefaultReviewSecurityMirrorConfig(t *testing.T) {
+	defaults := config.DefaultRubricConfigs()
+
+	reviewCfg, ok := defaults["review"]
+	if !ok {
+		t.Fatal("DefaultRubricConfigs missing 'review' key")
+	}
+	if len(reviewCfg.Dimensions) != len(DefaultReviewRubric.Dimensions) {
+		t.Errorf("DefaultRubricConfigs[review] has %d dims, DefaultReviewRubric has %d — they must mirror each other",
+			len(reviewCfg.Dimensions), len(DefaultReviewRubric.Dimensions))
+	}
+	for i, dc := range reviewCfg.Dimensions {
+		d := DefaultReviewRubric.Dimensions[i]
+		if dc.Name != d.Name {
+			t.Errorf("dim[%d] name mismatch: config %q vs rubric %q", i, dc.Name, d.Name)
+		}
+		if dc.Weight != d.Weight {
+			t.Errorf("dim[%d] weight mismatch: config %d vs rubric %d", i, dc.Weight, d.Weight)
+		}
+	}
+}
+
 func TestDefaultRefineRubricLevels(t *testing.T) {
 	dims := DefaultRefineRubric.Dimensions
 	if len(dims) == 0 {

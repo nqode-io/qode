@@ -14,7 +14,6 @@ import (
 	"github.com/nqode/qode/internal/scoring"
 )
 
-
 //go:embed templates
 var embeddedFS embed.FS
 
