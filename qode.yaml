@@ -18,7 +18,7 @@ scoring:
             dimensions:
                 - name: Problem Understanding & Scope
                   weight: 5
-                  description: Correct restatement; identifies whether change touches CLI, template system, qode.yaml schema, or IDE integration; backward-compat implications explicit
+                  description: Correct restatement; identifies whether change touches CLI, template system, qode.yaml schema, or IDE integration; backward-compat implications explicit; all ambiguities resolved
                   levels:
                     - '5: Precise restatement; affected subsystems (CLI/template/schema/IDE) named; all backward-compat implications called out'
                     - '4: Good understanding; minor gaps in subsystem or compat analysis'
