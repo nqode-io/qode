@@ -164,7 +164,7 @@ func runKnowledgeAddBranch(args []string, toFile bool) error {
 	}
 
 	if toFile {
-		branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
+		branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
 		promptPath := filepath.Join(branchDir, ".knowledge-add-branch-prompt.md")
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
@@ -200,9 +200,8 @@ func buildBranchLessonData(root string, cfg *config.Config, branches []string) (
 			allSpec.WriteString("\n\n")
 		}
 
-		branchDir := filepath.Join(root, config.QodeDir, "branches", b)
 		for _, reviewFile := range []string{"code-review.md", "security-review.md"} {
-			data, readErr := os.ReadFile(filepath.Join(branchDir, reviewFile))
+			data, readErr := os.ReadFile(filepath.Join(ctx.ContextDir, reviewFile))
 			if readErr == nil && len(data) > 0 {
 				allExtra.WriteString("### ")
 				allExtra.WriteString(reviewFile)
@@ -221,7 +220,7 @@ func buildBranchLessonData(root string, cfg *config.Config, branches []string) (
 	lessons, _ := knowledge.ListLessons(root)
 	lessonsStr := formatLessonsList(lessons)
 
-	branchDir := filepath.Join(root, config.QodeDir, "branches", branches[0])
+	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branches[0]))
 
 	return prompt.TemplateData{
 		Project:     cfg.Project,
@@ -242,7 +241,7 @@ func parseBranchArgs(args []string) []string {
 	for _, arg := range args {
 		for _, b := range strings.Split(arg, ",") {
 			b = strings.TrimSpace(b)
-			if b != "" && !strings.Contains(b, "..") {
+			if b != "" && b != "." && !strings.Contains(b, "..") {
 				branches = append(branches, b)
 			}
 		}

@@ -112,5 +112,5 @@ qode ticket fetch https://github.com/owner/repo/issues/1
 qode ticket fetch https://www.notion.so/workspace/My-Ticket-abc123de1234567890abcdef12345678
 
 # Output is written to .qode/branches/{branch}/context/ticket.md
-cat .qode/branches/$(git branch --show-current)/context/ticket.md
+cat .qode/branches/$(git branch --show-current | sed 's|/|--|g')/context/ticket.md
 ```

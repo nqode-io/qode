@@ -84,7 +84,7 @@ func runReview(kind string, toFile, force bool) error {
 		return err
 	}
 
-	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
+	branchDir := ctx.ContextDir
 
 	diffPath := filepath.Join(branchDir, "diff.md")
 	if err := os.WriteFile(diffPath, []byte(diff), 0600); err != nil {

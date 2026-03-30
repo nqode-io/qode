@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/nqode/qode/internal/config"
+	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/scoring"
 )
 
@@ -38,7 +39,7 @@ type Context struct {
 
 // Load reads the context folder for a branch.
 func Load(root, branch string) (*Context, error) {
-	dir := filepath.Join(root, config.QodeDir, "branches", branch)
+	dir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
 	ctx := &Context{
 		Branch:     branch,
 		ContextDir: dir,

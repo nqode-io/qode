@@ -8,6 +8,32 @@ import (
 	"testing"
 )
 
+// TestSanitizeBranchName verifies that slashes are replaced with "--" and
+// names without slashes pass through unchanged.
+func TestSanitizeBranchName(t *testing.T) {
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"main", "main"},
+		{"feat/my-feature", "feat--my-feature"},
+		{"feat/jira-123/description", "feat--jira-123--description"},
+		{"fix/bug-456", "fix--bug-456"},
+		{"", ""},
+		// Trailing slash edge case.
+		{"feat/", "feat--"},
+		// Double slash edge case.
+		{"feat//bar", "feat----bar"},
+		// Backslash is not replaced (not a path separator on Unix/Mac).
+		{`feat\bar`, `feat\bar`},
+	}
+	for _, c := range cases {
+		if got := SanitizeBranchName(c.input); got != c.want {
+			t.Errorf("SanitizeBranchName(%q) = %q, want %q", c.input, got, c.want)
+		}
+	}
+}
+
 // initGitRepo creates a temp directory with a git repo initialised on the
 // given branch and one empty root commit, mirroring the pattern used in the
 // CLI tests.

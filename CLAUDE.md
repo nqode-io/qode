@@ -72,6 +72,6 @@ Scores are parsed from saved markdown files in the branch context folder.
 
 ## Additional instructions
 
-- If asked by the the user to add something to `notes` or `notes.md` file, always append it to the `.qode/branches/$(git branch --show-current)/context/notes.md` file
+- If asked by the the user to add something to `notes` or `notes.md` file, always append it to the `.qode/branches/$(git branch --show-current | sed 's|/|--|g')/context/notes.md` file
 - Never change `CLAUDE.md` file
 - If running `/qode-ticket-fetch` do what is described in the command, do not automatically call the MCP server.

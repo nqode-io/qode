@@ -6,6 +6,13 @@ import (
 	"strings"
 )
 
+// SanitizeBranchName returns a filesystem-safe directory name for the branch,
+// replacing "/" with "--" so slashed branch names (e.g. feat/jira-123) map to
+// a single flat directory rather than nested subdirectories.
+func SanitizeBranchName(name string) string {
+	return strings.ReplaceAll(name, "/", "--")
+}
+
 // CurrentBranch returns the current git branch name.
 func CurrentBranch(root string) (string, error) {
 	out, err := run(root, "rev-parse", "--abbrev-ref", "HEAD")

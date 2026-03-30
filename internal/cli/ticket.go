@@ -50,7 +50,7 @@ func newTicketFetchCmd() *cobra.Command {
 				return fmt.Errorf("fetching ticket: %w", err)
 			}
 
-			contextDir := filepath.Join(root, config.QodeDir, "branches", branch, "context")
+			contextDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch), "context")
 			if err := os.MkdirAll(contextDir, 0755); err != nil {
 				return err
 			}

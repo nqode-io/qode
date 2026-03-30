@@ -106,7 +106,7 @@ func runPlanJudge(toFile bool) error {
 
 	if !ctx.HasRefinedAnalysis() {
 		fmt.Fprintln(os.Stderr, "No refined analysis found.")
-		fmt.Fprintf(os.Stderr, "Run 'qode plan refine' first and save the AI output to:\n  .qode/branches/%s/refined-analysis.md\n", branch)
+		fmt.Fprintf(os.Stderr, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", ctx.ContextDir)
 		return fmt.Errorf("no refined analysis")
 	}
 
@@ -120,7 +120,7 @@ func runPlanJudge(toFile bool) error {
 		return err
 	}
 
-	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
+	branchDir := ctx.ContextDir
 	promptPath := filepath.Join(branchDir, ".refine-judge-prompt.md")
 
 	if toFile {
@@ -159,7 +159,7 @@ func runPlanRefine(ticketURL string, toFile bool) error {
 		return err
 	}
 
-	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
+	branchDir := ctx.ContextDir
 	analysisPath := filepath.Join(branchDir, "refined-analysis.md")
 
 	out, err := plan.BuildRefinePromptWithOutput(engine, cfg, ctx, ticketURL, 0, analysisPath)
@@ -211,7 +211,7 @@ func runPlanSpec(toFile, force bool) error {
 
 	if !ctx.HasRefinedAnalysis() {
 		fmt.Fprintln(os.Stderr, "No refined analysis found.")
-		fmt.Fprintf(os.Stderr, "Run 'qode plan refine' first and save the AI output to:\n  .qode/branches/%s/refined-analysis.md\n", branch)
+		fmt.Fprintf(os.Stderr, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", ctx.ContextDir)
 		return fmt.Errorf("no refined analysis")
 	}
 
@@ -220,7 +220,7 @@ func runPlanSpec(toFile, force bool) error {
 		return err
 	}
 
-	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
+	branchDir := ctx.ContextDir
 	specPath := filepath.Join(branchDir, "spec.md")
 	promptPath := filepath.Join(branchDir, ".spec-prompt.md")
 

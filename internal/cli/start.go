@@ -57,7 +57,7 @@ Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md fo
 
 			if !ctx.HasSpec() {
 				fmt.Fprintln(os.Stderr, "No spec.md found.")
-				fmt.Fprintf(os.Stderr, "Run /qode-plan-spec first and save the output to:\n  .qode/branches/%s/spec.md\n", branch)
+				fmt.Fprintf(os.Stderr, "Run /qode-plan-spec first and save the output to:\n  %s/spec.md\n", ctx.ContextDir)
 				return fmt.Errorf("no spec")
 			}
 
@@ -86,7 +86,7 @@ Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md fo
 			}
 
 			if toFile {
-				outPath := filepath.Join(root, config.QodeDir, "branches", branch, ".start-prompt.md")
+				outPath := filepath.Join(ctx.ContextDir, ".start-prompt.md")
 				if err := writePromptToFile(outPath, p); err != nil {
 					return err
 				}

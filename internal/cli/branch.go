@@ -12,8 +12,9 @@ import (
 )
 
 func safeBranchDir(root, name string) (string, error) {
+	sanitized := git.SanitizeBranchName(name)
 	base := filepath.Join(root, config.QodeDir, "branches")
-	target := filepath.Join(base, name)
+	target := filepath.Join(base, sanitized)
 	rel, err := filepath.Rel(base, target)
 	if err != nil || strings.HasPrefix(rel, "..") || rel == "." {
 		return "", fmt.Errorf("invalid branch name %q: path traversal detected", name)

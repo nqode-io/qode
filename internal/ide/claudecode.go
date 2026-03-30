@@ -87,7 +87,7 @@ func claudeSlashCommands(cfg *config.Config) map[string]string {
   qode plan refine
 
 Save the worker output to:
-  .qode/branches/$(git branch --show-current)/refined-analysis.md
+  .qode/branches/$(git branch --show-current | sed 's|/|--|g')/refined-analysis.md
 
 **Judge pass (scoring):** Run this command and use its stdout output as your prompt:
   qode plan judge
@@ -96,7 +96,7 @@ Then:
 1. Parse the "**Total Score:** S/M" line and the "**Pass threshold:** T/M" line from the judge output to get score S, max M, and pass threshold T
 2. Detect iteration number N from the "<!-- qode:iteration=N -->" header in refined-analysis.md (default: 1)
 3. Rewrite refined-analysis.md replacing the first line with: <!-- qode:iteration=N score=S/M -->
-4. Write a copy to: .qode/branches/$(git branch --show-current)/refined-analysis-N-score-S.md
+4. Write a copy to: .qode/branches/$(git branch --show-current | sed 's|/|--|g')/refined-analysis-N-score-S.md
 5. Report the score to the user. If S >= T, suggest running /qode-plan-spec. Otherwise suggest re-running /qode-plan-refine.
 `, name),
 
@@ -108,7 +108,7 @@ Run this command and use its stdout output as your prompt:
 If the output begins with `+"`STOP.`"+`, do not execute it as a prompt — report the prerequisite message to the user and wait for instructions. Use `+"`qode plan spec --force`"+` to bypass score gates when needed.
 
 After generating the spec:
-- Save it to: .qode/branches/$(git branch --show-current)/spec.md
+- Save it to: .qode/branches/$(git branch --show-current | sed 's|/|--|g')/spec.md
 - Suggest copying it to the ticket system for team review
 `, name),
 
@@ -120,7 +120,7 @@ Run this command and use its stdout output as your prompt:
 If the command produces no output (no uncommitted changes), inform the user to commit changes first. Use `+"`qode review code --force`"+` to bypass the uncommitted-diff check.
 
 After completing the review:
-- Save to: .qode/branches/$(git branch --show-current)/code-review.md
+- Save to: .qode/branches/$(git branch --show-current | sed 's|/|--|g')/code-review.md
 - List all Critical and High issues clearly
 - Provide specific, actionable fix suggestions
 `, name),
@@ -133,7 +133,7 @@ Run this command and use its stdout output as your prompt:
 If the command produces no output (no uncommitted changes), inform the user to commit changes first. Use `+"`qode review security --force`"+` to bypass the uncommitted-diff check.
 
 After completing the review:
-- Save to: .qode/branches/$(git branch --show-current)/security-review.md
+- Save to: .qode/branches/$(git branch --show-current | sed 's|/|--|g')/security-review.md
 - List all Critical and High vulnerabilities with OWASP categories
 - Provide specific remediation for each issue
 `, name),

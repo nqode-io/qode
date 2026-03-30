@@ -8,6 +8,7 @@ import (
 
 	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/prompt"
 	"github.com/nqode/qode/internal/scoring"
 )
@@ -87,7 +88,7 @@ func BuildStartPrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Co
 // SaveIterationFiles writes the worker prompt to the branch context dir
 // and returns its path.
 func SaveIterationFiles(root, branch string, out *RefineOutput) (workerPath string, err error) {
-	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
+	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
 	if err := os.MkdirAll(branchDir, 0755); err != nil {
 		return "", err
 	}
@@ -121,7 +122,7 @@ func BuildJudgePrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Co
 // Use this instead of ParseIterationFromOutput when the score is known from
 // judge output rather than parsed from the analysis text.
 func SaveIterationResult(root, branch string, iteration int, analysisText string, result scoring.Result) error {
-	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
+	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
 	if err := os.MkdirAll(branchDir, 0755); err != nil {
 		return err
 	}
@@ -144,7 +145,7 @@ func ParseIterationFromOutput(root, branch string, iteration int, analysisText s
 		result.TargetScore = cfg.Scoring.TargetScore
 	}
 
-	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
+	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
 
 	// Save numbered iteration file.
 	iterFile := filepath.Join(branchDir, fmt.Sprintf("refined-analysis-%d-score-%d.md", iteration, result.TotalScore))

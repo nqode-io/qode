@@ -18,6 +18,37 @@ func setupBranchDir(t *testing.T) (root, branchDir string) {
 	return root, branchDir
 }
 
+// TestLoad_SlashedBranchName verifies that a branch name containing "/"
+// resolves to a flat sanitized directory (slashes replaced with "--") rather
+// than nested subdirectories.
+func TestLoad_SlashedBranchName(t *testing.T) {
+	root := t.TempDir()
+	// Create the sanitized directory (feat--jira-123) that Load should resolve to.
+	sanitizedDir := filepath.Join(root, ".qode", "branches", "feat--jira-123")
+	if err := os.MkdirAll(filepath.Join(sanitizedDir, "context"), 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	writeFile(t, filepath.Join(sanitizedDir, "context", "ticket.md"), "# Ticket\n")
+
+	ctx, err := Load(root, "feat/jira-123")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if ctx.ContextDir != sanitizedDir {
+		t.Errorf("ContextDir = %q, want %q", ctx.ContextDir, sanitizedDir)
+	}
+	// Verify the nested path was NOT created.
+	nestedDir := filepath.Join(root, ".qode", "branches", "feat", "jira-123")
+	if _, err := os.Stat(nestedDir); !os.IsNotExist(err) {
+		t.Errorf("nested directory %q should not exist", nestedDir)
+	}
+	// Verify ticket content was loaded from the sanitized path.
+	if ctx.Ticket == "" {
+		t.Error("expected Ticket to be loaded from sanitized path")
+	}
+}
+
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
