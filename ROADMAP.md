@@ -42,17 +42,18 @@ Planned features for qode, in recommended implementation order. Items marked wit
  ├── #25 Optimize prompts for token usage ✅
  ├── #26 Configurable scoring rubrics ✅
  │    └── #30 Strict mode ✅
- ├── #27 Replace ticket fetch with MCP
- │    ├── #28 Post step outputs as ticket comments
- │    ├── #36 qode pr create
- │         └── #31 PR/MR review comments step
- └── #29 Rethink qode init
+ └── #27 Replace ticket fetch with MCP
+      ├── #28 Post step outputs as ticket comments
+      └── #36 qode pr create
+           └── #31 PR/MR review comments step
+
+#29 Rethink qode init
+ └── #41 qode init: append gitignore rules
 
 Independent (can run in parallel with any of the above):
  #33 Worktree support
  #34 Codex IDE support
  #35 Auto-commit after completed tasks
- #41 qode init: append gitignore rules
  #45 Replace qode check with /qode-check  ✅
 
 All of the above → #37 Prepare for public beta release
