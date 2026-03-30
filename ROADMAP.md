@@ -11,10 +11,10 @@ Planned features for qode, in recommended implementation order. Items marked wit
 - [x] [#44](https://github.com/nqode-io/qode/issues/44) — **Remove unused CLI flags** — Removed `--verbose`, `--base`, `--keep-branch`, `--skip-tests`, `--layer`, `--new`, `--scaffold`, `--workspace`, `--ide`, `--cursor`, `--claude`, `--iterations`
 - [x] [#45](https://github.com/nqode-io/qode/issues/45) — **Replace `qode check` with `/qode-check` IDE slash command** — AI-driven interactive quality gate; detects test runner and linter from project structure
 - [x] [#26](https://github.com/nqode-io/qode/issues/26) — **Configurable scoring rubrics** — Extract hardcoded rubrics into `qode.yaml`, support custom dimensions and weights
+- [x] [#30](https://github.com/nqode-io/qode/issues/30) — **Strict mode** — Block workflow steps when prerequisites are missing or scores are below configured minimums; `--force` flag to bypass gates; `qode workflow status` subcommand *(requires #26)*
 
 ## In Progress
 
-- [x] [#30](https://github.com/nqode-io/qode/issues/30) — **Strict mode** — Block workflow steps when prerequisites are missing or scores are below configured minimums *(requires #26)*
 
 ## Up Next (parallel — start after #24)
 
@@ -41,7 +41,7 @@ Planned features for qode, in recommended implementation order. Items marked wit
 #24 Harden review prompts ✅
  ├── #25 Optimize prompts for token usage ✅
  ├── #26 Configurable scoring rubrics ✅
- │    └── #30 Strict mode
+ │    └── #30 Strict mode ✅
  ├── #27 Replace ticket fetch with MCP
  │    ├── #28 Post step outputs as ticket comments
  │    ├── #36 qode pr create

@@ -3,83 +3,230 @@ package cli
 import (
 	"fmt"
 
+	"github.com/nqode/qode/internal/config"
+	gocontext "github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/git"
+	"github.com/nqode/qode/internal/scoring"
+	"github.com/nqode/qode/internal/workflow"
 	"github.com/spf13/cobra"
 )
 
-func newHelpWorkflowCmd() *cobra.Command {
-	return &cobra.Command{
+func newWorkflowCmd() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "workflow",
-		Short: "Show the full qode workflow diagram",
+		Short: "Show or inspect the qode workflow",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Print(workflowList)
+			return nil
+		},
+	}
+	cmd.AddCommand(newWorkflowShowCmd(), newWorkflowStatusCmd())
+	return cmd
+}
+
+func newWorkflowShowCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "show",
+		Short: "Print the full qode workflow steps",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Print(workflowDiagram)
+			fmt.Print(workflowList)
 		},
 	}
 }
 
-const workflowDiagram = `
-qode Workflow
+func newWorkflowStatusCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "status",
+		Short: "Show live completion status for each workflow step",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runWorkflowStatus()
+		},
+	}
+}
+
+func runWorkflowStatus() error {
+	root, err := resolveRoot()
+	if err != nil {
+		return err
+	}
+	cfg, err := config.Load(root)
+	if err != nil {
+		return err
+	}
+	branch, err := git.CurrentBranch(root)
+	if err != nil {
+		return err
+	}
+	ctx, err := gocontext.Load(root, branch)
+	if err != nil {
+		return err
+	}
+
+	diff, _ := git.DiffFromBase(root, "")
+
+	lines, upNext := buildStatusLines(ctx, cfg, diff)
+	for _, line := range lines {
+		fmt.Println(line)
+	}
+	if upNext != "" {
+		fmt.Println()
+		fmt.Println("Up next:", upNext)
+	}
+	return nil
+}
+
+func buildStatusLines(ctx *gocontext.Context, cfg *config.Config, diff string) (lines []string, upNext string) {
+	step := func(n int, label, status string) string {
+		return fmt.Sprintf("%d. %s - %s", n, label, status)
+	}
+
+	// Step 1: always complete once the branch exists.
+	lines = append(lines, step(1, "Create branch", "Completed."))
+
+	// Step 2: Add context.
+	if ctx.Ticket != "" {
+		lines = append(lines, step(2, "Add context", "Completed."))
+	} else {
+		lines = append(lines, step(2, "Add context", "Not started."))
+		if upNext == "" {
+			upNext = "Fetch the ticket with /qode-ticket-fetch <url>."
+		}
+	}
+
+	// Step 3: Refine requirements.
+	lines = append(lines, step(3, "Refine requirements", refineStatus(ctx, cfg, &upNext)))
+
+	// Step 4: Generate spec.
+	if ctx.HasSpec() {
+		lines = append(lines, step(4, "Generate spec", "Completed."))
+	} else {
+		lines = append(lines, step(4, "Generate spec", "Not started."))
+		if upNext == "" {
+			upNext = "Run /qode-plan-spec."
+		}
+	}
+
+	// Step 5: Implement.
+	if diff != "" {
+		lines = append(lines, step(5, "Implement", "Completed."))
+	} else {
+		lines = append(lines, step(5, "Implement", "Not started."))
+		if upNext == "" {
+			upNext = "Run /qode-start to generate the implementation prompt."
+		}
+	}
+
+	// Steps 6–7: always manual.
+	lines = append(lines, step(6, "Test locally", "Always done by the user."))
+	lines = append(lines, step(7, "Quality gates", "Always done by the user."))
+
+	// Step 8: Reviews.
+	lines = append(lines, reviewStatus(ctx, cfg, &upNext)...)
+
+	// Step 9: Lessons learned — always optional.
+	lines = append(lines, step(9, "Capture lessons learned", "Always optional — run /qode-knowledge-add-context."))
+
+	return lines, upNext
+}
+
+func refineStatus(ctx *gocontext.Context, cfg *config.Config, upNext *string) string {
+	if !ctx.HasRefinedAnalysis() {
+		if *upNext == "" {
+			*upNext = "Run /qode-plan-refine."
+		}
+		return "Not started."
+	}
+	n := len(ctx.Iterations)
+	score := ctx.LatestScore()
+	if score == 0 {
+		if *upNext == "" {
+			*upNext = "Run /qode-plan-judge to score the analysis."
+		}
+		return fmt.Sprintf("%d iteration(s), unscored — run /qode-plan-judge.", n)
+	}
+	maxScore := workflow.RefineMaxScore(cfg)
+	minScore := workflow.RefineMinScore(cfg)
+	if score < minScore {
+		if *upNext == "" {
+			*upNext = fmt.Sprintf("Score %d/%d is below minimum %d. Run /qode-plan-refine to improve.", score, maxScore, minScore)
+		}
+		return fmt.Sprintf("%d iteration(s), latest score: %d/%d (below minimum %d).", n, score, maxScore, minScore)
+	}
+	return fmt.Sprintf("%d iteration(s), latest score: %d/%d.", n, score, maxScore)
+}
+
+func reviewStatus(ctx *gocontext.Context, cfg *config.Config, upNext *string) []string {
+	var lines []string
+	codeMax := scoring.BuildRubric(scoring.RubricReview, cfg).Total()
+	secMax := scoring.BuildRubric(scoring.RubricSecurity, cfg).Total()
+	codeStatus := reviewItemStatus(
+		ctx.HasCodeReview(), ctx.CodeReviewScore(), cfg.Review.MinCodeScore,
+		"/qode-review-code", codeMax, upNext,
+	)
+	secStatus := reviewItemStatus(
+		ctx.HasSecurityReview(), ctx.SecurityReviewScore(), cfg.Review.MinSecurityScore,
+		"/qode-review-security", secMax, upNext,
+	)
+	lines = append(lines,
+		fmt.Sprintf("8. Review - Code review: %s", codeStatus),
+		fmt.Sprintf("   Security review: %s", secStatus),
+	)
+	return lines
+}
+
+func reviewItemStatus(present bool, score, min float64, cmd string, maxScore int, upNext *string) string {
+	if !present {
+		if *upNext == "" {
+			*upNext = fmt.Sprintf("Run %s.", cmd)
+		}
+		return "Not started."
+	}
+	if score < min {
+		if *upNext == "" {
+			*upNext = fmt.Sprintf("Score %.1f/%d is below minimum %.1f. Consider fixing issues and re-running %s.", score, maxScore, min, cmd)
+		}
+		return fmt.Sprintf("Score %.1f/%d (below minimum %.1f).", score, maxScore, min)
+	}
+	return fmt.Sprintf("Passed with score %.1f/%d.", score, maxScore)
+}
+
+const workflowList = `qode Workflow
 =============
 
-┌─────────────────────────────────────────────────────────────────┐
-│  STEP 1: CREATE BRANCH                                          │
-│  qode branch create feat-user-dashboard                         │
-│  → Creates git branch + .qode/branches/feat-user-dashboard/     │
-├─────────────────────────────────────────────────────────────────┤
-│  STEP 2: ADD CONTEXT                                            │
-│  qode ticket fetch <url>                                        │
-│  /qode-ticket-fetch <url>  (in Cursor/Claude Code)              │
-│  → Auto-fetches ticket into context/ticket.md                   │
-│  → Or manually edit .qode/branches/.../context/ticket.md        │
-│  → Add mockups: cp design.png .qode/branches/.../context/       │
-├─────────────────────────────────────────────────────────────────┤
-│  STEP 3: REFINE REQUIREMENTS  (iterate to pass threshold)       │
-│  /qode-plan-refine  (in Cursor/Claude Code)                     │
-│  → AI reads context + researches codebase                       │
-│  → Judge independently scores each configured dimension         │
-│  → Iterate: answer open questions, re-run until pass threshold  │
-├─────────────────────────────────────────────────────────────────┤
-│  STEP 4: GENERATE SPEC                                          │
-│  /qode-plan-spec  (in Cursor/Claude Code)                       │
-│  → Creates spec.md from refined analysis                        │
-│  → Tip: copy spec back to Jira/Azure DevOps ticket              │
-├─────────────────────────────────────────────────────────────────┤
-│  STEP 5: IMPLEMENT                                              │
-│  /qode-start  (in Cursor/Claude Code)                           │
-│  → Generates implementation prompt with spec + knowledge        │
-├─────────────────────────────────────────────────────────────────┤
-│  STEP 6: TEST LOCALLY                                           │
-│  → Test the implementation manually                             │
-│  → Use Cursor Chat / Claude Code chat for tweaks                │
-├─────────────────────────────────────────────────────────────────┤
-│  STEP 7: QUALITY GATES                                          │
-│  /qode-check  (in Cursor/Claude Code)                           │
-│  → AI detects test runner + linter from project structure       │
-│  → Runs tests, then lint; proposes fixes on failure             │
-├─────────────────────────────────────────────────────────────────┤
-│  STEP 8: REVIEW                                                 │
-│  /qode-review-code       (in Cursor/Claude Code)                │
-│  /qode-review-security   (in Cursor/Claude Code)                │
-│  → Apply suggested fixes; re-run until all gates pass           │
-├─────────────────────────────────────────────────────────────────┤
-│  STEP 9: CAPTURE LESSONS LEARNED                                │
-│  /qode-knowledge-add-context (in Cursor/Claude Code)            │
-│  → Capture insights and best practices from context             │
-├─────────────────────────────────────────────────────────────────┤
-│  STEP 10: SHIP                                                  │
-│  git add . && git commit && git push                            │
-│  gh pr create  (or az repos pr create)                          │
-├─────────────────────────────────────────────────────────────────┤
-│  STEP 11: CLEANUP                                               │
-│  qode branch remove feat-user-dashboard                         │
-└─────────────────────────────────────────────────────────────────┘
+1.  Create branch
+    qode branch create <name>
 
-Scoring Rubric (refinement, default: 5 × 5 = 25 points):
-  Default dimensions: Problem Understanding, Technical Analysis,
-                      Risk & Edge Cases, Completeness, Actionability
-  Configurable via scoring.rubrics.refine in qode.yaml
+2.  Add context
+    qode ticket fetch <url>
+    /qode-ticket-fetch <url>  (in Cursor/Claude Code)
 
-Review Scoring (default scales, configurable via scoring.rubrics):
-  Code Review:     minimum 10.0/12 (configurable via review.min_code_score)
-  Security Review: minimum 8.0/10  (configurable via review.min_security_score)
+3.  Refine requirements  (iterate until pass threshold)
+    /qode-plan-refine   — worker and scoring pass
 
+4.  Generate spec
+    /qode-plan-spec
+
+5.  Implement
+    /qode-start
+
+6.  Test locally
+    (manual)
+
+7.  Quality gates
+    /qode-check
+
+8.  Review
+    /qode-review-code
+    /qode-review-security
+
+9.  Capture lessons learned
+    /qode-knowledge-add-context  (optional)
+
+10. Ship
+    git push && gh pr create
+
+11. Cleanup
+    qode branch remove <name>
+
+Run 'qode workflow status' to see live completion status for the current branch.
 `

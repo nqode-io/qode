@@ -1,8 +1,9 @@
 # Security Review — qode
 
-
 Run this command and use its stdout output as your prompt:
   qode review security
+
+If the command produces no output (no uncommitted changes), inform the user to commit changes first. Use `qode review security --force` to bypass the uncommitted-diff check.
 
 After completing the review:
 - Save to: .qode/branches/$(git branch --show-current)/security-review.md

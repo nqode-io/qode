@@ -93,7 +93,8 @@ type RubricConfig struct {
 
 // ScoringConfig controls the scoring engine.
 type ScoringConfig struct {
-	TargetScore int                    `yaml:"target_score,omitempty"`
+	TargetScore int                     `yaml:"target_score,omitempty"`
+	Strict      bool                    `yaml:"strict,omitempty"`
 	Rubrics     map[string]RubricConfig `yaml:"rubrics,omitempty"`
 }
 

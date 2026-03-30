@@ -102,9 +102,10 @@ Then:
 
 		"qode-plan-spec": fmt.Sprintf(`# Generate Technical Specification — %s
 
-
 Run this command and use its stdout output as your prompt:
   qode plan spec
+
+If the output begins with `+"`STOP.`"+`, do not execute it as a prompt — report the prerequisite message to the user and wait for instructions. Use `+"`qode plan spec --force`"+` to bypass score gates when needed.
 
 After generating the spec:
 - Save it to: .qode/branches/$(git branch --show-current)/spec.md
@@ -113,9 +114,10 @@ After generating the spec:
 
 		"qode-review-code": fmt.Sprintf(`# Code Review — %s
 
-
 Run this command and use its stdout output as your prompt:
   qode review code
+
+If the command produces no output (no uncommitted changes), inform the user to commit changes first. Use `+"`qode review code --force`"+` to bypass the uncommitted-diff check.
 
 After completing the review:
 - Save to: .qode/branches/$(git branch --show-current)/code-review.md
@@ -125,9 +127,10 @@ After completing the review:
 
 		"qode-review-security": fmt.Sprintf(`# Security Review — %s
 
-
 Run this command and use its stdout output as your prompt:
   qode review security
+
+If the command produces no output (no uncommitted changes), inform the user to commit changes first. Use `+"`qode review security --force`"+` to bypass the uncommitted-diff check.
 
 After completing the review:
 - Save to: .qode/branches/$(git branch --show-current)/security-review.md
@@ -139,9 +142,10 @@ After completing the review:
 
 		"qode-start": fmt.Sprintf(`# Start Implementation — %s
 
-
 Run this command and use its stdout output as your prompt:
   qode start
+
+If the output begins with `+"`STOP.`"+`, do not execute it as a prompt — report the prerequisite message to the user and wait for instructions. Use `+"`qode start --force`"+` to bypass the spec prerequisite when needed.
 
 Execute the prompt as your implementation session.
 `, name),

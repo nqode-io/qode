@@ -12,11 +12,13 @@ import (
 	"github.com/nqode/qode/internal/knowledge"
 	"github.com/nqode/qode/internal/plan"
 	"github.com/nqode/qode/internal/prompt"
+	"github.com/nqode/qode/internal/workflow"
 	"github.com/spf13/cobra"
 )
 
 func newStartCmd() *cobra.Command {
 	var toFile bool
+	var force bool
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Generate an implementation prompt from the current spec",
@@ -43,7 +45,21 @@ Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md fo
 				return err
 			}
 
-			ctx.WarnMissingPredecessors("start", os.Stderr)
+			if !toFile && !force {
+				if result := workflow.CheckStep("start", ctx, cfg); result.Blocked {
+					if cfg.Scoring.Strict {
+						return fmt.Errorf("%s", result.Message)
+					}
+					fmt.Printf("STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
+					return nil
+				}
+			}
+
+			if !ctx.HasSpec() {
+				fmt.Fprintln(os.Stderr, "No spec.md found.")
+				fmt.Fprintf(os.Stderr, "Run /qode-plan-spec first and save the output to:\n  .qode/branches/%s/spec.md\n", branch)
+				return fmt.Errorf("no spec")
+			}
 
 			paths, _ := knowledge.List(root, cfg)
 			var kb string
@@ -83,5 +99,6 @@ Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md fo
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
+	cmd.Flags().BoolVar(&force, "force", false, "bypass step guard checks")
 	return cmd
 }
