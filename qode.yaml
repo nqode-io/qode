@@ -10,10 +10,99 @@ project:
             lint: golangci-lint run
             build: go build ./...
 review:
-    min_code_score: 8
+    min_code_score: 10
     min_security_score: 8
 scoring:
-    refine_target_score: 25
+    rubrics:
+        refine:
+            dimensions:
+                - name: Problem Understanding
+                  weight: 5
+                  description: Correct restatement, all ambiguities resolved, user need clear
+                  levels:
+                    - '5: Perfect restatement, all ambiguities resolved, user need crystal clear'
+                    - '4: Good understanding, minor gaps'
+                    - '3: Adequate but surface-level'
+                    - '2: Partial understanding, significant gaps'
+                    - '1: Mostly incorrect or too vague'
+                    - '0: Missing or completely wrong'
+                - name: Technical Analysis
+                  weight: 5
+                  description: All affected components identified, specific file/API references
+                  levels:
+                    - '5: Identifies all affected components, correct patterns, specific file/API references'
+                    - '4: Mostly correct, minor omissions'
+                    - '3: Covers main points, misses some details'
+                    - '2: Shallow analysis, important components missed'
+                    - '1: Mostly incorrect or generic'
+                    - '0: Missing'
+                - name: Risk & Edge Cases
+                  weight: 5
+                  description: Comprehensive risks, specific edge cases with mitigation
+                  levels:
+                    - '5: Comprehensive risk analysis, specific edge cases with mitigation'
+                    - '4: Good coverage, minor gaps'
+                    - '3: Some risks identified, misses important ones'
+                    - '2: Superficial'
+                    - '1: Generic or incorrect'
+                    - '0: Missing'
+                - name: Completeness
+                  weight: 5
+                  description: All acceptance criteria, implicit requirements, scope clear
+                  levels:
+                    - '5: All acceptance criteria captured, implicit requirements identified, scope clear'
+                    - '4: Nearly complete, minor omissions'
+                    - '3: Main requirements captured, gaps exist'
+                    - '2: Significant gaps'
+                    - '1: Incomplete'
+                    - '0: Missing'
+                - name: Actionability
+                  weight: 5
+                  description: Concrete tasks, correct order, prerequisites, each one commit
+                  levels:
+                    - '5: Clear concrete tasks, correct order, prerequisites identified, each task is one commit'
+                    - '4: Mostly actionable, minor improvements possible'
+                    - '3: Tasks defined but too coarse or unclear'
+                    - '2: Hard to act on'
+                    - '1: Very vague'
+                    - '0: Missing'
+        review:
+            dimensions:
+                - name: Correctness
+                  weight: 2
+                  description: Implements spec correctly, no logic bugs
+                - name: Code Quality
+                  weight: 2
+                  description: Readable, maintainable, well-named
+                - name: Architecture
+                  weight: 2
+                  description: Follows patterns, correct separation of concerns
+                - name: Error Handling
+                  weight: 2
+                  description: All error paths handled explicitly
+                - name: Testing
+                  weight: 2
+                  description: Tests present and cover edge cases
+                - name: Performance
+                  weight: 2
+                  description: No obvious performance issues, unnecessary allocations, or blocking calls
+        security:
+            dimensions:
+                - name: Injection Prevention
+                  weight: 2
+                  description: No SQL/command/template injection vectors
+                - name: Auth & AuthZ
+                  weight: 2
+                  description: Authentication bypass and IDOR prevention
+                - name: Data Exposure
+                  weight: 2
+                  description: No PII leak, secure storage
+                - name: Input Validation
+                  weight: 2
+                  description: All inputs validated and sanitised
+                - name: Dependency Safety
+                  weight: 2
+                  description: No known CVEs in new deps
 ide:
     cursor:
         enabled: true

@@ -18,7 +18,7 @@ func TestParseScore_RefineRubric(t *testing.T) {
 3. Clarify authentication approach
 `
 
-	result := ParseScore(judgeOutput, RefineRubric)
+	result := ParseScore(judgeOutput, DefaultRefineRubric)
 
 	if result.TotalScore != 22 {
 		t.Errorf("expected TotalScore 22, got %d", result.TotalScore)
@@ -40,7 +40,7 @@ func TestParseScore_PerfectScore(t *testing.T) {
 
 Excellent requirements analysis.
 `
-	result := ParseScore(judgeOutput, RefineRubric)
+	result := ParseScore(judgeOutput, DefaultRefineRubric)
 	if result.TotalScore != 25 {
 		t.Errorf("expected 25, got %d", result.TotalScore)
 	}
@@ -58,18 +58,18 @@ func TestResult_String(t *testing.T) {
 
 func TestRubricDimensions(t *testing.T) {
 	total := 0
-	for _, d := range RefineRubric.Dimensions {
+	for _, d := range DefaultRefineRubric.Dimensions {
 		total += d.Weight
 	}
-	if total != RefineRubric.MaxScore {
-		t.Errorf("dimension weights sum to %d, expected %d", total, RefineRubric.MaxScore)
+	if total != DefaultRefineRubric.Total() {
+		t.Errorf("refine rubric weights sum to %d, expected %d", total, DefaultRefineRubric.Total())
 	}
 
 	total = 0
-	for _, d := range ReviewRubric.Dimensions {
+	for _, d := range DefaultReviewRubric.Dimensions {
 		total += d.Weight
 	}
-	if total != ReviewRubric.MaxScore {
-		t.Errorf("review rubric weights sum to %d, expected %d", total, ReviewRubric.MaxScore)
+	if total != DefaultReviewRubric.Total() {
+		t.Errorf("review rubric weights sum to %d, expected %d", total, DefaultReviewRubric.Total())
 	}
 }

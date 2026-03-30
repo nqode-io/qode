@@ -62,7 +62,7 @@ alwaysApply: true
 ## Workflow
 1. Branch → qode branch create
 2. Context → qode ticket fetch / edit context/ticket.md
-3. Refine → /qode-plan-refine (iterate until 25/25)
+3. Refine → /qode-plan-refine (iterate until pass threshold)
 4. Spec → /qode-plan-spec
 5. Implement → /qode-start → code in Cursor
 6. Check → /qode-check
@@ -104,7 +104,7 @@ alwaysApply: true
 func slashCommands(cfg *config.Config) map[string]string {
 	return map[string]string{
 		"qode-plan-refine": fmt.Sprintf(`---
-description: Refine requirements for %s (target 25/25)
+description: Refine requirements for %s
 ---
 
 **Worker pass:** Run this command and use its stdout output as your worker prompt:
@@ -117,11 +117,11 @@ Save the worker output to:
   qode plan judge
 
 Then:
-1. Parse the "**Total Score:** N/25" line from the judge output
+1. Parse the "**Total Score:** S/M" line and the "**Pass threshold:** T/M" line from the judge output to get score S, max M, and pass threshold T
 2. Detect iteration number N from the "<!-- qode:iteration=N -->" header in refined-analysis.md (default: 1)
-3. Rewrite refined-analysis.md replacing the first line with: <!-- qode:iteration=N score=S/25 -->
+3. Rewrite refined-analysis.md replacing the first line with: <!-- qode:iteration=N score=S/M -->
 4. Write a copy to: .qode/branches/$(git branch --show-current)/refined-analysis-N-score-S.md
-5. Report the score to the user. If S >= 25, suggest running /qode-plan-spec. Otherwise suggest re-running /qode-plan-refine.
+5. Report the score to the user. If S >= T, suggest running /qode-plan-spec. Otherwise suggest re-running /qode-plan-refine.
 `, cfg.Project.Name),
 
 		"qode-plan-spec": fmt.Sprintf(`---

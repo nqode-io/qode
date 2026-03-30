@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-var totalScoreRe = regexp.MustCompile(`(?i)total\s*score[:\s*]*(\d+(?:\.\d+)?)\s*/\s*10`)
+var totalScoreRe = regexp.MustCompile(`(?i)total\s*score[:\s*]*(\d+(?:\.\d+)?)\s*/\s*(\d+)`)
 
 // ExtractScoreFromFile reads a review markdown file and returns the total
 // score found on a "Total Score: X/10" line. Returns 0 if the file does not

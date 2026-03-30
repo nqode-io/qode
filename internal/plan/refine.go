@@ -104,8 +104,17 @@ func SaveIterationFiles(root, branch string, out *RefineOutput) (workerPath stri
 // BuildJudgePrompt generates the judge scoring prompt.
 // The template references refined-analysis.md by path; no file read is performed here.
 func BuildJudgePrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Context) (string, error) {
-	scoreEngine := scoring.NewEngine(engine, cfg)
-	return scoreEngine.BuildJudgePrompt(ctx.ContextDir, scoring.RefineRubric)
+	rubric := scoring.BuildRubric(scoring.RubricRefine, cfg)
+	targetScore := rubric.Total()
+	if cfg != nil && cfg.Scoring.TargetScore > 0 {
+		targetScore = cfg.Scoring.TargetScore
+	}
+	data := prompt.TemplateData{
+		BranchDir:   ctx.ContextDir,
+		Rubric:      rubric,
+		TargetScore: targetScore,
+	}
+	return engine.Render("scoring/judge_refine", data)
 }
 
 // SaveIterationResult writes iteration files using a pre-computed score result.
@@ -128,9 +137,12 @@ func SaveIterationResult(root, branch string, iteration int, analysisText string
 }
 
 // ParseIterationFromOutput tries to extract a score and save the analysis file.
-func ParseIterationFromOutput(root, branch string, iteration int, analysisText string) (scoring.Result, error) {
-	result := scoring.ParseScore(analysisText, scoring.RefineRubric)
-	result.TargetScore = 25
+func ParseIterationFromOutput(root, branch string, iteration int, analysisText string, cfg *config.Config) (scoring.Result, error) {
+	rubric := scoring.BuildRubric(scoring.RubricRefine, cfg)
+	result := scoring.ParseScore(analysisText, rubric)
+	if cfg != nil && cfg.Scoring.TargetScore > 0 {
+		result.TargetScore = cfg.Scoring.TargetScore
+	}
 
 	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
 

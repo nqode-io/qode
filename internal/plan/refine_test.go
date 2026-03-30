@@ -162,6 +162,51 @@ func TestBuildJudgePrompt_ReferencesRefinedAnalysis(t *testing.T) {
 	}
 }
 
+func TestBuildJudgePrompt_CustomRubric(t *testing.T) {
+	root := t.TempDir()
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	cfg := &config.Config{
+		Scoring: config.ScoringConfig{
+			Rubrics: map[string]config.RubricConfig{
+				"refine": {
+					Dimensions: []config.DimensionConfig{
+						{Name: "Domain Fit", Weight: 5, Description: "Fits domain requirements"},
+						{Name: "Data Clarity", Weight: 5, Description: "Data model is clear"},
+					},
+				},
+			},
+		},
+	}
+
+	branchDir := filepath.Join(root, ".qode", "branches", "test-branch")
+	ctx := &context.Context{Branch: "test-branch", ContextDir: branchDir}
+
+	got, err := BuildJudgePrompt(engine, cfg, ctx)
+	if err != nil {
+		t.Fatalf("BuildJudgePrompt: %v", err)
+	}
+	if !strings.Contains(got, "Domain Fit") {
+		t.Error("judge prompt must contain custom dimension 'Domain Fit'")
+	}
+	if !strings.Contains(got, "Data Clarity") {
+		t.Error("judge prompt must contain custom dimension 'Data Clarity'")
+	}
+	if strings.Contains(got, "Problem Understanding") {
+		t.Error("judge prompt must not contain default dimension 'Problem Understanding' when overridden")
+	}
+	if !strings.Contains(got, "= 10 maximum") {
+		t.Error("judge prompt must show total '= 10 maximum' for two 5-weight dimensions")
+	}
+	// Ensure no raw Go template action syntax leaked through
+	if strings.Contains(got, ".Rubric.Total") {
+		t.Error("judge prompt must not contain unrendered '.Rubric.Total'")
+	}
+}
+
 func TestBuildRefinePromptWithOutput_OmitsAnalysisAndTicket(t *testing.T) {
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)

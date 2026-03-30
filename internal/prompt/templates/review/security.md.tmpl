@@ -115,22 +115,21 @@ For each vulnerability found:
 
 ## Rating
 
-| Dimension             | Score (0-2) | Control or finding that determines this score |
-|-----------------------|-------------|------------------------------------------------|
-| Injection Prevention  |             |                                                |
-| Auth & Access Control |             |                                                |
-| Data Protection       |             |                                                |
-| Input Validation      |             |                                                |
-| Dependency Security   |             |                                                |
+| Dimension | Score | Control or finding that determines this score |
+|-----------|-------|------------------------------------------------|
+{{range .Rubric.Dimensions -}}
+| {{.Name}} (0–{{.Weight}}) |       |                                                |
+{{end}}
 
-**Total Score: X.X/10**
+**Total Score: X.X/{{.Rubric.Total}}**
+**Minimum passing score: {{.MinPassScore}}/{{.Rubric.Total}}**
 
 Constraints:
-- A Critical vulnerability voids a high score — total cannot exceed 5.0
-- A High vulnerability caps the total at 7.5
-- Total ≥ 8.0 requires citing specific controls observed (e.g. parameterized queries
+- A Critical vulnerability voids a high score — total cannot exceed {{printf "%.1f" (pct 50 .Rubric.Total)}}
+- A High vulnerability caps the total at {{printf "%.1f" (pct 75 .Rubric.Total)}}
+- Total ≥ {{printf "%.1f" (pct 80 .Rubric.Total)}} requires citing specific controls observed (e.g. parameterized queries
   at line X, input allowlist at line Y) — not just the absence of known bugs
-- Total 10.0 is not a valid security score; complete security is not provable
+- Total {{printf "%.1f" (pct 100 .Rubric.Total)}} is not a valid security score; complete security is not provable
 
 ---
 {{if .OutputPath}}

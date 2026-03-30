@@ -12,17 +12,27 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 
-	if cfg.Review.MinCodeScore != 8.0 {
-		t.Errorf("expected MinCodeScore 8.0, got %.1f", cfg.Review.MinCodeScore)
+	if cfg.Review.MinCodeScore != 10.0 {
+		t.Errorf("expected MinCodeScore 10.0, got %.1f", cfg.Review.MinCodeScore)
 	}
-	if cfg.Scoring.RefineTargetScore != 25 {
-		t.Errorf("expected RefineTargetScore 25, got %d", cfg.Scoring.RefineTargetScore)
+	if cfg.Scoring.TargetScore != 0 {
+		t.Errorf("expected TargetScore 0 (use rubric max), got %d", cfg.Scoring.TargetScore)
 	}
 	if !cfg.IDE.Cursor.Enabled {
 		t.Error("expected Cursor enabled by default")
 	}
 	if !cfg.IDE.ClaudeCode.Enabled {
 		t.Error("expected ClaudeCode enabled by default")
+	}
+	if len(cfg.Scoring.Rubrics) != 3 {
+		t.Errorf("expected 3 default rubrics, got %d", len(cfg.Scoring.Rubrics))
+	}
+	reviewRubric, ok := cfg.Scoring.Rubrics["review"]
+	if !ok {
+		t.Fatal("expected review rubric in defaults")
+	}
+	if len(reviewRubric.Dimensions) != 6 {
+		t.Errorf("expected 6 review dimensions (including Performance), got %d", len(reviewRubric.Dimensions))
 	}
 }
 

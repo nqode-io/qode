@@ -7,69 +7,23 @@ You did NOT produce the analysis below. Score it strictly and objectively.
 
 Read the refined analysis from `{{.BranchDir}}/refined-analysis.md` before scoring.
 
-## Scoring Rubric (5 dimensions × 5 points = 25 maximum)
+## Scoring Rubric ({{len .Rubric.Dimensions}} dimensions = {{.Rubric.Total}} maximum)
 
-For each dimension, give a score 0-5 and a one-sentence justification.
+For each dimension, give a score and a one-sentence justification.
 Be strict: only award full marks for genuinely excellent work.
 
-### Dimension 1: Problem Understanding (0-5)
-- 5: Perfect restatement, all ambiguities resolved, user need crystal clear
-- 4: Good understanding, minor gaps
-- 3: Adequate but surface-level
-- 2: Partial understanding, significant gaps
-- 1: Mostly incorrect or too vague
-- 0: Missing or completely wrong
-
-**Score:** /5
+{{range $i, $d := .Rubric.Dimensions -}}
+### Dimension {{add $i 1}}: {{$d.Name}} (0-{{$d.Weight}})
+{{if $d.Levels}}{{range $d.Levels}}- {{.}}
+{{end}}{{end}}
+**Score:** /{{$d.Weight}}
 **Justification:**
 
-### Dimension 2: Technical Analysis (0-5)
-- 5: Identifies all affected components, correct patterns, specific file/API references
-- 4: Mostly correct, minor omissions
-- 3: Covers main points, misses some details
-- 2: Shallow analysis, important components missed
-- 1: Mostly incorrect or generic
-- 0: Missing
-
-**Score:** /5
-**Justification:**
-
-### Dimension 3: Risk & Edge Cases (0-5)
-- 5: Comprehensive risk analysis, specific edge cases with mitigation
-- 4: Good coverage, minor gaps
-- 3: Some risks identified, misses important ones
-- 2: Superficial
-- 1: Generic or incorrect
-- 0: Missing
-
-**Score:** /5
-**Justification:**
-
-### Dimension 4: Completeness (0-5)
-- 5: All acceptance criteria captured, implicit requirements identified, scope clear
-- 4: Nearly complete, minor omissions
-- 3: Main requirements captured, gaps exist
-- 2: Significant gaps
-- 1: Incomplete
-- 0: Missing
-
-**Score:** /5
-**Justification:**
-
-### Dimension 5: Actionability (0-5)
-- 5: Clear concrete tasks, correct order, prerequisites identified, each task is one commit
-- 4: Mostly actionable, minor improvements possible
-- 3: Tasks defined but too coarse or unclear
-- 2: Hard to act on
-- 1: Very vague
-- 0: Missing
-
-**Score:** /5
-**Justification:**
-
+{{end}}
 ## Summary
 
-**Total Score:** /25
+**Total Score:** /{{.Rubric.Total}}
+**Pass threshold:** {{.TargetScore}}/{{.Rubric.Total}}
 
 **Overall Assessment:** (one paragraph)
 
@@ -78,4 +32,4 @@ Be strict: only award full marks for genuinely excellent work.
 2.
 3.
 
-**Recommendation:** {{"{{"}}if ge .Score 25{{"}}"}}✅ Ready for spec generation{{"{{"}}else{{"}}"}}🔄 Iterate again — address improvements above{{"{{"}}end{{"}}"}}
+**Recommendation:** {{"{{"}}if ge .Score {{.TargetScore}}{{"}}"}}✅ Ready for spec generation{{"{{"}}else{{"}}"}}🔄 Iterate again — address improvements above{{"{{"}}end{{"}}"}}

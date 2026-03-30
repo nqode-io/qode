@@ -78,9 +78,23 @@ type ReviewConfig struct {
 	MinSecurityScore float64 `yaml:"min_security_score,omitempty"`
 }
 
+// DimensionConfig is one scoring axis defined in qode.yaml.
+type DimensionConfig struct {
+	Name        string   `yaml:"name"`
+	Weight      int      `yaml:"weight"`
+	Description string   `yaml:"description,omitempty"`
+	Levels      []string `yaml:"levels,omitempty"`
+}
+
+// RubricConfig holds the dimensions for one rubric kind.
+type RubricConfig struct {
+	Dimensions []DimensionConfig `yaml:"dimensions"`
+}
+
 // ScoringConfig controls the scoring engine.
 type ScoringConfig struct {
-	RefineTargetScore int `yaml:"refine_target_score,omitempty"`
+	TargetScore int                    `yaml:"target_score,omitempty"`
+	Rubrics     map[string]RubricConfig `yaml:"rubrics,omitempty"`
 }
 
 // IDEConfig controls which IDE integrations are generated.
