@@ -31,33 +31,34 @@ func DeleteBranch(root, name string) error {
 	return err
 }
 
-// DiffFromBase returns the unified diff of changes since the merge-base with
-// baseBranch (defaults to "main" then "master").
-// When the merge-base equals HEAD (e.g. you are on main), it falls back to
-// the diff of the last commit (HEAD~1..HEAD).
+// DiffFromBase returns the unified diff of all changes on the current branch
+// since the merge-base with baseBranch (defaults to "main" then "master"),
+// including both committed and uncommitted (staged + unstaged) changes.
 func DiffFromBase(root, baseBranch string) (string, error) {
+	uncommitted, err := run(root, "diff", "HEAD", "--", ":(exclude).qode/")
+	if err != nil {
+		uncommitted = ""
+	}
+
 	base, err := resolveBase(root, baseBranch)
 	if err != nil {
-		// Fall back to staged + unstaged changes.
-		out, err2 := run(root, "diff", "HEAD", "--", ":(exclude).qode/")
-		if err2 != nil {
-			return "", err
-		}
-		return out, nil
+		// No base branch found; return uncommitted changes only.
+		return strings.TrimRight(uncommitted, "\n"), nil
 	}
-	out, err := run(root, "diff", base+"...HEAD", "--", ":(exclude).qode/")
+
+	committed, err := run(root, "diff", base+"...HEAD", "--", ":(exclude).qode/")
 	if err != nil {
 		return "", err
 	}
-	// When merge-base == HEAD the branch hasn't diverged (e.g. we're on main).
-	// Fall back to the last commit so the review still has something to analyse.
-	if strings.TrimSpace(out) == "" {
-		out, err = run(root, "diff", "HEAD~1..HEAD", "--", ":(exclude).qode/")
-		if err != nil {
-			return "", err
+
+	result := strings.TrimRight(committed, "\n")
+	if u := strings.TrimSpace(uncommitted); u != "" {
+		if result != "" {
+			result += "\n"
 		}
+		result += u
 	}
-	return out, nil
+	return result, nil
 }
 
 // ChangedFiles returns files changed since the merge-base.

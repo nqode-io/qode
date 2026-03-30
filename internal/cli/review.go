@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/nqode/qode/internal/config"
 	gocontext "github.com/nqode/qode/internal/context"
@@ -86,7 +87,7 @@ func runReview(kind string, toFile, force bool) error {
 	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
 
 	diffPath := filepath.Join(branchDir, "diff.md")
-	if err := os.WriteFile(diffPath, []byte(diff), 0644); err != nil {
+	if err := os.WriteFile(diffPath, []byte(diff), 0600); err != nil {
 		return fmt.Errorf("saving diff snapshot: %w", err)
 	}
 
@@ -125,5 +126,5 @@ func capitalize(s string) string {
 	if len(s) == 0 {
 		return s
 	}
-	return string(s[0]-32) + s[1:]
+	return strings.ToUpper(string(s[0])) + s[1:]
 }
