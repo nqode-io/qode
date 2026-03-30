@@ -162,6 +162,95 @@ func TestBuildJudgePrompt_ReferencesRefinedAnalysis(t *testing.T) {
 	}
 }
 
+func TestBuildJudgePrompt_CustomRubric(t *testing.T) {
+	root := t.TempDir()
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	cfg := &config.Config{
+		Scoring: config.ScoringConfig{
+			Rubrics: map[string]config.RubricConfig{
+				"refine": {
+					Dimensions: []config.DimensionConfig{
+						{Name: "Domain Fit", Weight: 5, Description: "Fits domain requirements"},
+						{Name: "Data Clarity", Weight: 5, Description: "Data model is clear"},
+					},
+				},
+			},
+		},
+	}
+
+	branchDir := filepath.Join(root, ".qode", "branches", "test-branch")
+	ctx := &context.Context{Branch: "test-branch", ContextDir: branchDir}
+
+	got, err := BuildJudgePrompt(engine, cfg, ctx)
+	if err != nil {
+		t.Fatalf("BuildJudgePrompt: %v", err)
+	}
+	if !strings.Contains(got, "Domain Fit") {
+		t.Error("judge prompt must contain custom dimension 'Domain Fit'")
+	}
+	if !strings.Contains(got, "Data Clarity") {
+		t.Error("judge prompt must contain custom dimension 'Data Clarity'")
+	}
+	if strings.Contains(got, "Problem Understanding") {
+		t.Error("judge prompt must not contain default dimension 'Problem Understanding' when overridden")
+	}
+	if !strings.Contains(got, "= 10 maximum") {
+		t.Error("judge prompt must show total '= 10 maximum' for two 5-weight dimensions")
+	}
+	// Ensure no raw Go template action syntax leaked through
+	if strings.Contains(got, ".Rubric.Total") {
+		t.Error("judge prompt must not contain unrendered '.Rubric.Total'")
+	}
+}
+
+func TestParseIterationFromOutput_TargetScoreOverride(t *testing.T) {
+	root, branchDir := setupRefineDir(t)
+	if err := os.MkdirAll(branchDir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	analysisText := "<!-- qode:iteration=1 -->\n\n**Total Score:** 18/25\n\nsome analysis"
+	cfg := &config.Config{
+		Scoring: config.ScoringConfig{
+			TargetScore: 20,
+		},
+	}
+
+	result, err := ParseIterationFromOutput(root, "test-branch", 1, analysisText, cfg)
+	if err != nil {
+		t.Fatalf("ParseIterationFromOutput: %v", err)
+	}
+	if result.TargetScore != 20 {
+		t.Errorf("expected TargetScore 20 from cfg override, got %d", result.TargetScore)
+	}
+	if result.TotalScore != 18 {
+		t.Errorf("expected TotalScore 18, got %d", result.TotalScore)
+	}
+}
+
+func TestParseIterationFromOutput_TargetScoreDefaultsToRubricTotal(t *testing.T) {
+	root, branchDir := setupRefineDir(t)
+	if err := os.MkdirAll(branchDir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	analysisText := "<!-- qode:iteration=1 -->\n\n**Total Score:** 22/25\n\nsome analysis"
+	// TargetScore == 0 → should default to rubric.Total() == 25
+	cfg := &config.Config{}
+
+	result, err := ParseIterationFromOutput(root, "test-branch", 1, analysisText, cfg)
+	if err != nil {
+		t.Fatalf("ParseIterationFromOutput: %v", err)
+	}
+	if result.TargetScore != 25 {
+		t.Errorf("expected TargetScore 25 (rubric total), got %d", result.TargetScore)
+	}
+}
+
 func TestBuildRefinePromptWithOutput_OmitsAnalysisAndTicket(t *testing.T) {
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)

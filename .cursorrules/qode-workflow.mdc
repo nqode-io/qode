@@ -16,7 +16,7 @@ qode
 ## Workflow
 1. Branch → qode branch create
 2. Context → qode ticket fetch / edit context/ticket.md
-3. Refine → /qode-plan-refine (iterate until 25/25)
+3. Refine → /qode-plan-refine (iterate until pass threshold)
 4. Spec → /qode-plan-spec
 5. Implement → /qode-start → code in Cursor
 6. Check → /qode-check

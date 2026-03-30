@@ -39,6 +39,48 @@ func TestBuildCodePrompt_OmitsDiffAndSpec(t *testing.T) {
 	}
 }
 
+func TestBuildCodePrompt_PctConstraints(t *testing.T) {
+	root := t.TempDir()
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	// Custom 10-point rubric: two dimensions × weight 5.
+	// Expected pct thresholds: 50%→5.0, 75%→7.5, 80%→8.0, 100%→10.0.
+	cfg := &config.Config{
+		Scoring: config.ScoringConfig{
+			Rubrics: map[string]config.RubricConfig{
+				"review": {
+					Dimensions: []config.DimensionConfig{
+						{Name: "Dimension A", Weight: 5, Description: "first"},
+						{Name: "Dimension B", Weight: 5, Description: "second"},
+					},
+				},
+			},
+		},
+	}
+
+	ctx := &context.Context{
+		Branch:     "test-branch",
+		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	}
+
+	got, err := BuildCodePrompt(engine, cfg, ctx, "")
+	if err != nil {
+		t.Fatalf("BuildCodePrompt: %v", err)
+	}
+
+	for _, want := range []string{"5.0", "7.5", "8.0", "10.0"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("prompt must contain pct threshold %q", want)
+		}
+	}
+	if !strings.Contains(got, "10") {
+		t.Error("prompt must show rubric total 10")
+	}
+}
+
 func TestBuildSecurityPrompt_OmitsDiff(t *testing.T) {
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)

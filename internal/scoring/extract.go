@@ -6,10 +6,10 @@ import (
 	"strconv"
 )
 
-var totalScoreRe = regexp.MustCompile(`(?i)total\s*score[:\s*]*(\d+(?:\.\d+)?)\s*/\s*10`)
+var totalScoreRe = regexp.MustCompile(`(?i)total\s*score[:\s*]*(\d+(?:\.\d+)?)\s*/\s*(\d+)`)
 
 // ExtractScoreFromFile reads a review markdown file and returns the total
-// score found on a "Total Score: X/10" line. Returns 0 if the file does not
+// score found on a "Total Score: X/M" line. Returns 0 if the file does not
 // exist or no score line is present.
 func ExtractScoreFromFile(path string) float64 {
 	data, err := os.ReadFile(path)
@@ -21,7 +21,7 @@ func ExtractScoreFromFile(path string) float64 {
 
 func extractScore(text string) float64 {
 	m := totalScoreRe.FindStringSubmatch(text)
-	if len(m) < 2 {
+	if len(m) < 3 {
 		return 0
 	}
 	score, err := strconv.ParseFloat(m[1], 64)

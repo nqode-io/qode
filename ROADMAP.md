@@ -10,12 +10,14 @@ Planned features for qode, in recommended implementation order. Items marked wit
 - [x] [#42](https://github.com/nqode-io/qode/issues/42) — **Remove unused commands** — Removed `plan status`, `branch list`, `branch focus`, `config show/detect/validate`
 - [x] [#44](https://github.com/nqode-io/qode/issues/44) — **Remove unused CLI flags** — Removed `--verbose`, `--base`, `--keep-branch`, `--skip-tests`, `--layer`, `--new`, `--scaffold`, `--workspace`, `--ide`, `--cursor`, `--claude`, `--iterations`
 - [x] [#45](https://github.com/nqode-io/qode/issues/45) — **Replace `qode check` with `/qode-check` IDE slash command** — AI-driven interactive quality gate; detects test runner and linter from project structure
+- [x] [#26](https://github.com/nqode-io/qode/issues/26) — **Configurable scoring rubrics** — Extract hardcoded rubrics into `qode.yaml`, support custom dimensions and weights
 
-## In progress
+## In Progress
+
+- [x] [#30](https://github.com/nqode-io/qode/issues/30) — **Strict mode** — Block workflow steps when prerequisites are missing or scores are below configured minimums *(requires #26)*
 
 ## Up Next (parallel — start after #24)
 
-- [ ] [#26](https://github.com/nqode-io/qode/issues/26) — **Configurable scoring rubrics** — Extract hardcoded rubrics into `qode.yaml`, support custom dimensions and weights
 - [ ] [#27](https://github.com/nqode-io/qode/issues/27) — **Replace ticket fetch with MCP** — Use MCP servers instead of built-in HTTP clients; support comments, attachments, linked resources
 - [ ] [#29](https://github.com/nqode-io/qode/issues/29) — **Rethink qode init** — Simplify setup; let the AI read project configs instead of hardcoding test/lint/build commands
 - [ ] [#41](https://github.com/nqode-io/qode/issues/41) — **`qode init`: append gitignore rules** — Add qode-specific `.gitignore` entries (temp prompt files, ticket snapshots, scored iteration copies) during init
@@ -26,7 +28,6 @@ Planned features for qode, in recommended implementation order. Items marked wit
 ## After Dependencies
 
 - [ ] [#28](https://github.com/nqode-io/qode/issues/28) — **Post step outputs as ticket comments** — Publish analysis, spec, and review outputs to the original ticket via MCP *(requires #27)*
-- [ ] [#30](https://github.com/nqode-io/qode/issues/30) — **Strict mode** — Block workflow steps when prerequisites are missing or scores are below configured minimums *(requires #26)*
 - [ ] [#36](https://github.com/nqode-io/qode/issues/36) — **Add qode pr create command** — Generate PR/MR with AI-written title and description from branch context; store PR URL for subsequent steps *(requires #27)*
 - [ ] [#31](https://github.com/nqode-io/qode/issues/31) — **PR/MR review comments step** — Read and address PR review comments using MCP *(requires #27, #36)*
 
@@ -39,7 +40,7 @@ Planned features for qode, in recommended implementation order. Items marked wit
 ```
 #24 Harden review prompts ✅
  ├── #25 Optimize prompts for token usage ✅
- ├── #26 Configurable scoring rubrics
+ ├── #26 Configurable scoring rubrics ✅
  │    └── #30 Strict mode
  ├── #27 Replace ticket fetch with MCP
  │    ├── #28 Post step outputs as ticket comments

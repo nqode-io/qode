@@ -27,7 +27,7 @@ func newPlanRefineCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "refine [ticket-url]",
-		Short: "Generate a requirements refinement prompt (target: 25/25)",
+		Short: "Generate a requirements refinement prompt",
 		Long: `Generates a requirements refinement prompt and writes it to stdout.
 
 The LLM reads the stdout output and executes it as the worker prompt.

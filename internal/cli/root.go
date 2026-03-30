@@ -35,7 +35,7 @@ with varied tech stacks — Next.js+React, .NET+React, Angular+Java, and more.
 Workflow:
   1. qode branch create <name>                  # Create feature branch
   2. /qode-ticket-fetch <url>    (in IDE)       # Fetch ticket
-  3. /qode-plan-refine           (in IDE)       # Refine requirements (3-5x → 25/25)
+  3. /qode-plan-refine           (in IDE)       # Refine requirements (3-5x, until pass threshold)
   4. /qode-plan-spec             (in IDE)       # Generate tech spec
   5. /qode-start                 (in IDE)       # Run implementation prompt
   6. /qode-check                 (in IDE)       # Run quality gates (tests + lint)

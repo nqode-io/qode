@@ -32,11 +32,11 @@ qode Workflow
 │  → Or manually edit .qode/branches/.../context/ticket.md        │
 │  → Add mockups: cp design.png .qode/branches/.../context/       │
 ├─────────────────────────────────────────────────────────────────┤
-│  STEP 3: REFINE REQUIREMENTS  (target: 25/25, ~3-5 iterations)  │
+│  STEP 3: REFINE REQUIREMENTS  (iterate to pass threshold)       │
 │  /qode-plan-refine  (in Cursor/Claude Code)                     │
 │  → AI reads context + researches codebase                       │
-│  → Judge independently scores 5 dimensions × 5 points           │
-│  → Iterate: answer open questions, re-run until 25/25           │
+│  → Judge independently scores each configured dimension         │
+│  → Iterate: answer open questions, re-run until pass threshold  │
 ├─────────────────────────────────────────────────────────────────┤
 │  STEP 4: GENERATE SPEC                                          │
 │  /qode-plan-spec  (in Cursor/Claude Code)                       │
@@ -73,15 +73,13 @@ qode Workflow
 │  qode branch remove feat-user-dashboard                         │
 └─────────────────────────────────────────────────────────────────┘
 
-Scoring Rubric (refinement, 5 × 5 = 25 points):
-  1. Problem Understanding      (0-5)
-  2. Technical Analysis         (0-5)
-  3. Risk & Edge Cases          (0-5)
-  4. Completeness               (0-5)
-  5. Actionability              (0-5)
+Scoring Rubric (refinement, default: 5 × 5 = 25 points):
+  Default dimensions: Problem Understanding, Technical Analysis,
+                      Risk & Edge Cases, Completeness, Actionability
+  Configurable via scoring.rubrics.refine in qode.yaml
 
-Review Scoring (10-point scale):
-  Code Review:     minimum 8.0/10 (configurable via review.min_code_score)
-  Security Review: minimum 8.0/10 (configurable via review.min_security_score)
+Review Scoring (default scales, configurable via scoring.rubrics):
+  Code Review:     minimum 10.0/12 (configurable via review.min_code_score)
+  Security Review: minimum 8.0/10  (configurable via review.min_security_score)
 
 `

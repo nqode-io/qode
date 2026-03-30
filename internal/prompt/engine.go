@@ -11,6 +11,7 @@ import (
 	"text/template"
 
 	"github.com/nqode/qode/internal/config"
+	"github.com/nqode/qode/internal/scoring"
 )
 
 //go:embed templates
@@ -36,6 +37,10 @@ func NewEngine(root string) (*Engine, error) {
 			}
 			return result
 		},
+		"add": func(a, b int) int { return a + b },
+		// pct returns percent% of n as float64. Use with printf "%.1f" in templates.
+		// Example: {{printf "%.1f" (pct 75 .Rubric.Total)}} → "7.5" for a 10-pt rubric.
+		"pct": func(percent float64, n int) float64 { return float64(n) * percent / 100.0 },
 	}
 	return e, nil
 }
@@ -45,15 +50,18 @@ type TemplateData struct {
 	Project    config.ProjectConfig
 	Layers     []config.LayerConfig
 	Branch     string
-	Ticket     string // inline content; set only for knowledge/add-branch
-	Analysis   string // inline content; set for knowledge/add-branch and scoring judge
-	Spec       string // inline content; set only for knowledge/add-branch
-	Diff       string // inline content; set only for knowledge/add-branch
-	Extra      string // inline content; set for knowledge/add-branch and refine (reviews, notes)
-	KB         string // knowledge base file references; set for start
-	Lessons    string // existing lesson summaries for deduplication; set for knowledge/add-branch
-	OutputPath string // when set, templates append file-write instructions
-	BranchDir  string // absolute path to .qode/branches/<branch>/; used by templates for file-path references
+	Ticket     string         // inline content; set only for knowledge/add-branch
+	Analysis   string         // inline content; set for knowledge/add-branch and scoring judge
+	Spec       string         // inline content; set only for knowledge/add-branch
+	Diff       string         // inline content; set only for knowledge/add-branch
+	Extra      string         // inline content; set for knowledge/add-branch and refine (reviews, notes)
+	KB         string         // knowledge base file references; set for start
+	Lessons    string         // existing lesson summaries for deduplication; set for knowledge/add-branch
+	OutputPath   string         // when set, templates append file-write instructions
+	BranchDir    string         // absolute path to .qode/branches/<branch>/; used by templates for file-path references
+	Rubric       scoring.Rubric // scoring rubric; set for judge-refine, code-review, security-review prompts
+	TargetScore  int            // pass threshold for refine judge (defaults to Rubric.Total(); overridden by scoring.target_score)
+	MinPassScore float64        // minimum score to pass review; set from review.min_code_score or review.min_security_score
 }
 
 // Render renders a named template (e.g. "refine/base") with the given data.

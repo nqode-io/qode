@@ -16,9 +16,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/nqode/qode/internal/config"
-	"github.com/nqode/qode/internal/prompt"
 )
 
 // Result holds the judge's scoring output.
@@ -45,32 +42,13 @@ func (r Result) String() string {
 	return fmt.Sprintf("%d/%d", r.TotalScore, r.MaxScore)
 }
 
-// Engine is the two-pass scoring engine.
-type Engine struct {
-	promptEngine *prompt.Engine
-	cfg          *config.Config
-}
-
-// NewEngine creates a scoring Engine.
-func NewEngine(pe *prompt.Engine, cfg *config.Config) *Engine {
-	return &Engine{promptEngine: pe, cfg: cfg}
-}
-
-// BuildJudgePrompt generates the judge prompt for a given branch dir and rubric.
-func (e *Engine) BuildJudgePrompt(branchDir string, rubric Rubric) (string, error) {
-	data := prompt.TemplateData{
-		BranchDir: branchDir,
-	}
-	templateName := fmt.Sprintf("scoring/judge_%s", rubric.Kind)
-	return e.promptEngine.Render(templateName, data)
-}
-
 // ParseScore attempts to extract a total score from judge output.
 // It looks for patterns like "Total Score: 22/25" or "**Total Score:** 22/25".
+// TargetScore defaults to rubric.Total(); callers may override it afterward.
 func ParseScore(judgeOutput string, rubric Rubric) Result {
 	result := Result{
-		MaxScore:    rubric.MaxScore,
-		TargetScore: rubric.MaxScore,
+		MaxScore:    rubric.Total(),
+		TargetScore: rubric.Total(),
 	}
 
 	// Try to find "Total Score: N/M" or "N/M" near "total".
