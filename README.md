@@ -129,13 +129,17 @@ qode plan refine --to-file                                     Save worker promp
 qode plan judge                                                Generate judge scoring prompt to stdout (requires refined-analysis.md)
 qode plan judge --to-file                                      Save judge prompt to file for debugging
 qode plan spec                                                 Generate tech spec prompt to stdout (use in IDE via /qode-plan-spec)
+qode plan spec --force                                         Bypass score gate (prerequisite check still applies)
 qode plan spec --to-file                                       Save spec prompt to file for debugging
 
 qode start                                                     Generate implementation prompt to stdout (use in IDE via /qode-start)
+qode start --force                                             Bypass spec prerequisite gate
 qode start --to-file                                           Save implementation prompt to file for debugging
 
 qode review code                                               Generate code review prompt to stdout (use in IDE via /qode-review-code)
+qode review code --force                                       Bypass uncommitted-diff check
 qode review security                                           Generate security review prompt to stdout (use in IDE via /qode-review-security)
+qode review security --force                                   Bypass uncommitted-diff check
 
 qode ide setup                                                 Generate IDE configs for all enabled IDEs
 qode ide sync                                                  Regenerate configs from qode.yaml
@@ -146,6 +150,7 @@ qode knowledge list                                            List knowledge ba
 qode knowledge search <query>                                  Search knowledge base
 
 qode workflow                                                  Show full workflow diagram
+qode workflow status                                           Show live completion status for the current branch
 ```
 
 ## Project Types

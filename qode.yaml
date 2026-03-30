@@ -13,6 +13,7 @@ review:
     min_code_score: 10
     min_security_score: 10
 scoring:
+    strict: true
     rubrics:
         refine:
             dimensions:

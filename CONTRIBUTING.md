@@ -53,9 +53,6 @@ All contributions must pass these checks:
 |------|---------|
 | Unit tests | `go test ./...` |
 | Lint | `golangci-lint run` |
-| Build | `go build ./...` |
-| Code review score | Minimum 8.0/10 |
-| Security review score | Minimum 8.0/10 |
 
 Run `/qode-check` (in IDE) to execute all gates interactively.
 

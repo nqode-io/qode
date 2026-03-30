@@ -24,31 +24,35 @@ func newReviewCmd() *cobra.Command {
 
 func newReviewCodeCmd() *cobra.Command {
 	var toFile bool
+	var force bool
 	cmd := &cobra.Command{
 		Use:   "code",
 		Short: "Generate a code review prompt for the current changes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runReview("code", toFile)
+			return runReview("code", toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
+	cmd.Flags().BoolVar(&force, "force", false, "bypass step guard checks")
 	return cmd
 }
 
 func newReviewSecurityCmd() *cobra.Command {
 	var toFile bool
+	var force bool
 	cmd := &cobra.Command{
 		Use:   "security",
 		Short: "Generate a security review prompt for the current changes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runReview("security", toFile)
+			return runReview("security", toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
+	cmd.Flags().BoolVar(&force, "force", false, "bypass step guard checks")
 	return cmd
 }
 
-func runReview(kind string, toFile bool) error {
+func runReview(kind string, toFile, force bool) error {
 	root, err := resolveRoot()
 	if err != nil {
 		return err
@@ -66,7 +70,10 @@ func runReview(kind string, toFile bool) error {
 	if err != nil {
 		return fmt.Errorf("getting diff: %w", err)
 	}
-	if diff == "" {
+	if diff == "" && !force {
+		if cfg.Scoring.Strict {
+			return fmt.Errorf("no changes detected: commit code first before running a review")
+		}
 		fmt.Fprintln(os.Stderr, "No changes detected. Commit some code first.")
 		return nil
 	}
@@ -75,8 +82,6 @@ func runReview(kind string, toFile bool) error {
 	if err != nil {
 		return err
 	}
-
-	ctx.WarnMissingPredecessors("review", os.Stderr)
 
 	branchDir := filepath.Join(root, config.QodeDir, "branches", branch)
 

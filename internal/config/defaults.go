@@ -11,6 +11,7 @@ func DefaultConfig() Config {
 			MinSecurityScore: 8.0,
 		},
 		Scoring: ScoringConfig{
+			Strict:  false, // backward compatible default
 			Rubrics: DefaultRubricConfigs(),
 		},
 		IDE: IDEConfig{

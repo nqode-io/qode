@@ -1,10 +1,8 @@
 package context
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -189,52 +187,94 @@ func TestLoad_NoAnalysisMd(t *testing.T) {
 	}
 }
 
-func TestWarnMissingPredecessors_Start_NoSpec(t *testing.T) {
-	ctx := &Context{}
-	var buf bytes.Buffer
-	ctx.WarnMissingPredecessors("start", &buf)
-	if !strings.Contains(buf.String(), "spec.md") {
-		t.Errorf("expected warning about spec.md, got: %q", buf.String())
-	}
-}
-
-func TestWarnMissingPredecessors_Start_HasSpec(t *testing.T) {
+func TestHasCodeReview_Present(t *testing.T) {
 	root, branchDir := setupBranchDir(t)
-	writeFile(t, filepath.Join(branchDir, "spec.md"), "spec content")
+	writeFile(t, filepath.Join(branchDir, "code-review.md"), "**Total Score: 10/12**")
 	ctx, err := Load(root, "test-branch")
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	var buf bytes.Buffer
-	ctx.WarnMissingPredecessors("start", &buf)
-	if buf.Len() != 0 {
-		t.Errorf("expected no warning when spec exists, got: %q", buf.String())
+	if !ctx.HasCodeReview() {
+		t.Error("expected HasCodeReview() == true")
 	}
 }
 
-func TestWarnMissingPredecessors_Review_NoSpec(t *testing.T) {
-	ctx := &Context{}
-	var buf bytes.Buffer
-	ctx.WarnMissingPredecessors("review", &buf)
-	if !strings.Contains(buf.String(), "spec.md") {
-		t.Errorf("expected warning about spec.md, got: %q", buf.String())
+func TestHasCodeReview_Absent(t *testing.T) {
+	root, _ := setupBranchDir(t)
+	ctx, err := Load(root, "test-branch")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if ctx.HasCodeReview() {
+		t.Error("expected HasCodeReview() == false")
 	}
 }
 
-func TestWarnMissingPredecessors_Spec_NoAnalysis(t *testing.T) {
-	ctx := &Context{}
-	var buf bytes.Buffer
-	ctx.WarnMissingPredecessors("spec", &buf)
-	if !strings.Contains(buf.String(), "refined-analysis.md") {
-		t.Errorf("expected warning about refined-analysis.md, got: %q", buf.String())
+func TestHasSecurityReview_Present(t *testing.T) {
+	root, branchDir := setupBranchDir(t)
+	writeFile(t, filepath.Join(branchDir, "security-review.md"), "**Total Score: 8/10**")
+	ctx, err := Load(root, "test-branch")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !ctx.HasSecurityReview() {
+		t.Error("expected HasSecurityReview() == true")
 	}
 }
 
-func TestWarnMissingPredecessors_Unknown_NoOutput(t *testing.T) {
-	ctx := &Context{}
-	var buf bytes.Buffer
-	ctx.WarnMissingPredecessors("unknown-step", &buf)
-	if buf.Len() != 0 {
-		t.Errorf("expected no output for unknown step, got: %q", buf.String())
+func TestHasSecurityReview_Absent(t *testing.T) {
+	root, _ := setupBranchDir(t)
+	ctx, err := Load(root, "test-branch")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if ctx.HasSecurityReview() {
+		t.Error("expected HasSecurityReview() == false")
+	}
+}
+
+func TestCodeReviewScore_ReturnsScore(t *testing.T) {
+	root, branchDir := setupBranchDir(t)
+	writeFile(t, filepath.Join(branchDir, "code-review.md"), "**Total Score: 10/12**")
+	ctx, err := Load(root, "test-branch")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := ctx.CodeReviewScore(); got != 10.0 {
+		t.Errorf("want 10.0, got %f", got)
+	}
+}
+
+func TestCodeReviewScore_MissingFile(t *testing.T) {
+	root, _ := setupBranchDir(t)
+	ctx, err := Load(root, "test-branch")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := ctx.CodeReviewScore(); got != 0 {
+		t.Errorf("want 0, got %f", got)
+	}
+}
+
+func TestSecurityReviewScore_ReturnsScore(t *testing.T) {
+	root, branchDir := setupBranchDir(t)
+	writeFile(t, filepath.Join(branchDir, "security-review.md"), "**Total Score: 8/10**")
+	ctx, err := Load(root, "test-branch")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := ctx.SecurityReviewScore(); got != 8.0 {
+		t.Errorf("want 8.0, got %f", got)
+	}
+}
+
+func TestSecurityReviewScore_MissingFile(t *testing.T) {
+	root, _ := setupBranchDir(t)
+	ctx, err := Load(root, "test-branch")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := ctx.SecurityReviewScore(); got != 0 {
+		t.Errorf("want 0, got %f", got)
 	}
 }

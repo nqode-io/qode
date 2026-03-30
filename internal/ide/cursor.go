@@ -131,6 +131,8 @@ description: Generate technical specification for %s
 Run this command and use its stdout output as your prompt:
   qode plan spec
 
+If the output begins with `+"`STOP.`"+`, do not execute it as a prompt — report the prerequisite message to the user and wait for instructions. Use `+"`qode plan spec --force`"+` to bypass score gates when needed.
+
 After generating the spec, save it to:
   .qode/branches/$(git branch --show-current)/spec.md
 `, cfg.Project.Name),
@@ -142,6 +144,8 @@ description: Code review for %s
 Run this command and use its stdout output as your prompt:
   qode review code
 
+If the command produces no output (no uncommitted changes), inform the user to commit changes first. Use `+"`qode review code --force`"+` to bypass the uncommitted-diff check.
+
 After completing the review, save it to:
   .qode/branches/$(git branch --show-current)/code-review.md
 `, cfg.Project.Name),
@@ -152,6 +156,8 @@ description: Security review for %s
 
 Run this command and use its stdout output as your prompt:
   qode review security
+
+If the command produces no output (no uncommitted changes), inform the user to commit changes first. Use `+"`qode review security --force`"+` to bypass the uncommitted-diff check.
 
 After completing the review, save it to:
   .qode/branches/$(git branch --show-current)/security-review.md
@@ -165,6 +171,8 @@ description: Start implementation session for %s
 
 Run this command and use its stdout output as your prompt:
   qode start
+
+If the output begins with `+"`STOP.`"+`, do not execute it as a prompt — report the prerequisite message to the user and wait for instructions. Use `+"`qode start --force`"+` to bypass the spec prerequisite when needed.
 
 Execute the prompt as your implementation session.
 `, cfg.Project.Name),

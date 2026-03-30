@@ -2,13 +2,13 @@ package context
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/nqode/qode/internal/config"
+	"github.com/nqode/qode/internal/scoring"
 )
 
 // Iteration holds metadata about one refinement pass.
@@ -129,23 +129,26 @@ func (c *Context) LatestScore() int {
 	return latestScore
 }
 
-// WarnMissingPredecessors writes a warning to w if required predecessor files
-// for the given step are absent. It does not block execution.
-func (c *Context) WarnMissingPredecessors(step string, w io.Writer) {
-	switch step {
-	case "spec":
-		if !c.HasRefinedAnalysis() {
-			_, _ = fmt.Fprintln(w, "Warning: no refined-analysis.md — spec quality may be low. Run 'qode plan refine' first.")
-		}
-	case "start":
-		if !c.HasSpec() {
-			_, _ = fmt.Fprintln(w, "Warning: no spec.md — run 'qode plan spec' first.")
-		}
-	case "review":
-		if !c.HasSpec() {
-			_, _ = fmt.Fprintln(w, "Warning: no spec.md — code review proceeds without spec context.")
-		}
-	}
+// HasCodeReview returns true if a code-review.md exists in the branch context.
+func (c *Context) HasCodeReview() bool {
+	_, err := os.Stat(filepath.Join(c.ContextDir, "code-review.md"))
+	return err == nil
+}
+
+// HasSecurityReview returns true if a security-review.md exists in the branch context.
+func (c *Context) HasSecurityReview() bool {
+	_, err := os.Stat(filepath.Join(c.ContextDir, "security-review.md"))
+	return err == nil
+}
+
+// CodeReviewScore returns the total score from code-review.md, or 0 if absent or unparseable.
+func (c *Context) CodeReviewScore() float64 {
+	return scoring.ExtractScoreFromFile(filepath.Join(c.ContextDir, "code-review.md"))
+}
+
+// SecurityReviewScore returns the total score from security-review.md, or 0 if absent or unparseable.
+func (c *Context) SecurityReviewScore() float64 {
+	return scoring.ExtractScoreFromFile(filepath.Join(c.ContextDir, "security-review.md"))
 }
 
 func readFileOr(path, fallback string) string {

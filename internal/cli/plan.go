@@ -10,6 +10,7 @@ import (
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/plan"
 	"github.com/nqode/qode/internal/prompt"
+	"github.com/nqode/qode/internal/workflow"
 	"github.com/spf13/cobra"
 )
 
@@ -48,6 +49,7 @@ Use --to-file to write the prompt files to disk (worker + judge) for debugging.`
 
 func newPlanSpecCmd() *cobra.Command {
 	var toFile bool
+	var force bool
 	cmd := &cobra.Command{
 		Use:   "spec",
 		Short: "Generate a technical specification prompt from the refined analysis",
@@ -56,10 +58,11 @@ func newPlanSpecCmd() *cobra.Command {
 The LLM reads the stdout output and executes it to produce spec.md.
 Use --to-file to write the prompt to disk for debugging.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPlanSpec(toFile)
+			return runPlanSpec(toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
+	cmd.Flags().BoolVar(&force, "force", false, "bypass step guard checks")
 	return cmd
 }
 
@@ -177,7 +180,7 @@ func runPlanRefine(ticketURL string, toFile bool) error {
 	return err
 }
 
-func runPlanSpec(toFile bool) error {
+func runPlanSpec(toFile, force bool) error {
 	root, err := resolveRoot()
 	if err != nil {
 		return err
@@ -196,7 +199,15 @@ func runPlanSpec(toFile bool) error {
 		return err
 	}
 
-	ctx.WarnMissingPredecessors("spec", os.Stderr)
+	if !toFile && !force {
+		if result := workflow.CheckStep("spec", ctx, cfg); result.Blocked {
+			if cfg.Scoring.Strict {
+				return fmt.Errorf("%s", result.Message)
+			}
+			fmt.Printf("STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
+			return nil
+		}
+	}
 
 	if !ctx.HasRefinedAnalysis() {
 		fmt.Fprintln(os.Stderr, "No refined analysis found.")
