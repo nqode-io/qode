@@ -6,7 +6,6 @@ Planned features for qode, in recommended implementation order. Items marked wit
 
 - [x] [#24](https://github.com/nqode-io/qode/issues/24) — **Harden review prompts** — Enforcement mechanisms for code and security reviews, slim IDE commands
 - [x] [#25](https://github.com/nqode-io/qode/issues/25) — **Optimize prompts for token usage** — Reference files instead of inlining previous-step outputs into templates
-- [x] [#32](https://github.com/nqode-io/qode/issues/32) — **Add `--force` flag to `qode ide setup` and `qode ide sync`** — Default to safe mode (skip existing files); `--force` restores overwrite behaviour
 - [x] [#39](https://github.com/nqode-io/qode/issues/39) — **Split `qode plan refine` into `qode plan refine` + `qode plan judge`** — Judge pass is a dedicated subcommand; worker prompt no longer generates the judge file
 - [x] [#42](https://github.com/nqode-io/qode/issues/42) — **Remove unused commands** — Removed `plan status`, `branch list`, `branch focus`, `config show/detect/validate`
 - [x] [#44](https://github.com/nqode-io/qode/issues/44) — **Remove unused CLI flags** — Removed `--verbose`, `--base`, `--keep-branch`, `--skip-tests`, `--layer`, `--new`, `--scaffold`, `--workspace`, `--ide`, `--cursor`, `--claude`, `--iterations`
@@ -38,8 +37,8 @@ Planned features for qode, in recommended implementation order. Items marked wit
 ## Dependency Graph
 
 ```
-#24 Harden review prompts
- ├── #25 Optimize prompts for token usage
+#24 Harden review prompts ✅
+ ├── #25 Optimize prompts for token usage ✅
  ├── #26 Configurable scoring rubrics
  │    └── #30 Strict mode
  ├── #27 Replace ticket fetch with MCP
@@ -53,7 +52,7 @@ Independent (can run in parallel with any of the above):
  #34 Codex IDE support
  #35 Auto-commit after completed tasks
  #41 qode init: append gitignore rules
- #45 Replace qode check with /qode-check
+ #45 Replace qode check with /qode-check  ✅
 
 All of the above → #37 Prepare for public beta release
 ```
