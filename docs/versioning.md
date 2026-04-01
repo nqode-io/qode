@@ -80,12 +80,13 @@ When a version tag (`v*`) is pushed:
 
 1. Ensure `main` is in the desired state
 2. Choose the version number following the rules above
-3. Create and push the tag:
+3. Run the release script from the repo root:
 
 ```bash
-git tag v0.1.0-alpha
-git push origin v0.1.0-alpha
+tools/release.sh v0.1.0-alpha
 ```
+
+The script checks that you are on `main`, that the working tree is clean, and that the tag does not already exist — then creates a lightweight tag and pushes it to `origin`.
 
 4. GitHub Actions will build binaries and create the release automatically
 5. Verify the release at https://github.com/nqode-io/qode/releases
