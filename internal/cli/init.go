@@ -37,6 +37,10 @@ for Cursor and Claude Code.`,
 // written on first run so user-customised rubrics are never overwritten.
 func runInitExisting(root string) error {
 	cfg := config.DefaultConfig()
+	cfg.QodeVersion = rootCmd.Version
+	if cfg.QodeVersion == "" {
+		cfg.QodeVersion = "dev"
+	}
 
 	// Always write qode.yaml — rubrics live in .qode/scoring.yaml, not here.
 	cfgForYaml := cfg

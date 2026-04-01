@@ -3,7 +3,6 @@ package config
 // DefaultConfig returns a Config with sensible defaults applied.
 func DefaultConfig() Config {
 	return Config{
-		QodeVersion: "0.1",
 		Review: ReviewConfig{
 			MinCodeScore:     10.0,
 			MinSecurityScore: 8.0,

@@ -12,9 +12,6 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 
-	if cfg.QodeVersion != "0.1" {
-		t.Errorf("expected QodeVersion \"0.1\", got %q", cfg.QodeVersion)
-	}
 	if cfg.Review.MinCodeScore != 10.0 {
 		t.Errorf("expected MinCodeScore 10.0, got %.1f", cfg.Review.MinCodeScore)
 	}
@@ -53,8 +50,10 @@ func TestSave_Load(t *testing.T) {
 		t.Fatalf("load: %v", err)
 	}
 
-	if loaded.QodeVersion != "0.1" {
-		t.Errorf("expected QodeVersion \"0.1\", got %q", loaded.QodeVersion)
+	// QodeVersion is set by qode init (cli layer), not by DefaultConfig.
+	// A round-tripped DefaultConfig has no version set.
+	if loaded.QodeVersion != "" {
+		t.Errorf("expected empty QodeVersion from DefaultConfig round-trip, got %q", loaded.QodeVersion)
 	}
 }
 

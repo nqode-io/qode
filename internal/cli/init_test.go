@@ -26,8 +26,8 @@ func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 		t.Fatalf("unmarshaling qode.yaml: %v", err)
 	}
 
-	if raw["qode_version"] != "0.1" {
-		t.Errorf("expected qode_version \"0.1\", got %v", raw["qode_version"])
+	if raw["qode_version"] != "dev" {
+		t.Errorf("expected qode_version \"dev\", got %v", raw["qode_version"])
 	}
 	if _, ok := raw["project"]; ok {
 		t.Error("qode.yaml must not contain a 'project' key")
