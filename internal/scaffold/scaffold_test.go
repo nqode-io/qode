@@ -5,16 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/nqode/qode/internal/config"
 )
-
-func minimalConfig() *config.Config {
-	cfg := &config.Config{}
-	cfg.IDE.ClaudeCode.Enabled = true
-	cfg.IDE.Cursor.Enabled = true
-	return cfg
-}
 
 // --- claudeSlashCommands ---
 
@@ -156,9 +147,7 @@ func TestCursorSlashCommands_NoPromptOnly(t *testing.T) {
 
 func TestSetupClaudeCode_WritesTicketFetchCommand(t *testing.T) {
 	dir := t.TempDir()
-	cfg := minimalConfig()
-
-	if err := SetupClaudeCode(dir, cfg); err != nil {
+	if err := SetupClaudeCode(dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
@@ -174,9 +163,7 @@ func TestSetupClaudeCode_WritesTicketFetchCommand(t *testing.T) {
 
 func TestSetupClaudeCode_WritesKnowledgeCommands(t *testing.T) {
 	dir := t.TempDir()
-	cfg := minimalConfig()
-
-	if err := SetupClaudeCode(dir, cfg); err != nil {
+	if err := SetupClaudeCode(dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
@@ -200,9 +187,8 @@ func TestSetupClaudeCode_CommandsContainRootName(t *testing.T) {
 	if err := os.MkdirAll(projectDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	cfg := minimalConfig()
 
-	if err := SetupClaudeCode(projectDir, cfg); err != nil {
+	if err := SetupClaudeCode(projectDir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
@@ -220,9 +206,7 @@ func TestSetupClaudeCode_CommandsContainRootName(t *testing.T) {
 
 func TestSetupCursor_WritesTicketFetchCommand(t *testing.T) {
 	dir := t.TempDir()
-	cfg := minimalConfig()
-
-	if err := SetupCursor(dir, cfg); err != nil {
+	if err := SetupCursor(dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
@@ -239,9 +223,7 @@ func TestSetupCursor_WritesTicketFetchCommand(t *testing.T) {
 
 func TestSetupCursor_WritesKnowledgeCommands(t *testing.T) {
 	dir := t.TempDir()
-	cfg := minimalConfig()
-
-	if err := SetupCursor(dir, cfg); err != nil {
+	if err := SetupCursor(dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
@@ -260,9 +242,7 @@ func TestSetupCursor_WritesKnowledgeCommands(t *testing.T) {
 
 func TestSetupCursor_NoCursorRulesDir(t *testing.T) {
 	dir := t.TempDir()
-	cfg := minimalConfig()
-
-	if err := SetupCursor(dir, cfg); err != nil {
+	if err := SetupCursor(dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
@@ -277,9 +257,8 @@ func TestSetupCursor_CommandsContainRootName(t *testing.T) {
 	if err := os.MkdirAll(projectDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	cfg := minimalConfig()
 
-	if err := SetupCursor(projectDir, cfg); err != nil {
+	if err := SetupCursor(projectDir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 

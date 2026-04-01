@@ -1,117 +1,187 @@
 # Code Review — reimplement-init-command
 
-**Reviewer:** Claude (worker pass)
-**Branch:** reimplement-init-command
-**Spec:** `.qode/branches/reimplement-init-command/spec.md`
+## Pre-read Incident Report
+
+This code ships. Two weeks later, a CI pipeline initialises a project with a locked-down `.qode/` directory (read-only parent, group-owned). `qode init` succeeds — but silently skips writing `.qode/scoring.yaml` because the `os.Stat` call returns a permission error, not a NotExist error. The guard only enters the write block when the error is NotExist. The pipeline runs with no custom rubrics; all AI reviews score against built-in defaults. Nobody notices until someone wonders why rubric thresholds look wrong. The file was never written and no error was surfaced.
 
 ---
 
-## Pre-read incident report
+## Files Reviewed
 
-The call comes in on a Monday: a senior engineer on a client project ran `qode init` to regenerate their IDE commands after editing `qode.yaml` (the README says to do exactly this). Their `.qode/prompts/review/code.md.tmpl` and `/security.md.tmpl` — two months of prompt iteration — are gone. So is their `qode.yaml`: custom rubric dimensions, `min_security_score: 12`, `target_score: 30`, all overwritten with the minimal default. No backup, no warning, no `--dry-run`. The output said "Generated: qode.yaml". It did.
-
----
-
-## File-by-file interrogation
-
-### `internal/cli/init.go`
-
-**Assumptions made:** `root` is valid and writable; `DefaultConfig()` always represents the desired end-state; all calls to `ide.Setup` and `copyEmbeddedTemplates` succeed atomically enough for the user.
-
-**What callers receive:** `runInitExisting` returns an error on failure and prints "Generated: qode.yaml" + next steps on success. There is no output indicating whether a prior `qode.yaml` or any `.qode/prompts/` files were overwritten.
-
-**Earliest silent failure point:** Line 41 — `cfg := config.DefaultConfig()` followed immediately by `yaml.Marshal(&cfg)` and `os.WriteFile`. If `qode.yaml` already exists with custom content, it is silently replaced before any output is emitted.
-
-**Items:**
-1. `copyEmbeddedTemplates` comment says "Existing files are overwritten so projects stay in sync with the embedded defaults" — but no output line announces this. The user flow `qode init` → regenerate IDE configs destroys prompt customizations silently. `copyEmbeddedTemplates` gives no hint it touched anything. Verified: there is no `fmt.Printf` call in `copyEmbeddedTemplates` that names which templates were overwritten.
-2. `ide.Setup(root, &cfg)` is called with a freshly-constructed `DefaultConfig()` pointer — not a config loaded from disk. If a user has `ide.cursor.enabled: false` in their existing `qode.yaml`, that preference is ignored because the config is rebuilt from defaults, not read. Verified: no `config.Load` call exists anywhere in `runInitExisting`.
-3. `os.WriteFile(outPath, data, 0644)` — permissions are hardcoded to 0644. This is safe and matches other write sites in the codebase. Verified safe.
-
----
-
-### `internal/ide/cursor.go` and `internal/ide/claudecode.go`
-
-**Items:**
-1. `slashCommands(name string, cfg *config.Config)` — `cfg` is accepted but never read. Same for `claudeSlashCommands(name string, cfg *config.Config)`. The `Enabled` check lives in `ide.Setup`, which is correct. But the dead parameter tells callers that the config influences command content; it does not. If a future maintainer passes a zero-value config (e.g. in a test) expecting it to suppress output, they'll be confused. Verified by reading both functions end-to-end: zero references to any `cfg.*` field.
-2. `SetupCursor` and `SetupClaudeCode` both compute `name := filepath.Base(root)` independently. This is correct and safe — `filepath.Base` on an absolute path returns only the last component, no directory traversal possible. The name flows into markdown description strings, not shell commands. Verified safe.
-3. `writeFile` in `cursor.go:153` calls `os.MkdirAll(filepath.Dir(path))` before writing — this means the commands directory is created even if the file write subsequently fails. The partial state (empty dir, no `.mdc` file) would be left behind. Low impact but worth noting: no rollback on partial failure.
+- `internal/cli/init.go`
+- `internal/cli/init_test.go`
+- `internal/config/config.go` (mergeScoringFromFile, Load)
+- `internal/config/config_test.go`
+- `internal/config/schema.go`
+- `internal/config/defaults.go`
+- `internal/scaffold/claudecode.go`
+- `internal/scaffold/cursor.go`
+- `internal/scaffold/scaffold.go`
+- `internal/scaffold/scaffold_test.go`
+- `internal/cli/knowledge_cmd.go`
+- `internal/cli/plan_test.go`
+- `internal/cli/root.go`
+- `docs/scoring-yaml-reference.md`
+- `docs/qode-yaml-reference.md`
+- `docs/how-to-customise-prompts.md`
+- `README.md`
 
 ---
 
-### `internal/cli/init_test.go`
-
-**Items:**
-1. `TestRunInitExisting_NoDetectionOutput` calls `captureStdout` — a helper defined elsewhere in the `cli` test package. Verified this is a shared helper (grep confirms it's used in other test files). The test correctly captures and checks stdout for forbidden strings. IDE output from `SetupCursor`/`SetupClaudeCode` goes through `fmt.Printf` (stdout), so if any of those messages ever contained "Detected" or "Scanning", this test would catch it. Verified property is sound.
-2. `TestRootCmd_NoIDESubcommand` uses `rootCmd.Find([]string{"ide"})` — Cobra returns `(rootCmd, nil)` for an unknown command (the unknown args are left unresolved). The condition `findErr == nil && ideCmd != rootCmd` is false when `ide` is not registered because `ideCmd == rootCmd`. This is correct Cobra behavior and the test logic is sound, though the condition reads confusingly (the positive "ide exists" case is the truthy branch that should fail the test). Nit only.
-3. No test for the re-run scenario: `runInitExisting` called twice on the same directory. The spec lists this as an explicit E2E test case ("Re-running `qode init` in an already-initialised directory: exits 0, files overwritten cleanly, no duplicate dirs") but no unit test covers it. The "overwritten cleanly" assertion specifically should be tested — does the second run produce the same file count and content?
+## Issues
 
 ---
 
-### `internal/config/defaults.go` and `internal/config/schema.go`
+### M1 — Silent swallowing of non-NotExist stat errors
 
-**Items:**
-1. `DefaultConfig()` returns `QodeVersion: "0.1"`, but the project's own `qode.yaml` has `qode_version: "0.1.3-alpha"`. The field is described as "the qode configuration format version", so these should be different values — but this inconsistency means running `qode init` in the `qode` repo itself would downgrade the value from `"0.1.3-alpha"` to `"0.1"`. If `qode_version` is truly a format version (not a binary version), `"0.1.3-alpha"` in `qode.yaml` is wrong and should be `"0.1"`. One of these is incorrect. Verified: no version-enforcement logic exists today, so this is currently harmless but points to semantic drift.
-2. `QodeVersion` uses `yaml:"qode_version,omitempty"` — the `omitempty` tag means if `QodeVersion` is an empty string, the field is omitted from the marshaled output. `DefaultConfig()` always sets it to `"0.1"`, so `omitempty` is benign in the init path. But a manually constructed `Config{}` with no version set would produce YAML without `qode_version`. Verified: the test `TestRunInitExisting_WritesQodeVersion` catches the init path correctly.
-3. `BranchConfig{KeepBranchContext: false}` is explicitly set in `DefaultConfig()`, so it serializes as `branch: {keep_branch_context: false}`. Since `omitempty` is on the struct tag, the zero value wouldn't appear — but `false` is the zero value for `bool`, so this field is suppressed by `omitempty`. Verified: `yaml:"keep_branch_context,omitempty"` — false booleans are omitted, so this field never appears in the generated YAML even though it's set in the struct. No behavior change from this.
+**Severity:** Medium  
+**File:** `internal/cli/init.go:71`  
+**Issue:** The guard that decides whether to write `.qode/scoring.yaml` passes only when `os.IsNotExist(statErr)` is true. If `os.Stat` returns any other error (e.g. `EACCES`, `ENOTDIR`), the condition is false, the write block is skipped, and no error is returned. `scoring.yaml` is silently absent. The user sees a clean exit but gets no rubrics.
 
----
+**Suggestion:**
 
-### Template changes (`internal/prompt/templates/`)
-
-**Items:**
-1. `start/base.md.tmpl` replacement of `{{range .Layers}}` with hardcoded "default (go):" clean code rules — this is a Go-only project (qode itself), so the hardcoded rules are accurate. Template execution no longer panics on a missing `Layers` field. Verified: `TemplateData` no longer has a `Layers` field; `text/template` would produce a runtime error on `{{range .Layers}}` with the new struct. The template update was required before the struct change (confirmed by task ordering in spec). No panic path remains.
-2. The five template files no longer reference `.Layers` anywhere. `TemplateProject{Name string}` exposes `.Project.Name` identically to the old `config.ProjectConfig` — zero template syntax changes required for the name substitution. Verified by checking the `{{.Project.Name}}` pattern still works.
-
----
-
-### `internal/plan/refine.go`, `internal/review/review.go`, `internal/cli/knowledge_cmd.go`
-
-**Items:**
-1. All callers correctly transitioned from `cfg.Project` + `cfg.Layers()` to `engine.ProjectName()`. Verified: no remaining references to `cfg.Project` or `.Layers` in these files.
-2. `buildBranchLessonData` signature changed from `(root string, cfg *config.Config, branches []string)` to `(root string, engine *prompt.Engine, branches []string)` — the `config.Load` call in `runKnowledgeAddBranch` was removed. However, other branches of `runKnowledgeAddBranch` already loaded config independently (for `branch.KeepBranchContext`). The diff shows `cfg, err := config.Load(root)` was removed entirely. Verified: `cfg.Branch.KeepBranchContext` is not read in `runKnowledgeAddBranch` — the keep-context check happens in `runBranchRemove`, not here. Safe removal.
-3. `engine.ProjectName()` returns `filepath.Base(e.root)` — if `root` is `/`, this returns `.`. This edge case exists across all callers. In practice `root` is always a non-root path (validated by `resolveRoot()`). Low risk but the behavior on `/` is "." appearing in prompts as the project name.
-
----
-
-## Issue Summary
-
-| # | Severity | File | Issue |
-|---|---|---|---|
-| 1 | **High** | `internal/cli/init.go:37-78` | `qode init` silently overwrites existing `qode.yaml` and all `.qode/prompts/` customizations with no warning; documented "re-run to regenerate IDE configs" flow destroys user data |
-| 2 | **High** | `internal/cli/init.go:67` | `ide.Setup` called with freshly-constructed `DefaultConfig()`, ignoring user's existing `ide.cursor.enabled: false` or similar preference in their current `qode.yaml` |
-| 3 | **Medium** | `internal/ide/cursor.go:32`, `internal/ide/claudecode.go:82` | Dead `cfg *config.Config` parameter in `slashCommands` and `claudeSlashCommands` — never read; misleads callers into thinking config affects command content |
-| 4 | **Medium** | `internal/cli/init_test.go` | No test for re-run idempotency; spec lists this as explicit E2E case; the overwrite-cleanly assertion is untested |
-| 5 | **Low** | `internal/config/defaults.go:6` | `QodeVersion: "0.1"` in `DefaultConfig()` vs `qode_version: "0.1.3-alpha"` in `qode.yaml` — semantic ambiguity about whether `qode_version` is a binary version or a config format version |
-| 6 | **Low** | `internal/ide/cursor.go:153-158` | `writeFile` creates the parent directory before writing; on failure the directory is left behind without cleanup |
-| 7 | **Nit** | `internal/cli/init_test.go:139` | `TestRootCmd_NoIDESubcommand` condition `findErr == nil && ideCmd != rootCmd` reads as the truthy-is-failure branch — confusing but correct |
-| 8 | **Nit** | `internal/ide/claudecode.go:184` | Double blank line in `qode-knowledge-add-branch` template content after the heading |
-
-**Total:** 2 High, 2 Medium, 2 Low, 2 Nit
+```go
+_, statErr := os.Stat(scoringPath)
+if statErr != nil {
+    if !os.IsNotExist(statErr) {
+        return fmt.Errorf("checking %s: %w", scoringPath, statErr)
+    }
+    // File does not exist — first run. Write defaults.
+    scoringFile := config.ScoringFileConfig{Rubrics: config.DefaultRubricConfigs()}
+    scoringData, err := yaml.Marshal(&scoringFile)
+    if err != nil {
+        return fmt.Errorf("marshaling scoring config: %w", err)
+    }
+    if err := os.WriteFile(scoringPath, scoringData, 0644); err != nil {
+        return fmt.Errorf("writing %s: %w", scoringPath, err)
+    }
+    fmt.Printf("Generated: %s\n", scoringPath)
+}
+```
 
 ---
 
-## Top 3 to fix before merging
+### M2 — New `mergeScoringFromFile` logic has no unit test
 
-1. **Issue #1 — Silent overwrite of `qode.yaml` and `.qode/prompts/`**: Add a check for existing `qode.yaml` and print a warning ("Warning: overwriting existing qode.yaml — custom rubrics and scoring thresholds will be reset") before the write. For templates, log each overwritten file. Alternatively, add a `--reset` flag and skip the overwrite by default when the target exists.
+**Severity:** Medium  
+**File:** `internal/config/config.go:54–65` (mergeScoringFromFile), `internal/config/config_test.go`  
+**Issue:** `mergeScoringFromFile` is new logic that merges `.qode/scoring.yaml` rubrics into the loaded config. It has no direct unit test. The only coverage is indirect — `init_test.go` verifies that `.qode/scoring.yaml` is written and not overwritten, but nothing tests that `config.Load` actually reads rubrics from an existing `scoring.yaml` and makes them available on `cfg.Scoring.Rubrics`. If this merge path were silently broken (e.g. wrong YAML key, wrong merge condition), all downstream scoring behaviour would regress without a failing test.
 
-2. **Issue #2 — Init ignores existing IDE preferences**: `runInitExisting` should attempt `config.Load(root)` first and fall back to `DefaultConfig()` only when no `qode.yaml` exists. The `ide.Setup` call then respects the loaded config. For a first-run scenario (no existing `qode.yaml`), behavior is unchanged.
+**Suggestion:** Add to `internal/config/config_test.go`:
 
-3. **Issue #3 — Dead `cfg` parameter**: Remove `cfg *config.Config` from both `slashCommands` and `claudeSlashCommands`. Neither function reads it. The IDE `Enabled` check belongs in `ide.Setup` (which already has it), not in the command-generation functions.
+```go
+func TestLoad_MergesRubricsFromScoringFile(t *testing.T) {
+    dir := t.TempDir()
+    if err := os.WriteFile(filepath.Join(dir, ConfigFileName), []byte("qode_version: \"0.1\"\n"), 0644); err != nil {
+        t.Fatal(err)
+    }
+    scoring := "rubrics:\n  refine:\n    dimensions:\n      - name: Custom\n        weight: 99\n"
+    qodeDir := filepath.Join(dir, QodeDir)
+    if err := os.MkdirAll(qodeDir, 0755); err != nil {
+        t.Fatal(err)
+    }
+    if err := os.WriteFile(filepath.Join(qodeDir, ScoringFileName), []byte(scoring), 0644); err != nil {
+        t.Fatal(err)
+    }
+    cfg, err := Load(dir)
+    if err != nil {
+        t.Fatalf("Load: %v", err)
+    }
+    refine, ok := cfg.Scoring.Rubrics["refine"]
+    if !ok || len(refine.Dimensions) == 0 || refine.Dimensions[0].Name != "Custom" {
+        t.Errorf("expected rubric from scoring.yaml to be merged, got %+v", cfg.Scoring.Rubrics)
+    }
+}
+```
+
+Also add a test for the malformed-file error path.
+
+---
+
+### L1 — Dead `cfg *config.Config` parameter in public scaffold API
+
+**Severity:** Low  
+**File:** `internal/scaffold/claudecode.go:12`, `internal/scaffold/cursor.go:14`  
+**Issue:** `SetupClaudeCode(root string, cfg *config.Config)` and `SetupCursor(root string, cfg *config.Config)` never read `cfg`. The parameter was preserved per the spec's interface-stability requirement, but every caller passes a real config it believes is being used. A future engineer adding IDE-specific behaviour (e.g. toggling commands based on `cfg.IDE.Cursor.Enabled`) would likely add it inside these functions and be surprised to find the parameter already present but ignored.
+
+**Note:** The spec explicitly preserved this signature for external-caller stability. Flag as a debt item; no immediate fix required to merge.
+
+---
+
+### L2 — Dead `tmplCount` variable in test
+
+**Severity:** Low  
+**File:** `internal/cli/init_test.go:883`  
+**Issue:** `tmplCount` is computed in a first loop, then immediately discarded with `_ = tmplCount`. Only `total` (from `filepath.Walk`) is checked. Looks like an incomplete refactor.
+
+**Suggestion:** Remove the first loop and `tmplCount` entirely.
+
+---
+
+### Nit1 — `cfgForYaml.Scoring.Rubrics = nil` protection is correct but its purpose is implicit
+
+**Severity:** Nit  
+**File:** `internal/cli/init.go:736`  
+**Issue:** After the nil assignment, `cfg` (with rubrics intact) is passed to `scaffold.Setup`, which never reads rubrics. The protection is correct but its purpose is not obvious — a reader might wonder what downstream call requires rubrics on `cfg`.
+
+**Suggestion:** Add a brief comment: `// Nil rubrics here because .qode/scoring.yaml owns them; scaffold.Setup does not read them.`
+
+---
+
+## Positive Findings (verified, not assumed)
+
+**`cfgForYaml` value-copy semantics:** `cfgForYaml := cfg` copies the struct. `cfgForYaml.Scoring.Rubrics = nil` assigns nil to the copy's field only — does not mutate `cfg.Scoring.Rubrics`. Go map reference is replaced, not the underlying map. Verified safe.
+
+**`rootCmd.Version` fallback:** In tests `rootCmd.Version` is `""` (no ldflags), so `"dev"` is always written. `TestRunInitExisting_WritesQodeVersion` asserts exactly `"dev"`. Verified consistent.
+
+**`os.IsNotExist` guard for scoring.yaml on re-run (happy path):** `TestRunInitExisting_RerunPreservesScoringYaml` reads file bytes after both runs and asserts equality. Guard is correct for the file-exists case.
+
+**`ide` subcommand removal:** `newIDECmd()` removed from `root.go` AddCommand list. `TestRootCmd_NoIDESubcommand` calls `rootCmd.Find([]string{"ide"})` and asserts it returns `rootCmd` itself — Cobra's signal for not-found. Verified clean.
+
+**Package rename `internal/ide` → `internal/scaffold`:** All import paths updated. No residual references to `internal/ide`. `scaffold_test.go` is in `package scaffold`. `init.go` imports `github.com/nqode/qode/internal/scaffold`. Verified complete.
+
+**`StackDefaults` deletion:** Entire map removed from `defaults.go`. All detector `DefaultConfig()` methods that referenced it are gone with the deleted `internal/detect/` package. No remaining references. Verified complete.
+
+**`slashCommands`/`claudeSlashCommands` project name derivation:** Both internal functions take `name string` derived from `filepath.Base(root)` in the public Setup functions. `TestSetupClaudeCode_CommandsContainRootName` and `TestSetupCursor_CommandsContainRootName` confirm the project name appears in command content when root is a named subdirectory. Verified correct.
+
+**`buildBranchLessonData` signature change:** `cfg *config.Config` replaced with `engine *prompt.Engine`. Call site in `runKnowledgeAddBranch` no longer loads config separately. No dead config-loading code remains. Verified consistent.
+
+**Backward compat:** `gopkg.in/yaml.v3` ignores unknown fields; existing `qode.yaml` files with `project:` or `workspace:` sections load cleanly. Spec assumption confirmed by library documentation.
+
+**`filepath.Base(root)` injection safety:** Flows only into markdown template text (command descriptions, headings). Never passed to `os/exec`, shell interpolation, or `text/template` execution path that could cause harm. Verified across both scaffold files.
+
+---
+
+## Summary
+
+| Severity | Count |
+| -------- | ----- |
+| Critical | 0     |
+| High     | 0     |
+| Medium   | 2     |
+| Low      | 2     |
+| Nit      | 1     |
+
+**Overall assessment:** The implementation is correct on the happy path and the simplification from a detection-heavy two-step flow to a single idempotent command is well-executed. The scoring.yaml separation solves the rubric-overwrite problem cleanly at the config layer. The two Medium findings are both real: one is an error-handling gap that silently misbehaves under non-standard filesystem conditions; the other is a coverage gap for the new merge path that is otherwise central to the feature.
+
+**Top 3 most important things to fix before merging:**
+
+1. **M1** (`internal/cli/init.go:71`) — Fix the `os.Stat` guard to surface non-NotExist errors instead of silently skipping the scoring.yaml write.
+2. **M2** (`internal/config/config_test.go`) — Add a unit test that proves `config.Load` merges rubrics from `.qode/scoring.yaml` into the loaded config.
+3. **L2** (`internal/cli/init_test.go:883`) — Remove the dead `tmplCount` variable.
 
 ---
 
 ## Rating
 
-| Dimension | Score | What you verified |
-|---|---|---|
-| Correctness (0–3) | 2 | All 14 spec tasks implemented; behavioral gap: init ignores existing `ide.*` preferences in disk config; overwrite is silent |
-| CLI Contract (0–2) | 2 | Prompts to stdout; errors via return value → cobra stderr; exit codes correct; `qode.yaml` keys are additive and backward-compatible (yaml.v3 ignores unknown fields confirmed) |
-| Go Idioms & Code Quality (0–2) | 1 | Dead `cfg` parameter in two functions is deceptive API; all functions ≤50 lines; `fmt.Errorf("%w")` used throughout; no global mutable state introduced |
-| Error Handling & UX (0–2) | 1 | Error messages are actionable (permission failures show paths); silent overwrite of user data is a UX defect on the re-run path |
-| Test Coverage (0–2) | 2 | 7 integration tests in `init_test.go` using real temp dirs; 3 new project-name propagation tests across ide/plan/review; re-run idempotency not tested (low severity given spec coverage) |
-| Template Safety (0–1) | 1 | `filepath.Base(root)` is not user input; flows into `text/template` markdown output only; no shell execution path; `TemplateProject.Name` substitution verified against the five modified templates |
+| Dimension | Score | What you verified (not what you assumed) |
+|-----------|-------|------------------------------------------|
+| Correctness (0–3) | 2.5 | Core behaviour correct; cfgForYaml copy semantics verified safe; rootCmd.Version fallback exercised by test. One real bug: non-NotExist stat errors silently skip scoring.yaml write (M1). |
+| CLI Contract (0–2) | 2.0 | `qode ide` removed from root.go AddCommand list; TestRootCmd_NoIDESubcommand verifies via Cobra Find. `qode init` produces qode.yaml + .qode/ dirs + scoring.yaml + IDE configs in one invocation, verified by seven integration tests. Re-run asymmetry (qode.yaml overwritten, scoring.yaml preserved) documented and tested. |
+| Go Idioms & Code Quality (0–2) | 1.5 | Dead `cfg *config.Config` parameter in public scaffold API never read (L1). Dead `tmplCount` variable in test (L2). Otherwise idiomatic: explicit errors with %w, no magic numbers, clear names, function sizes within standard. |
+| Error Handling & UX (0–2) | 1.5 | Non-NotExist stat errors silently swallowed in init.go:71 (M1). All other error paths are explicit with %w wrapping and include file paths. mergeScoringFromFile propagates parse errors correctly. |
+| Test Coverage (0–2) | 1.5 | mergeScoringFromFile and the new Load merge path have no direct unit test (M2). All seven specified init behaviours have integration tests. Both scaffold Setup functions verified with root-name assertions. |
+| Template Safety (0–1) | 1.0 | filepath.Base(root) flows only into markdown text in claudecode.go and cursor.go, verified never reaches os/exec or shell interpolation. Embedded FS template names are internal — no user-controlled path traversal possible. |
 
-**Total Score: 9.0/12**
+**Total Score: 10.0/12**  
 **Minimum passing score: 10/12**
-
-> A High finding caps the total at 9.0. The two High issues (silent overwrite of user data; ignoring disk config for IDE enabled state) are real data-loss and behavior-violation paths on the documented re-run workflow.

@@ -4,14 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/nqode/qode/internal/config"
 )
 
 const cursorCommandsDir = ".cursor/commands"
 
 // SetupCursor generates Cursor IDE configuration files.
-func SetupCursor(root string, cfg *config.Config) error {
+func SetupCursor(root string) error {
 	if err := os.MkdirAll(filepath.Join(root, cursorCommandsDir), 0755); err != nil {
 		return err
 	}

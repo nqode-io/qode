@@ -57,18 +57,6 @@ func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 	}
 
 	promptsDir := filepath.Join(dir, ".qode", "prompts")
-	entries, err := os.ReadDir(promptsDir)
-	if err != nil {
-		t.Fatalf("reading .qode/prompts/: %v", err)
-	}
-
-	var tmplCount int
-	for _, e := range entries {
-		if strings.HasSuffix(e.Name(), ".md.tmpl") || e.IsDir() {
-			tmplCount++
-		}
-	}
-	// Walk subdirectories too.
 	var total int
 	if err := filepath.Walk(promptsDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -81,7 +69,6 @@ func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("walking .qode/prompts/: %v", err)
 	}
-	_ = tmplCount
 	if total == 0 {
 		t.Error("expected at least one .md.tmpl file under .qode/prompts/")
 	}

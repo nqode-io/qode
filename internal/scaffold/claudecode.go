@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/nqode/qode/internal/config"
 )
 
 // SetupClaudeCode generates Claude Code configuration files.
-func SetupClaudeCode(root string, cfg *config.Config) error {
+func SetupClaudeCode(root string) error {
 	commandsDir := filepath.Join(root, ".claude", "commands")
 	if err := os.MkdirAll(commandsDir, 0755); err != nil {
 		return err
