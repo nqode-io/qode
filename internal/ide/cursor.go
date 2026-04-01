@@ -177,13 +177,7 @@ If the output begins with `+"`STOP.`"+`, do not execute it as a prompt — repor
 Execute the prompt as your implementation session.
 `, cfg.Project.Name),
 
-		"qode-ticket-fetch": fmt.Sprintf(`---
-description: Fetch a ticket into branch context for %s
----
-
-Run the following command with the ticket URL provided after the slash command:
-  qode ticket fetch $ARGUMENTS
-`, cfg.Project.Name),
+		"qode-ticket-fetch": ticketFetchCursorCommand(cfg),
 
 		"qode-knowledge-add-context": fmt.Sprintf(`---
 description: Extract lessons learned from current session for %s
@@ -299,9 +293,41 @@ func stackCleanCodeRules(stacks []string) string {
 	return sb.String()
 }
 
+func ticketFetchCursorCommand(cfg *config.Config) string {
+	if cfg.TicketSystem.Mode == "mcp" {
+		return fmt.Sprintf(`---
+description: Fetch ticket via MCP for %s
+---
+
+Fetch the ticket at the URL provided in $ARGUMENTS using your available MCP tools.
+
+Use whatever MCP tool is available (Jira, Linear, GitHub, Notion, or Azure DevOps server).
+If no MCP tool is available, open the URL with a browser tool and extract the content.
+
+Collect: title, description, all comments (author + timestamp), linked resources, attachment
+summaries.
+
+Write to the context directory for the current branch:
+- context/ticket.md — title, description, metadata
+- context/ticket-comments.md — all comments (omit if none)
+- context/ticket-links.md — linked resource summaries (omit if none)
+
+Report: "Fetched: <title> — <N> comments, <M> links."
+`, cfg.Project.Name)
+	}
+	return fmt.Sprintf(`---
+description: Fetch a ticket into branch context for %s
+---
+
+Run the following command with the ticket URL provided after the slash command:
+  qode ticket fetch $ARGUMENTS
+`, cfg.Project.Name)
+}
+
 func writeFile(path, content string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
 	return os.WriteFile(path, []byte(content), 0644)
 }
+

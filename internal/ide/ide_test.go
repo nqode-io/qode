@@ -18,6 +18,12 @@ func minimalConfig() *config.Config {
 	return cfg
 }
 
+func minimalMCPConfig() *config.Config {
+	cfg := minimalConfig()
+	cfg.TicketSystem.Mode = "mcp"
+	return cfg
+}
+
 // --- claudeSlashCommands ---
 
 func TestClaudeSlashCommands_ContainsTicketFetch(t *testing.T) {
@@ -157,6 +163,56 @@ func TestCursorSlashCommands_NoPromptOnly(t *testing.T) {
 }
 
 // --- SetupClaudeCode integration ---
+
+// --- MCP mode slash commands ---
+
+func TestClaudeSlashCommands_MCPMode_TicketFetchIsPrompt(t *testing.T) {
+	cmds := claudeSlashCommands(minimalMCPConfig())
+	content, ok := cmds["qode-ticket-fetch"]
+	if !ok {
+		t.Fatal("claudeSlashCommands: missing key qode-ticket-fetch")
+	}
+	if strings.HasPrefix(content, "!") {
+		t.Error("claudeSlashCommands: qode-ticket-fetch in mcp mode must not start with '!'")
+	}
+	if !strings.Contains(content, "$ARGUMENTS") {
+		t.Error("claudeSlashCommands: qode-ticket-fetch in mcp mode must contain $ARGUMENTS")
+	}
+	if !strings.Contains(content, "context/ticket.md") {
+		t.Error("claudeSlashCommands: qode-ticket-fetch in mcp mode must reference context/ticket.md")
+	}
+}
+
+func TestClaudeSlashCommands_APIMode_TicketFetchIsShellCmd(t *testing.T) {
+	cmds := claudeSlashCommands(minimalConfig())
+	content, ok := cmds["qode-ticket-fetch"]
+	if !ok {
+		t.Fatal("claudeSlashCommands: missing key qode-ticket-fetch")
+	}
+	if content != "!qode ticket fetch $ARGUMENTS" {
+		t.Errorf("claudeSlashCommands: api mode qode-ticket-fetch = %q, want %q", content, "!qode ticket fetch $ARGUMENTS")
+	}
+}
+
+func TestCursorSlashCommands_MCPMode_TicketFetchIsPrompt(t *testing.T) {
+	cmds := slashCommands(minimalMCPConfig())
+	content, ok := cmds["qode-ticket-fetch"]
+	if !ok {
+		t.Fatal("slashCommands: missing key qode-ticket-fetch")
+	}
+	if !strings.Contains(content, "$ARGUMENTS") {
+		t.Error("slashCommands: qode-ticket-fetch in mcp mode must contain $ARGUMENTS")
+	}
+	if !strings.Contains(content, "context/ticket.md") {
+		t.Error("slashCommands: qode-ticket-fetch in mcp mode must reference context/ticket.md")
+	}
+	if !strings.Contains(content, "description:") {
+		t.Error("slashCommands: qode-ticket-fetch in mcp mode must have YAML frontmatter description")
+	}
+	if strings.Contains(content, "qode ticket fetch") {
+		t.Error("slashCommands: qode-ticket-fetch in mcp mode must not reference qode ticket fetch CLI")
+	}
+}
 
 func TestSetupClaudeCode_WritesTicketFetchCommand(t *testing.T) {
 	dir := t.TempDir()

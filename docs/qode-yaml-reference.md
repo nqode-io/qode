@@ -65,6 +65,7 @@ project:
           min_percentage: 80
 
 ticket_system:
+  mode: mcp                  # "mcp" (recommended) | "api" (default, legacy)
   type: jira                 # jira | azure-devops | linear | github | notion | manual
   url: https://company.atlassian.net
   project_key: ENG
@@ -150,6 +151,15 @@ Auto-detected from directory structure when running `qode init`.
 ### `project.layers[].stack`
 
 Supported values: `react`, `angular`, `nextjs`, `vue`, `svelte`, `dotnet`, `java`, `python`, `go`, `typescript`
+
+### `ticket_system.mode`
+
+| Value | Behaviour |
+|---|---|
+| `""` or `"api"` | (Default) Uses qode's built-in HTTP clients. Fetches title and description only. |
+| `"mcp"` | Uses IDE MCP servers via `/qode-ticket-fetch` slash command. Fetches full ticket context including comments, attachments, and linked resources. `qode ticket fetch` becomes a no-op. |
+
+See [docs/how-to-use-ticket-fetch.md](how-to-use-ticket-fetch.md) for MCP server setup.
 
 ### `ticket_system.type`
 

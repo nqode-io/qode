@@ -150,7 +150,7 @@ If the output begins with `+"`STOP.`"+`, do not execute it as a prompt — repor
 Execute the prompt as your implementation session.
 `, name),
 
-		"qode-ticket-fetch": `!qode ticket fetch $ARGUMENTS`,
+		"qode-ticket-fetch": ticketFetchClaudeCommand(cfg),
 
 		"qode-knowledge-add-context": fmt.Sprintf(`# Extract Lessons Learned — %s
 
@@ -186,4 +186,33 @@ Run this command and use its stdout output as your prompt:
   qode knowledge add-branch $ARGUMENTS
 `, name),
 	}
+}
+
+func ticketFetchClaudeCommand(cfg *config.Config) string {
+	if cfg.TicketSystem.Mode == "mcp" {
+		return fmt.Sprintf(`# Fetch Ticket via MCP — %s
+
+Fetch the ticket at the URL provided in $ARGUMENTS using your available MCP tools.
+
+**Steps:**
+1. Use whatever MCP tool is available to read the ticket (e.g. a Jira, Linear, GitHub,
+   Notion, or Azure DevOps MCP server). If no MCP server is available, open the URL
+   in a browser tool and extract the content.
+2. Collect: title, description, all comments (with author names and timestamps), any
+   linked resources (Figma, Notion docs, Google Docs, spreadsheets), and attachment
+   summaries.
+3. Write the following files, creating the directory if needed:
+
+**context/ticket.md** — title, description, metadata
+
+**context/ticket-comments.md** — all comments in chronological order
+(Omit this file if there are no comments.)
+
+**context/ticket-links.md** — linked resources with summaries
+(Omit this file if there are no links.)
+
+4. Report a one-line summary: "Fetched: <title> — <N> comments, <M> links."
+`, cfg.Project.Name)
+	}
+	return `!qode ticket fetch $ARGUMENTS`
 }

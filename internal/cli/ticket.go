@@ -34,6 +34,14 @@ func newTicketFetchCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			if cfg.TicketSystem.Mode == "mcp" {
+				fmt.Fprintln(os.Stderr, "Warning: ticket_system.mode is \"mcp\".")
+				fmt.Fprintln(os.Stderr, "Use /qode-ticket-fetch in your IDE to fetch tickets via MCP.")
+				fmt.Fprintln(os.Stderr, "qode ticket fetch is a no-op when mode: mcp.")
+				return nil
+			}
+
 			branch, err := git.CurrentBranch(root)
 			if err != nil {
 				return err

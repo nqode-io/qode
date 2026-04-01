@@ -192,6 +192,20 @@ cd workspace && qode init --workspace
 
 ## Ticket System Setup
 
+### MCP mode (recommended)
+
+Set `ticket_system.mode: mcp` in `qode.yaml` and use `/qode-ticket-fetch <url>` in your IDE. The AI fetches the full ticket — title, description, comments, attachments, and linked resources — via your IDE's configured MCP server.
+
+```yaml
+# qode.yaml
+ticket_system:
+  mode: mcp
+```
+
+### API mode (legacy)
+
+Use `qode ticket fetch` with environment variables. Fetches title and description only.
+
 ```bash
 # Jira
 export JIRA_EMAIL=you@company.com

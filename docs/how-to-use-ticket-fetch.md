@@ -1,5 +1,37 @@
 # How to use ticket fetch
 
+## MCP-based fetching (recommended)
+
+Set `ticket_system.mode: mcp` in `qode.yaml` to use your IDE's configured MCP servers for ticket fetching. This surfaces the full ticket context — comments, attachments, linked Figma/Notion/GDocs — that the API-based approach cannot retrieve.
+
+```yaml
+# qode.yaml
+ticket_system:
+  mode: mcp
+```
+
+Then use the IDE slash command:
+
+```
+/qode-ticket-fetch https://linear.app/team/ENG-123
+```
+
+The AI fetches the ticket via your MCP server and writes structured output to the branch context directory:
+
+- `context/ticket.md` — title, description, metadata
+- `context/ticket-comments.md` — all comments with authors and timestamps (if any)
+- `context/ticket-links.md` — linked resource summaries (if any)
+
+**MCP server setup:** Configure the appropriate MCP server in your IDE for your ticketing system (Linear, Jira, GitHub, Notion, or Azure DevOps). Refer to your IDE's MCP documentation for setup instructions.
+
+> **Note:** `qode ticket fetch <url>` is a no-op when `mode: mcp`. Use the IDE slash command instead.
+
+---
+
+## API-based fetching (legacy)
+
+> **Deprecated when `mode: mcp` is set.** The API-based approach fetches only the ticket title and description — no comments, attachments, or linked resources.
+
 Each ticketing system requires specific environment variables. qode auto-loads a `.env` file from the project root, so you don't need to `source` it manually.
 
 ## Jira
