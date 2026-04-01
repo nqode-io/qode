@@ -17,6 +17,11 @@ import (
 //go:embed templates
 var embeddedFS embed.FS
 
+// TemplateProject holds the project name for template rendering.
+type TemplateProject struct {
+	Name string
+}
+
 // Engine renders prompt templates with project context.
 type Engine struct {
 	root    string
@@ -45,20 +50,24 @@ func NewEngine(root string) (*Engine, error) {
 	return e, nil
 }
 
+// ProjectName returns the base name of the project root directory.
+func (e *Engine) ProjectName() string {
+	return filepath.Base(e.root)
+}
+
 // TemplateData is passed into every template.
 type TemplateData struct {
-	Project    config.ProjectConfig
-	Layers     []config.LayerConfig
-	Branch     string
-	Ticket     string         // inline content; set only for knowledge/add-branch
-	Analysis   string         // inline content; set for knowledge/add-branch and scoring judge
-	Spec       string         // inline content; set only for knowledge/add-branch
-	Diff       string         // inline content; set only for knowledge/add-branch
-	Extra      string         // inline content; set for knowledge/add-branch and refine (reviews, notes)
-	KB         string         // knowledge base file references; set for start
-	Lessons    string         // existing lesson summaries for deduplication; set for knowledge/add-branch
-	OutputPath   string         // when set, templates append file-write instructions
-	BranchDir    string         // absolute path to .qode/branches/<branch>/; used by templates for file-path references
+	Project      TemplateProject
+	Branch       string
+	Ticket       string  // inline content; set only for knowledge/add-branch
+	Analysis     string  // inline content; set for knowledge/add-branch and scoring judge
+	Spec         string  // inline content; set only for knowledge/add-branch
+	Diff         string  // inline content; set only for knowledge/add-branch
+	Extra        string  // inline content; set for knowledge/add-branch and refine (reviews, notes)
+	KB           string  // knowledge base file references; set for start
+	Lessons      string  // existing lesson summaries for deduplication; set for knowledge/add-branch
+	OutputPath   string  // when set, templates append file-write instructions
+	BranchDir    string  // absolute path to .qode/branches/<branch>/; used by templates for file-path references
 	Rubric       scoring.Rubric // scoring rubric; set for judge-refine, code-review, security-review prompts
 	TargetScore  int            // pass threshold for refine judge (defaults to Rubric.Total(); overridden by scoring.target_score)
 	MinPassScore float64        // minimum score to pass review; set from review.min_code_score or review.min_security_score

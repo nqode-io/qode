@@ -12,14 +12,13 @@ Planned features for qode, in recommended implementation order. Items marked wit
 - [x] [#45](https://github.com/nqode-io/qode/issues/45) — **Replace `qode check` with `/qode-check` IDE slash command** — AI-driven interactive quality gate; detects test runner and linter from project structure
 - [x] [#26](https://github.com/nqode-io/qode/issues/26) — **Configurable scoring rubrics** — Extract hardcoded rubrics into `qode.yaml`, support custom dimensions and weights
 - [x] [#30](https://github.com/nqode-io/qode/issues/30) — **Strict mode** — Block workflow steps when prerequisites are missing or scores are below configured minimums; `--force` flag to bypass gates; `qode workflow status` subcommand *(requires #26)*
+- [x] [#29](https://github.com/nqode-io/qode/issues/29) — **Rethink qode init** — Simplify setup; let the AI read project configs instead of hardcoding test/lint/build commands
 
 ## In Progress
-
 
 ## Up Next (parallel — start after #24)
 
 - [ ] [#27](https://github.com/nqode-io/qode/issues/27) — **Replace ticket fetch with MCP** — Use MCP servers instead of built-in HTTP clients; support comments, attachments, linked resources
-- [ ] [#29](https://github.com/nqode-io/qode/issues/29) — **Rethink qode init** — Simplify setup; let the AI read project configs instead of hardcoding test/lint/build commands
 - [ ] [#41](https://github.com/nqode-io/qode/issues/41) — **`qode init`: append gitignore rules** — Add qode-specific `.gitignore` entries (temp prompt files, ticket snapshots, scored iteration copies) during init
 - [ ] [#33](https://github.com/nqode-io/qode/issues/33) — **Worktree support** — Config flag `branch.use_worktrees` to create git worktrees via worktrunk, phantom, or `git worktree`; enables parallel task development
 - [ ] [#34](https://github.com/nqode-io/qode/issues/34) — **Add Codex IDE support** — Slash commands, IDE setup, templates, and documentation for OpenAI Codex, following the same convention as Cursor and Claude Code
@@ -37,7 +36,7 @@ Planned features for qode, in recommended implementation order. Items marked wit
 
 ## Dependency Graph
 
-```
+```markdown
 #24 Harden review prompts ✅
  ├── #25 Optimize prompts for token usage ✅
  ├── #26 Configurable scoring rubrics ✅
@@ -47,7 +46,7 @@ Planned features for qode, in recommended implementation order. Items marked wit
       └── #36 qode pr create
            └── #31 PR/MR review comments step
 
-#29 Rethink qode init
+#29 Rethink qode init ✅
  └── #41 qode init: append gitignore rules
 
 Independent (can run in parallel with any of the above):

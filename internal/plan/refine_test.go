@@ -277,3 +277,30 @@ func TestBuildRefinePromptWithOutput_OmitsAnalysisAndTicket(t *testing.T) {
 		t.Error("prompt must not inline ticket content")
 	}
 }
+
+func TestBuildRefinePromptWithOutput_ContainsProjectName(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "myproject")
+	if err := os.MkdirAll(root, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	ctx := &context.Context{
+		Branch:     "test-branch",
+		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	}
+
+	out, err := BuildRefinePromptWithOutput(engine, &config.Config{}, ctx, "", 1, "")
+	if err != nil {
+		t.Fatalf("BuildRefinePromptWithOutput: %v", err)
+	}
+
+	if !strings.Contains(out.WorkerPrompt, "myproject") {
+		t.Errorf("prompt must contain project name %q derived from root dir, got:\n%s", "myproject", out.WorkerPrompt)
+	}
+}

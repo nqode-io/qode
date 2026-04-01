@@ -32,8 +32,7 @@ func BuildRefinePromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx 
 	}
 
 	data := prompt.TemplateData{
-		Project:    cfg.Project,
-		Layers:     cfg.Layers(),
+		Project:    prompt.TemplateProject{Name: engine.ProjectName()},
 		Branch:     ctx.Branch,
 		OutputPath: outputPath,
 		BranchDir:  ctx.ContextDir,
@@ -64,8 +63,7 @@ func BuildSpecPrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Con
 // output path so the AI writes the spec directly to that file.
 func BuildSpecPromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx *context.Context, outputPath string) (string, error) {
 	data := prompt.TemplateData{
-		Project:    cfg.Project,
-		Layers:     cfg.Layers(),
+		Project:    prompt.TemplateProject{Name: engine.ProjectName()},
 		Branch:     ctx.Branch,
 		OutputPath: outputPath,
 		BranchDir:  ctx.ContextDir,
@@ -76,8 +74,7 @@ func BuildSpecPromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx *c
 // BuildStartPrompt generates the implementation kickoff prompt.
 func BuildStartPrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Context, kb string) (string, error) {
 	data := prompt.TemplateData{
-		Project:   cfg.Project,
-		Layers:    cfg.Layers(),
+		Project:   prompt.TemplateProject{Name: engine.ProjectName()},
 		Branch:    ctx.Branch,
 		KB:        kb,
 		BranchDir: ctx.ContextDir,

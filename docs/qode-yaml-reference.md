@@ -2,67 +2,32 @@
 
 Full configuration reference for `qode.yaml`.
 
-## Minimal example (single repo)
+> **Rubric customisation is in a separate file.** Scoring dimensions (`refine`, `review`, `security` rubrics) live in `.qode/scoring.yaml`, not here. See [scoring-yaml-reference.md](scoring-yaml-reference.md).
+
+## Minimal example
+
+`qode init` generates a `qode.yaml` with sensible defaults. No manual editing is required to get started.
 
 ```yaml
-project:
-  name: my-project
-  topology: single
-  layers:
-    - name: default
-      path: .
-      stack: go
+qode_version: "0.1"
+review:
+  min_code_score: 10
+  min_security_score: 8
+ide:
+  cursor:
+    enabled: true
+  claude_code:
+    enabled: true
+knowledge:
+  path: .qode/knowledge
 ```
 
-## Composite stack example (monorepo)
-
-A real nQode project with React frontend, Next.js BFF, and .NET backend:
-
-```yaml
-project:
-  name: insurance-portal
-  topology: monorepo
-  layers:
-    - name: frontend
-      path: ./frontend
-      stack: react
-      test:
-        unit: "npx vitest run"
-        lint: "npx eslint ."
-    - name: bff
-      path: ./bff
-      stack: nextjs
-      test:
-        unit: "npm test"
-        lint: "npm run lint"
-    - name: api
-      path: ./backend
-      stack: dotnet
-      test:
-        unit: "dotnet test"
-        lint: "dotnet format --verify-no-changes"
-```
+> **Re-running `qode init` regenerates `qode.yaml` with these defaults.** Any customisations you have made to `qode.yaml` (score thresholds, `scoring.strict`, `ticket_system`, etc.) will be reset. Re-add them after running `qode init`, or run it only when you want a clean reset.
 
 ## Full reference
 
 ```yaml
-project:
-  name: my-project
-  description: Optional description
-  topology: monorepo        # monorepo | multirepo | single (auto-detected)
-  layers:
-    - name: frontend
-      path: ./frontend
-      stack: react           # react | angular | nextjs | vue | svelte |
-                             # dotnet | java | python | go | typescript
-      test:
-        unit: "npm test"
-        e2e: "npx playwright test"
-        lint: "npm run lint"
-        build: "npm run build"
-        coverage:
-          enabled: true
-          min_percentage: 80
+qode_version: "0.1"          # written by qode init; informational
 
 ticket_system:
   type: jira                 # jira | azure-devops | linear | github | notion | manual
@@ -79,44 +44,7 @@ review:
 scoring:
   target_score: 25        # override pass threshold for /qode-plan-refine
   strict: false           # enforce step ordering; exit 1 when a gate fails
-  rubrics:
-    refine:               # override dimensions for judge_refine scoring
-      dimensions:
-        - name: Problem Understanding
-          weight: 5
-          levels:
-            - "5: Perfect restatement of the problem in engineering terms"
-            - "4: Mostly correct with minor gaps"
-            - "3: Partial understanding; some aspects missed"
-            - "2: Surface-level; misses key constraints"
-            - "1: Vague or mostly incorrect"
-            - "0: No meaningful understanding shown"
-    review:               # override dimensions for code review scoring
-      dimensions:
-        - name: Correctness
-          weight: 3
-        - name: Code Quality
-          weight: 2
-        - name: Architecture
-          weight: 2
-        - name: Error Handling
-          weight: 2
-        - name: Testing
-          weight: 1
-        - name: Performance
-          weight: 2
-    security:             # override dimensions for security review scoring
-      dimensions:
-        - name: Injection Prevention
-          weight: 3
-        - name: Authentication & Authorisation
-          weight: 3
-        - name: Data Exposure
-          weight: 2
-        - name: Input Validation
-          weight: 2
-        - name: Cryptography
-          weight: 2
+  # Rubric dimensions are not configured here — edit .qode/scoring.yaml instead.
 
 ide:
   cursor:
@@ -125,31 +53,14 @@ ide:
     enabled: true
 
 knowledge:
-  auto_discover: true
-  paths:
-    - docs/architecture/
-    - tests/**/README.md
-
-architecture:
-  clean_code:
-    max_function_lines: 50
+  path: .qode/knowledge
 ```
 
 ## Field descriptions
 
-### `project.topology`
+### `qode_version`
 
-| Value | When to use |
-|---|---|
-| `single` | One repo, one tech stack |
-| `monorepo` | Multiple stacks in subdirectories of the same repo |
-| `multirepo` | Separate repos managed as a workspace (`qode init --workspace`) |
-
-Auto-detected from directory structure when running `qode init`.
-
-### `project.layers[].stack`
-
-Supported values: `react`, `angular`, `nextjs`, `vue`, `svelte`, `dotnet`, `java`, `python`, `go`, `typescript`
+Written by `qode init`. Identifies the qode configuration format version. Currently informational; version enforcement is planned for a future release.
 
 ### `ticket_system.type`
 
@@ -202,17 +113,4 @@ Override the pass threshold for `/qode-plan-refine`. When not set, the threshold
 
 ### `scoring.rubrics`
 
-Override the default scoring dimensions for any of the three rubrics: `refine`, `review`, `security`.
-
-Each rubric entry accepts a `dimensions` list. Omitting a rubric (or providing an empty `dimensions` list) falls back to the built-in default for that rubric.
-
-**`dimensions` fields:**
-
-| Field | Required | Description |
-|---|---|---|
-| `name` | yes | Display name of the dimension |
-| `weight` | yes | Maximum points for this dimension |
-| `description` | no | Short description (informational) |
-| `levels` | no | Ordered score descriptions, highest first (e.g. `"5: Excellent..."`) — only used by `refine` rubric |
-
-The `refine` rubric uses `levels` to show labelled score bands in the judge prompt. The `review` and `security` rubrics do not use `levels`.
+Rubric dimensions are **not configured in `qode.yaml`**. They live in `.qode/scoring.yaml` so that re-running `qode init` never overwrites them. See [scoring-yaml-reference.md](scoring-yaml-reference.md) for the full rubric format and field reference.

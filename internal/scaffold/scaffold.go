@@ -1,4 +1,4 @@
-package ide
+package scaffold
 
 import (
 	"fmt"
@@ -11,14 +11,14 @@ func Setup(root string, cfg *config.Config) error {
 	var generated []string
 
 	if cfg.IDE.Cursor.Enabled {
-		if err := SetupCursor(root, cfg); err != nil {
+		if err := SetupCursor(root); err != nil {
 			return fmt.Errorf("cursor setup: %w", err)
 		}
 		generated = append(generated, "Cursor")
 	}
 
 	if cfg.IDE.ClaudeCode.Enabled {
-		if err := SetupClaudeCode(root, cfg); err != nil {
+		if err := SetupClaudeCode(root); err != nil {
 			return fmt.Errorf("claude code setup: %w", err)
 		}
 		generated = append(generated, "Claude Code")

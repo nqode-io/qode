@@ -6,9 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/nqode/qode/internal/config"
-	"github.com/nqode/qode/internal/detect"
 	"github.com/nqode/qode/internal/prompt"
-	"github.com/nqode/qode/internal/workspace"
+	"github.com/nqode/qode/internal/scaffold"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -17,10 +16,11 @@ func newInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initialise qode in a project",
-		Long: `Detect the project's tech stack and create qode.yaml.
+		Long: `Initialise qode in the current directory.
 
-Scans the current directory, detects the tech stack, and writes qode.yaml.
-Run 'qode ide setup' afterwards to generate IDE configs.`,
+Writes a minimal qode.yaml with defaults, creates the .qode/ directory
+structure, copies embedded prompt templates, and generates IDE slash commands
+for Cursor and Claude Code.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := resolveRoot()
 			if err != nil {
@@ -32,63 +32,30 @@ Run 'qode ide setup' afterwards to generate IDE configs.`,
 	return cmd
 }
 
-// runInitExisting scans an existing project root and generates qode.yaml.
+// runInitExisting writes qode.yaml with defaults, creates .qode/ dirs, copies
+// prompt templates, and generates IDE configs. .qode/scoring.yaml is only
+// written on first run so user-customised rubrics are never overwritten.
 func runInitExisting(root string) error {
-	fmt.Printf("Scanning project at %s ...\n\n", root)
-
-	topo, err := workspace.Detect(root)
-	if err != nil {
-		return fmt.Errorf("detecting workspace topology: %w", err)
-	}
-
-	layers, err := detect.Composite(root)
-	if err != nil {
-		return fmt.Errorf("detecting tech stacks: %w", err)
-	}
-
-	if len(layers) == 0 {
-		fmt.Println("No recognised tech stacks detected.")
-		fmt.Println("You can manually set the stack in qode.yaml.")
-		layers = []detect.DetectedLayer{{Name: "default", Path: ".", Stack: "unknown"}}
-	}
-
-	// Report findings.
-	fmt.Printf("Detected topology: %s\n", topo)
-	fmt.Printf("Detected layers:\n")
-	for _, l := range layers {
-		fmt.Printf("  %-20s → %-12s (confidence: %.0f%%)\n", l.Path+"/", l.Stack, l.Confidence*100)
-	}
-	fmt.Println()
-
 	cfg := config.DefaultConfig()
-	cfg.Project.Name = filepath.Base(root)
-	cfg.Project.Topology = config.Topology(topo)
-
-	for _, l := range layers {
-		tc := l.Test
-		if tc.Unit == "" {
-			tc = config.StackDefaults[l.Stack]
-		}
-		cfg.Project.Layers = append(cfg.Project.Layers, config.LayerConfig{
-			Name:  l.Name,
-			Path:  l.Path,
-			Stack: l.Stack,
-			Test:  tc,
-		})
+	cfg.QodeVersion = rootCmd.Version
+	if cfg.QodeVersion == "" {
+		cfg.QodeVersion = "dev"
 	}
 
-	// Write qode.yaml.
-	data, err := yaml.Marshal(&cfg)
+	// Always write qode.yaml — rubrics live in .qode/scoring.yaml, not here.
+	cfgForYaml := cfg
+	cfgForYaml.Scoring.Rubrics = nil
+	data, err := yaml.Marshal(&cfgForYaml)
 	if err != nil {
 		return fmt.Errorf("marshaling config: %w", err)
 	}
-
 	outPath := filepath.Join(root, config.ConfigFileName)
 	if err := os.WriteFile(outPath, data, 0644); err != nil {
 		return fmt.Errorf("writing %s: %w", outPath, err)
 	}
+	fmt.Printf("Generated: %s\n", outPath)
 
-	// Create .qode directory structure and copy prompt templates.
+	// Create .qode directory structure.
 	for _, dir := range []string{
 		filepath.Join(root, config.QodeDir, "branches"),
 		filepath.Join(root, config.QodeDir, "knowledge"),
@@ -98,16 +65,36 @@ func runInitExisting(root string) error {
 			return err
 		}
 	}
+
+	// Write .qode/scoring.yaml only on first run; re-runs preserve custom rubrics.
+	scoringPath := filepath.Join(root, config.QodeDir, config.ScoringFileName)
+	if _, statErr := os.Stat(scoringPath); os.IsNotExist(statErr) {
+		scoringFile := config.ScoringFileConfig{Rubrics: config.DefaultRubricConfigs()}
+		scoringData, err := yaml.Marshal(&scoringFile)
+		if err != nil {
+			return fmt.Errorf("marshaling scoring config: %w", err)
+		}
+		if err := os.WriteFile(scoringPath, scoringData, 0644); err != nil {
+			return fmt.Errorf("writing %s: %w", scoringPath, err)
+		}
+		fmt.Printf("Generated: %s\n", scoringPath)
+	}
+
+	// Copy embedded prompt templates.
 	if err := copyEmbeddedTemplates(root); err != nil {
 		return err
 	}
 
-	fmt.Printf("Generated: %s\n", outPath)
+	// Generate IDE configs and slash commands using the loaded (or default) config.
+	if err := scaffold.Setup(root, &cfg); err != nil {
+		return fmt.Errorf("setting up IDE configs: %w", err)
+	}
+
 	fmt.Println()
 	fmt.Println("Next steps:")
-	fmt.Println("  1. Review qode.yaml and adjust layer paths / test commands if needed")
-	fmt.Println("  2. Run 'qode ide setup' to generate IDE configs")
-	fmt.Println("  3. Run 'qode branch create <name>' to start your first feature")
+	fmt.Println("  1. Run 'qode branch create <name>' to start your first feature")
+	fmt.Println("  2. Fetch your ticket with 'qode ticket fetch <url>' or edit .qode/branches/<name>/context/ticket.md")
+	fmt.Println("  3. Use /qode-plan-refine in your IDE to begin requirements refinement")
 
 	return nil
 }
