@@ -46,6 +46,7 @@ go install ./cmd/qode/
 ### Two-pass scoring
 
 Reviews use a worker/judge split to eliminate AI self-scoring bias:
+
 - **Worker pass** (`/qode-review-code`, `/qode-review-security`): produces analysis without a score
 - **Judge pass** (separate template): scores the analysis against a rubric independently
 
@@ -66,9 +67,9 @@ Scores are parsed from saved markdown files in the branch context folder.
 
 ## Quality Standards
 
-- Minimum refined analysis score: 20/25
-- Minimum code review score: 8.0/10
-- Minimum security review score: 8.0/10
+- Minimum refined analysis score: 25/25
+- Minimum code review score: 10.0/12
+- Minimum security review score: 10.0/12
 
 ## Additional instructions
 
