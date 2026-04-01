@@ -11,8 +11,6 @@ import (
 const (
 	// ConfigFileName is the default config file name.
 	ConfigFileName = "qode.yaml"
-	// WorkspaceConfigFileName is the workspace-level config file name.
-	WorkspaceConfigFileName = "qode-workspace.yaml"
 	// QodeDir is the per-project qode state directory.
 	QodeDir = ".qode"
 )

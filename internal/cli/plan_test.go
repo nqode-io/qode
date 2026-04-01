@@ -81,7 +81,7 @@ func TestRunPlanSpec_GuardBlocked_NoAnalysis_Strict(t *testing.T) {
 	root := setupPlanTestRoot(t, "test-branch")
 
 	// Write a qode.yaml with strict: true
-	cfg := "project:\n  name: test\n  stack: go\nscoring:\n  strict: true\n"
+	cfg := "scoring:\n  strict: true\n"
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestRunPlanSpec_GuardBlocked_NoAnalysis_Strict(t *testing.T) {
 func TestRunPlanSpec_GuardBlocked_NonStrict(t *testing.T) {
 	root := setupPlanTestRoot(t, "test-branch")
 
-	cfg := "project:\n  name: test\n  stack: go\n"
+	cfg := ""
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestRunPlanSpec_GuardBlocked_NonStrict(t *testing.T) {
 func TestRunPlanSpec_GuardBlocked_Unscored(t *testing.T) {
 	root := setupPlanTestRoot(t, "test-branch")
 
-	cfg := "project:\n  name: test\n  stack: go\nscoring:\n  strict: true\n"
+	cfg := "scoring:\n  strict: true\n"
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestRunPlanSpec_GuardBlocked_Unscored(t *testing.T) {
 func TestRunPlanSpec_Force_SkipsGuard(t *testing.T) {
 	root := setupPlanTestRoot(t, "test-branch")
 
-	cfg := "project:\n  name: test\n  stack: go\nscoring:\n  strict: true\n"
+	cfg := "scoring:\n  strict: true\n"
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestRunPlanSpec_Force_SkipsGuard(t *testing.T) {
 func TestRunPlanSpec_Pass(t *testing.T) {
 	root := setupPlanTestRoot(t, "test-branch")
 
-	cfg := "project:\n  name: test\n  stack: go\nscoring:\n  strict: true\n"
+	cfg := "scoring:\n  strict: true\n"
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}

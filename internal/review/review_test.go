@@ -1,6 +1,7 @@
 package review
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -100,5 +101,59 @@ func TestBuildSecurityPrompt_OmitsDiff(t *testing.T) {
 
 	if !strings.Contains(got, "diff.md") {
 		t.Error("prompt must reference diff.md")
+	}
+}
+
+func TestBuildCodePrompt_ContainsProjectName(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "myproject")
+	if err := os.MkdirAll(root, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	ctx := &context.Context{
+		Branch:     "test-branch",
+		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	}
+
+	got, err := BuildCodePrompt(engine, &config.Config{}, ctx, "")
+	if err != nil {
+		t.Fatalf("BuildCodePrompt: %v", err)
+	}
+
+	if !strings.Contains(got, "myproject") {
+		t.Errorf("prompt must contain project name %q derived from root dir", "myproject")
+	}
+}
+
+func TestBuildSecurityPrompt_ContainsProjectName(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "myproject")
+	if err := os.MkdirAll(root, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	ctx := &context.Context{
+		Branch:     "test-branch",
+		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	}
+
+	got, err := BuildSecurityPrompt(engine, &config.Config{}, ctx, "")
+	if err != nil {
+		t.Fatalf("BuildSecurityPrompt: %v", err)
+	}
+
+	if !strings.Contains(got, "myproject") {
+		t.Errorf("prompt must contain project name %q derived from root dir", "myproject")
 	}
 }

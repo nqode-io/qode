@@ -12,6 +12,9 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 
+	if cfg.QodeVersion != "0.1" {
+		t.Errorf("expected QodeVersion \"0.1\", got %q", cfg.QodeVersion)
+	}
 	if cfg.Review.MinCodeScore != 10.0 {
 		t.Errorf("expected MinCodeScore 10.0, got %.1f", cfg.Review.MinCodeScore)
 	}
@@ -36,45 +39,10 @@ func TestDefaultConfig(t *testing.T) {
 	}
 }
 
-func TestConfigLayers_Shorthand(t *testing.T) {
-	cfg := Config{
-		Project: ProjectConfig{
-			Stack: "nextjs",
-			Test:  TestConfig{Unit: "npm test"},
-		},
-	}
-	layers := cfg.Layers()
-	if len(layers) != 1 {
-		t.Fatalf("expected 1 layer, got %d", len(layers))
-	}
-	if layers[0].Stack != "nextjs" {
-		t.Errorf("expected nextjs, got %s", layers[0].Stack)
-	}
-}
-
-func TestConfigLayers_Composite(t *testing.T) {
-	cfg := Config{
-		Project: ProjectConfig{
-			Layers: []LayerConfig{
-				{Name: "frontend", Stack: "react", Path: "./frontend"},
-				{Name: "backend", Stack: "dotnet", Path: "./backend"},
-			},
-		},
-	}
-	layers := cfg.Layers()
-	if len(layers) != 2 {
-		t.Fatalf("expected 2 layers, got %d", len(layers))
-	}
-}
-
 func TestSave_Load(t *testing.T) {
 	dir := t.TempDir()
 
 	cfg := DefaultConfig()
-	cfg.Project.Name = "test-project"
-	cfg.Project.Layers = []LayerConfig{
-		{Name: "frontend", Stack: "react", Path: "./frontend"},
-	}
 
 	if err := Save(dir, &cfg); err != nil {
 		t.Fatalf("save: %v", err)
@@ -85,11 +53,8 @@ func TestSave_Load(t *testing.T) {
 		t.Fatalf("load: %v", err)
 	}
 
-	if loaded.Project.Name != "test-project" {
-		t.Errorf("expected test-project, got %s", loaded.Project.Name)
-	}
-	if len(loaded.Project.Layers) != 1 {
-		t.Errorf("expected 1 layer, got %d", len(loaded.Project.Layers))
+	if loaded.QodeVersion != "0.1" {
+		t.Errorf("expected QodeVersion \"0.1\", got %q", loaded.QodeVersion)
 	}
 }
 
@@ -144,7 +109,7 @@ func TestFindRoot(t *testing.T) {
 	}
 
 	// Write qode.yaml at root.
-	if err := os.WriteFile(filepath.Join(dir, ConfigFileName), []byte("project:\n  name: test\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ConfigFileName), []byte("qode_version: \"0.1\"\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 

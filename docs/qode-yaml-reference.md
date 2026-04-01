@@ -2,67 +2,30 @@
 
 Full configuration reference for `qode.yaml`.
 
-## Minimal example (single repo)
+## Minimal example
+
+`qode init` generates a `qode.yaml` with sensible defaults. No manual editing is required to get started.
 
 ```yaml
-project:
-  name: my-project
-  topology: single
-  layers:
-    - name: default
-      path: .
-      stack: go
-```
-
-## Composite stack example (monorepo)
-
-A real nQode project with React frontend, Next.js BFF, and .NET backend:
-
-```yaml
-project:
-  name: insurance-portal
-  topology: monorepo
-  layers:
-    - name: frontend
-      path: ./frontend
-      stack: react
-      test:
-        unit: "npx vitest run"
-        lint: "npx eslint ."
-    - name: bff
-      path: ./bff
-      stack: nextjs
-      test:
-        unit: "npm test"
-        lint: "npm run lint"
-    - name: api
-      path: ./backend
-      stack: dotnet
-      test:
-        unit: "dotnet test"
-        lint: "dotnet format --verify-no-changes"
+qode_version: "0.1"
+review:
+  min_code_score: 10
+  min_security_score: 8
+scoring:
+  strict: false
+ide:
+  cursor:
+    enabled: true
+  claude_code:
+    enabled: true
+knowledge:
+  path: .qode/knowledge
 ```
 
 ## Full reference
 
 ```yaml
-project:
-  name: my-project
-  description: Optional description
-  topology: monorepo        # monorepo | multirepo | single (auto-detected)
-  layers:
-    - name: frontend
-      path: ./frontend
-      stack: react           # react | angular | nextjs | vue | svelte |
-                             # dotnet | java | python | go | typescript
-      test:
-        unit: "npm test"
-        e2e: "npx playwright test"
-        lint: "npm run lint"
-        build: "npm run build"
-        coverage:
-          enabled: true
-          min_percentage: 80
+qode_version: "0.1"          # written by qode init; informational
 
 ticket_system:
   type: jira                 # jira | azure-devops | linear | github | notion | manual
@@ -125,31 +88,14 @@ ide:
     enabled: true
 
 knowledge:
-  auto_discover: true
-  paths:
-    - docs/architecture/
-    - tests/**/README.md
-
-architecture:
-  clean_code:
-    max_function_lines: 50
+  path: .qode/knowledge
 ```
 
 ## Field descriptions
 
-### `project.topology`
+### `qode_version`
 
-| Value | When to use |
-|---|---|
-| `single` | One repo, one tech stack |
-| `monorepo` | Multiple stacks in subdirectories of the same repo |
-| `multirepo` | Separate repos managed as a workspace (`qode init --workspace`) |
-
-Auto-detected from directory structure when running `qode init`.
-
-### `project.layers[].stack`
-
-Supported values: `react`, `angular`, `nextjs`, `vue`, `svelte`, `dotnet`, `java`, `python`, `go`, `typescript`
+Written by `qode init`. Identifies the qode configuration format version. Currently informational; version enforcement is planned for a future release.
 
 ### `ticket_system.type`
 

@@ -1,14 +1,4 @@
-project:
-    name: qode
-    topology: single
-    layers:
-        - name: default
-          path: .
-          stack: go
-          test:
-            unit: go test ./...
-            lint: golangci-lint run
-            build: go build ./...
+qode_version: "0.1.3-alpha"
 review:
     min_code_score: 10
     min_security_score: 10

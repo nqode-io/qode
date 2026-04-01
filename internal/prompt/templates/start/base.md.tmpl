@@ -7,9 +7,6 @@ Follow the implementation plan in the spec precisely.
 
 **Project:** {{.Project.Name}}
 **Branch:** {{.Branch}}
-**Tech Stack:**
-{{range .Layers}}- **{{.Name}}** ({{.Stack}}) at `{{.Path}}`
-{{end}}
 
 ## Technical Specification
 
@@ -38,15 +35,12 @@ The following documents describe conventions and patterns to follow:
 
 ## Clean Code Requirements
 
-{{range .Layers}}
-**{{.Name}} ({{.Stack}}):**
+**default (go):**
 - Keep functions/methods under 50 lines
 - Prefer composition over inheritance
 - No magic numbers — use named constants
 - Handle errors explicitly; never swallow them
 - No TODO comments in committed code
-
-{{end}}
 
 ## When You Are Done
 

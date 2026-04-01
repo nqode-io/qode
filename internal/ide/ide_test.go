@@ -11,8 +11,6 @@ import (
 
 func minimalConfig() *config.Config {
 	cfg := &config.Config{}
-	cfg.Project.Name = "testproject"
-	cfg.Project.Topology = "single"
 	cfg.IDE.ClaudeCode.Enabled = true
 	cfg.IDE.Cursor.Enabled = true
 	return cfg
@@ -21,7 +19,7 @@ func minimalConfig() *config.Config {
 // --- claudeSlashCommands ---
 
 func TestClaudeSlashCommands_ContainsTicketFetch(t *testing.T) {
-	cmds := claudeSlashCommands(minimalConfig())
+	cmds := claudeSlashCommands("testproject", minimalConfig())
 	content, ok := cmds["qode-ticket-fetch"]
 	if !ok {
 		t.Fatal("claudeSlashCommands: missing key qode-ticket-fetch")
@@ -32,14 +30,14 @@ func TestClaudeSlashCommands_ContainsTicketFetch(t *testing.T) {
 }
 
 func TestClaudeSlashCommands_HasNineEntries(t *testing.T) {
-	cmds := claudeSlashCommands(minimalConfig())
+	cmds := claudeSlashCommands("testproject", minimalConfig())
 	if len(cmds) != 9 {
 		t.Errorf("claudeSlashCommands: len = %d, want 9", len(cmds))
 	}
 }
 
 func TestClaudeSlashCommands_IncludesKnowledge(t *testing.T) {
-	cmds := claudeSlashCommands(minimalConfig())
+	cmds := claudeSlashCommands("testproject", minimalConfig())
 	for _, key := range []string{"qode-knowledge-add-context", "qode-knowledge-add-branch"} {
 		content, ok := cmds[key]
 		if !ok {
@@ -53,7 +51,7 @@ func TestClaudeSlashCommands_IncludesKnowledge(t *testing.T) {
 }
 
 func TestClaudeSlashCommands_IncludesQodeCheck(t *testing.T) {
-	cmds := claudeSlashCommands(minimalConfig())
+	cmds := claudeSlashCommands("testproject", minimalConfig())
 	content, ok := cmds["qode-check"]
 	if !ok {
 		t.Fatal("claudeSlashCommands: missing key qode-check")
@@ -75,7 +73,7 @@ func TestClaudeSlashCommands_IncludesQodeCheck(t *testing.T) {
 }
 
 func TestClaudeSlashCommands_NoPromptOnly(t *testing.T) {
-	cmds := claudeSlashCommands(minimalConfig())
+	cmds := claudeSlashCommands("testproject", minimalConfig())
 	for name, content := range cmds {
 		if strings.Contains(content, "--prompt-only") {
 			t.Errorf("claudeSlashCommands: %s contains --prompt-only", name)
@@ -87,7 +85,7 @@ func TestClaudeSlashCommands_NoPromptOnly(t *testing.T) {
 
 func TestCursorSlashCommands_ContainsTicketFetch(t *testing.T) {
 	cfg := minimalConfig()
-	cmds := slashCommands(cfg)
+	cmds := slashCommands("testproject", cfg)
 	content, ok := cmds["qode-ticket-fetch"]
 	if !ok {
 		t.Fatal("slashCommands: missing key qode-ticket-fetch")
@@ -98,20 +96,20 @@ func TestCursorSlashCommands_ContainsTicketFetch(t *testing.T) {
 	if !strings.Contains(content, "description:") {
 		t.Errorf("qode-ticket-fetch content missing YAML frontmatter description, got:\n%s", content)
 	}
-	if !strings.Contains(content, cfg.Project.Name) {
-		t.Errorf("qode-ticket-fetch content missing project name %q, got:\n%s", cfg.Project.Name, content)
+	if !strings.Contains(content, "testproject") {
+		t.Errorf("qode-ticket-fetch content missing project name %q, got:\n%s", "testproject", content)
 	}
 }
 
 func TestCursorSlashCommands_HasNineEntries(t *testing.T) {
-	cmds := slashCommands(minimalConfig())
+	cmds := slashCommands("testproject", minimalConfig())
 	if len(cmds) != 9 {
 		t.Errorf("slashCommands: len = %d, want 9", len(cmds))
 	}
 }
 
 func TestCursorSlashCommands_IncludesKnowledge(t *testing.T) {
-	cmds := slashCommands(minimalConfig())
+	cmds := slashCommands("testproject", minimalConfig())
 	for _, key := range []string{"qode-knowledge-add-context", "qode-knowledge-add-branch"} {
 		content, ok := cmds[key]
 		if !ok {
@@ -126,7 +124,7 @@ func TestCursorSlashCommands_IncludesKnowledge(t *testing.T) {
 
 func TestCursorSlashCommands_IncludesQodeCheck(t *testing.T) {
 	cfg := minimalConfig()
-	cmds := slashCommands(cfg)
+	cmds := slashCommands("testproject", cfg)
 	content, ok := cmds["qode-check"]
 	if !ok {
 		t.Fatal("slashCommands: missing key qode-check")
@@ -148,7 +146,7 @@ func TestCursorSlashCommands_IncludesQodeCheck(t *testing.T) {
 }
 
 func TestCursorSlashCommands_NoPromptOnly(t *testing.T) {
-	cmds := slashCommands(minimalConfig())
+	cmds := slashCommands("testproject", minimalConfig())
 	for name, content := range cmds {
 		if strings.Contains(content, "--prompt-only") {
 			t.Errorf("slashCommands: %s contains --prompt-only", name)
@@ -197,6 +195,29 @@ func TestSetupClaudeCode_WritesKnowledgeCommands(t *testing.T) {
 	}
 }
 
+func TestSetupClaudeCode_CommandsContainRootName(t *testing.T) {
+	dir := t.TempDir()
+	// Rename the temp dir would be complex; use a subdirectory with a known name.
+	projectDir := filepath.Join(dir, "myproject")
+	if err := os.MkdirAll(projectDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := minimalConfig()
+
+	if err := SetupClaudeCode(projectDir, cfg); err != nil {
+		t.Fatalf("SetupClaudeCode: %v", err)
+	}
+
+	path := filepath.Join(projectDir, ".claude", "commands", "qode-plan-refine.md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading qode-plan-refine.md: %v", err)
+	}
+	if !strings.Contains(string(data), "myproject") {
+		t.Errorf("qode-plan-refine.md missing root dir name %q, got:\n%s", "myproject", string(data))
+	}
+}
+
 // --- SetupCursor integration ---
 
 func TestSetupCursor_WritesTicketFetchCommand(t *testing.T) {
@@ -236,5 +257,40 @@ func TestSetupCursor_WritesKnowledgeCommands(t *testing.T) {
 		if len(data) == 0 {
 			t.Errorf("%s.mdc is empty", name)
 		}
+	}
+}
+
+func TestSetupCursor_NoCursorRulesDir(t *testing.T) {
+	dir := t.TempDir()
+	cfg := minimalConfig()
+
+	if err := SetupCursor(dir, cfg); err != nil {
+		t.Fatalf("SetupCursor: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, ".cursorrules")); !os.IsNotExist(err) {
+		t.Error("SetupCursor must not create .cursorrules/ directory")
+	}
+}
+
+func TestSetupCursor_CommandsContainRootName(t *testing.T) {
+	dir := t.TempDir()
+	projectDir := filepath.Join(dir, "myproject")
+	if err := os.MkdirAll(projectDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := minimalConfig()
+
+	if err := SetupCursor(projectDir, cfg); err != nil {
+		t.Fatalf("SetupCursor: %v", err)
+	}
+
+	path := filepath.Join(projectDir, ".cursor", "commands", "qode-plan-refine.mdc")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading qode-plan-refine.mdc: %v", err)
+	}
+	if !strings.Contains(string(data), "myproject") {
+		t.Errorf("qode-plan-refine.mdc missing root dir name %q, got:\n%s", "myproject", string(data))
 	}
 }
