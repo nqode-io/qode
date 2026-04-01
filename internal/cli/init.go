@@ -32,13 +32,16 @@ for Cursor and Claude Code.`,
 	return cmd
 }
 
-// runInitExisting writes a minimal qode.yaml, creates .qode/ dirs,
-// copies prompt templates, and generates IDE configs.
+// runInitExisting writes qode.yaml with defaults, creates .qode/ dirs, copies
+// prompt templates, and generates IDE configs. .qode/scoring.yaml is only
+// written on first run so user-customised rubrics are never overwritten.
 func runInitExisting(root string) error {
 	cfg := config.DefaultConfig()
 
-	// Write qode.yaml.
-	data, err := yaml.Marshal(&cfg)
+	// Always write qode.yaml — rubrics live in .qode/scoring.yaml, not here.
+	cfgForYaml := cfg
+	cfgForYaml.Scoring.Rubrics = nil
+	data, err := yaml.Marshal(&cfgForYaml)
 	if err != nil {
 		return fmt.Errorf("marshaling config: %w", err)
 	}
@@ -46,6 +49,7 @@ func runInitExisting(root string) error {
 	if err := os.WriteFile(outPath, data, 0644); err != nil {
 		return fmt.Errorf("writing %s: %w", outPath, err)
 	}
+	fmt.Printf("Generated: %s\n", outPath)
 
 	// Create .qode directory structure.
 	for _, dir := range []string{
@@ -58,17 +62,30 @@ func runInitExisting(root string) error {
 		}
 	}
 
+	// Write .qode/scoring.yaml only on first run; re-runs preserve custom rubrics.
+	scoringPath := filepath.Join(root, config.QodeDir, config.ScoringFileName)
+	if _, statErr := os.Stat(scoringPath); os.IsNotExist(statErr) {
+		scoringFile := config.ScoringFileConfig{Rubrics: config.DefaultRubricConfigs()}
+		scoringData, err := yaml.Marshal(&scoringFile)
+		if err != nil {
+			return fmt.Errorf("marshaling scoring config: %w", err)
+		}
+		if err := os.WriteFile(scoringPath, scoringData, 0644); err != nil {
+			return fmt.Errorf("writing %s: %w", scoringPath, err)
+		}
+		fmt.Printf("Generated: %s\n", scoringPath)
+	}
+
 	// Copy embedded prompt templates.
 	if err := copyEmbeddedTemplates(root); err != nil {
 		return err
 	}
 
-	// Generate IDE configs and slash commands.
+	// Generate IDE configs and slash commands using the loaded (or default) config.
 	if err := ide.Setup(root, &cfg); err != nil {
 		return fmt.Errorf("setting up IDE configs: %w", err)
 	}
 
-	fmt.Printf("Generated: %s\n", outPath)
 	fmt.Println()
 	fmt.Println("Next steps:")
 	fmt.Println("  1. Run 'qode branch create <name>' to start your first feature")

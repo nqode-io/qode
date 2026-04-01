@@ -1,0 +1,90 @@
+rubrics:
+    refine:
+        dimensions:
+            - name: Problem Understanding & Scope
+              weight: 5
+              description: Correct restatement; identifies whether change touches CLI, template system, qode.yaml schema, or IDE integration; backward-compat implications explicit; all ambiguities resolved
+              levels:
+                - '5: Precise restatement; affected subsystems (CLI/template/schema/IDE) named; all backward-compat implications called out'
+                - '4: Good understanding; minor gaps in subsystem or compat analysis'
+                - '3: Correct at surface level; misses one subsystem or a compat implication'
+                - '2: Vague or conflates subsystems; compat not addressed'
+                - '1: Mostly incorrect or too generic to act on'
+                - '0: Missing or completely wrong'
+            - name: CLI & AI Prompt Design
+              weight: 5
+              description: Flag conventions correct; template variable/funcmap additions backward-compatible; .qode/prompts/ override impact considered; rendered prompt will produce correct AI behaviour
+              levels:
+                - '5: Flag names consistent with existing patterns; template changes backward-compatible; override system impact addressed; rendered prompt is unambiguous and correct'
+                - '4: Mostly correct; one minor flag or template gap'
+                - '3: Covers the main path; misses override system or AI prompt quality'
+                - '2: Flag design or template impact not considered'
+                - '1: Superficial; no attention to CLI contract or prompt quality'
+                - '0: Missing'
+            - name: Cross-Stack & Integration Impact
+              weight: 5
+              description: Feature verified across all supported stacks; Cursor and Claude Code IDE integrations both addressed; workspace topology considered
+              levels:
+                - '5: All stacks verified or explicitly scoped out with rationale; both IDE integrations addressed; workspace topology covered'
+                - '4: Most stacks covered; minor gap in one IDE or workspace case'
+                - '3: Core stacks addressed; IDE integrations or workspace not mentioned'
+                - '2: Only the primary stack considered'
+                - '1: No cross-stack or integration analysis'
+                - '0: Missing'
+            - name: Testability & Risk
+              weight: 5
+              description: Acceptance criteria are testable and name specific test locations; error scenarios specified; breaking changes have migration notes
+              levels:
+                - '5: Each criterion has a named test location and strategy; error scenarios (missing files, invalid config, network failure) specified; all breaking changes have migration notes'
+                - '4: Most criteria testable; one error scenario or migration note missing'
+                - '3: Criteria stated but test strategy vague; some error scenarios missing'
+                - '2: Criteria not testable as written; no error scenarios'
+                - '1: No testability or risk analysis'
+                - '0: Missing'
+            - name: Actionability
+              weight: 5
+              description: Concrete tasks, correct order, prerequisites identified, each task is one commit; no task spans schema + template without explicit dependency noted
+              levels:
+                - '5: Atomic tasks, correct order, prerequisites explicit; cross-cutting tasks (schema + template) have noted dependency'
+                - '4: Mostly atomic; one task slightly too broad or order unclear'
+                - '3: Tasks defined but some are too coarse or lack ordering'
+                - '2: Hard to act on without further breakdown'
+                - '1: Very vague'
+                - '0: Missing'
+    review:
+        dimensions:
+            - name: Correctness
+              weight: 3
+              description: Prompt rendering produces expected output; scoring parser handles edge cases; no template execution panics on zero-value fields; implements spec fully
+            - name: CLI Contract
+              weight: 2
+              description: Prompts to stdout, status/errors to stderr; non-zero exit on error; qode.yaml keys additive and backward-compatible; --to-file behaviour consistent
+            - name: Go Idioms & Code Quality
+              weight: 2
+              description: Errors as return values (no panic); fmt.Errorf("%w") for wrapping; functions ≤50 lines; no global mutable state added
+            - name: Error Handling & UX
+              weight: 2
+              description: User-facing errors are actionable; no error text on stdout; missing prerequisite files produce clear guidance with remediation steps
+            - name: Test Coverage
+              weight: 2
+              description: Table-driven tests for parsers and renderers; real temp dirs used (no file-I/O mocks); at least one test per exported function; edge cases covered
+            - name: Template Safety
+              weight: 1
+              description: No panic on zero-value TemplateData fields; new funcmap functions have test coverage; no user-controlled data injected unsanitised into template execution
+    security:
+        dimensions:
+            - name: Command & Path Injection
+              weight: 3
+              description: Branch names and layer paths are user-controlled and used in file operations; no path traversal outside .qode/; no user input concatenated into shell commands
+            - name: Credential Safety
+              weight: 3
+              description: API tokens (JIRA_API_TOKEN, LINEAR_API_KEY, etc.) never written to generated files, stdout, or diff.md; ticket content reviewed for inadvertent secret capture
+            - name: Template Injection
+              weight: 3
+              description: qode.yaml fields flowing into template execution are safe; .qode/prompts/ overrides reviewed for dangerous template actions; funcmap does not expose shell execution
+            - name: Input Validation & SSRF
+              weight: 2
+              description: Ticket fetch URLs validated (scheme, no private-network targets); HTTP response bodies size-capped before writing to disk; all config fields validated before use
+            - name: Dependency Safety
+              weight: 1
+              description: No new dependencies with known CVEs; go.sum updated; no use of unsafe package

@@ -76,3 +76,10 @@ type KnowledgeConfig struct {
 type BranchConfig struct {
 	KeepBranchContext bool `yaml:"keep_branch_context,omitempty"`
 }
+
+// ScoringFileConfig is written to and read from .qode/scoring.yaml.
+// It holds only the rubric definitions, keeping them separate from qode.yaml
+// so that re-running qode init never overwrites user-customised rubrics.
+type ScoringFileConfig struct {
+	Rubrics map[string]RubricConfig `yaml:"rubrics,omitempty"`
+}

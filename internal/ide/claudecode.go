@@ -16,7 +16,7 @@ func SetupClaudeCode(root string, cfg *config.Config) error {
 	}
 
 	name := filepath.Base(root)
-	cmds := claudeSlashCommands(name, cfg)
+	cmds := claudeSlashCommands(name)
 	for cmdName, content := range cmds {
 		if err := writeFile(filepath.Join(commandsDir, cmdName+".md"), content); err != nil {
 			return err
@@ -79,7 +79,7 @@ const qodeCheckBody = `Run quality gates interactively in two sequential phases.
 If neither a test runner nor a linter can be determined for a given layer, report what was inspected and ask the user to specify the command. Do not guess.
 `
 
-func claudeSlashCommands(name string, cfg *config.Config) map[string]string {
+func claudeSlashCommands(name string) map[string]string {
 	return map[string]string{
 		"qode-plan-refine": fmt.Sprintf(`# Refine Requirements — %s
 

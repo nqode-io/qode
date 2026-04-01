@@ -33,7 +33,7 @@ qode plan judge --to-file
 All templates are located under `.qode/prompts/`:
 
 | Template | Path |
-|---|---|
+| --- | --- |
 | Refinement worker | `.qode/prompts/refine/base.md.tmpl` |
 | Refinement judge | `.qode/prompts/scoring/judge_refine.md.tmpl` |
 | Spec generation | `.qode/prompts/spec/base.md.tmpl` |
@@ -48,9 +48,8 @@ All templates are located under `.qode/prompts/`:
 Templates use Go's `text/template` syntax. The following fields are available on the data struct:
 
 | Field | Type | Description |
-|---|---|---|
-| `Project` | `config.ProjectConfig` | Project name and topology from `qode.yaml` |
-| `Layers` | `[]config.LayerConfig` | Stack layers from `qode.yaml` |
+| --- | --- | --- |
+| `Project.Name` | `string` | Project name derived from the working directory (`filepath.Base` of the project root) |
 | `Branch` | `string` | Current git branch name |
 | `BranchDir` | `string` | Absolute path to `.qode/branches/<branch>/` — use this to reference context files |
 | `OutputPath` | `string` | When set, templates should append file-write instructions so the AI saves its output directly |
@@ -61,7 +60,7 @@ Templates use Go's `text/template` syntax. The following fields are available on
 | `Analysis` | `string` | Refined analysis inlined (set for `knowledge/add-branch` only) |
 | `Spec` | `string` | Spec content inlined (set for `knowledge/add-branch` only) |
 | `Diff` | `string` | Git diff inlined (set for `knowledge/add-branch` only) |
-| `Rubric` | `scoring.Rubric` | Active scoring rubric with `.Dimensions` and `.Total` — set for `scoring/judge_refine`, `review/code`, and `review/security`; reflects any `scoring.rubrics` override from `qode.yaml` |
+| `Rubric` | `scoring.Rubric` | Active scoring rubric with `.Dimensions` and `.Total` — set for `scoring/judge_refine`, `review/code`, and `review/security`; reflects any rubric override from `.qode/scoring.yaml` |
 | `TargetScore` | `int` | Pass threshold for the refine judge — defaults to `Rubric.Total()`, overridden by `scoring.target_score` in `qode.yaml` |
 | `MinPassScore` | `float64` | Minimum score to pass review — sourced from `review.min_code_score` (code) or `review.min_security_score` (security) in `qode.yaml` |
 
@@ -70,7 +69,7 @@ Templates use Go's `text/template` syntax. The following fields are available on
 The following functions are available inside templates in addition to Go's built-in `text/template` functions (e.g. `printf`, `len`):
 
 | Function | Signature | Description |
-|---|---|---|
+| --- | --- | --- |
 | `add` | `add a b int → int` | Adds two integers. Useful for 1-based dimension counters: `{{add $i 1}}` |
 | `pct` | `pct percent float64, n int → float64` | Returns `n × percent / 100`. Use with `printf "%.1f"` for formatted thresholds: `{{printf "%.1f" (pct 75 .Rubric.Total)}}` |
 | `join` | `join sep string, items []string → string` | Joins a string slice with the given separator |
@@ -79,7 +78,7 @@ The following functions are available inside templates in addition to Go's built
 
 For the main workflow templates (`refine`, `spec`, `start`, `review`) the AI reads context files directly rather than having content inlined. Use `BranchDir` to construct paths:
 
-```
+```text
 Read the ticket from `{{.BranchDir}}/context/ticket.md`.
 Read the notes from `{{.BranchDir}}/context/notes.md` (if the file exists).
 Read the refined analysis from `{{.BranchDir}}/refined-analysis.md`.

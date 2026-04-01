@@ -2,6 +2,8 @@
 
 Full configuration reference for `qode.yaml`.
 
+> **Rubric customisation is in a separate file.** Scoring dimensions (`refine`, `review`, `security` rubrics) live in `.qode/scoring.yaml`, not here. See [scoring-yaml-reference.md](scoring-yaml-reference.md).
+
 ## Minimal example
 
 `qode init` generates a `qode.yaml` with sensible defaults. No manual editing is required to get started.
@@ -11,8 +13,6 @@ qode_version: "0.1"
 review:
   min_code_score: 10
   min_security_score: 8
-scoring:
-  strict: false
 ide:
   cursor:
     enabled: true
@@ -21,6 +21,8 @@ ide:
 knowledge:
   path: .qode/knowledge
 ```
+
+> **Re-running `qode init` regenerates `qode.yaml` with these defaults.** Any customisations you have made to `qode.yaml` (score thresholds, `scoring.strict`, `ticket_system`, etc.) will be reset. Re-add them after running `qode init`, or run it only when you want a clean reset.
 
 ## Full reference
 
@@ -42,44 +44,7 @@ review:
 scoring:
   target_score: 25        # override pass threshold for /qode-plan-refine
   strict: false           # enforce step ordering; exit 1 when a gate fails
-  rubrics:
-    refine:               # override dimensions for judge_refine scoring
-      dimensions:
-        - name: Problem Understanding
-          weight: 5
-          levels:
-            - "5: Perfect restatement of the problem in engineering terms"
-            - "4: Mostly correct with minor gaps"
-            - "3: Partial understanding; some aspects missed"
-            - "2: Surface-level; misses key constraints"
-            - "1: Vague or mostly incorrect"
-            - "0: No meaningful understanding shown"
-    review:               # override dimensions for code review scoring
-      dimensions:
-        - name: Correctness
-          weight: 3
-        - name: Code Quality
-          weight: 2
-        - name: Architecture
-          weight: 2
-        - name: Error Handling
-          weight: 2
-        - name: Testing
-          weight: 1
-        - name: Performance
-          weight: 2
-    security:             # override dimensions for security review scoring
-      dimensions:
-        - name: Injection Prevention
-          weight: 3
-        - name: Authentication & Authorisation
-          weight: 3
-        - name: Data Exposure
-          weight: 2
-        - name: Input Validation
-          weight: 2
-        - name: Cryptography
-          weight: 2
+  # Rubric dimensions are not configured here — edit .qode/scoring.yaml instead.
 
 ide:
   cursor:
@@ -148,17 +113,4 @@ Override the pass threshold for `/qode-plan-refine`. When not set, the threshold
 
 ### `scoring.rubrics`
 
-Override the default scoring dimensions for any of the three rubrics: `refine`, `review`, `security`.
-
-Each rubric entry accepts a `dimensions` list. Omitting a rubric (or providing an empty `dimensions` list) falls back to the built-in default for that rubric.
-
-**`dimensions` fields:**
-
-| Field | Required | Description |
-|---|---|---|
-| `name` | yes | Display name of the dimension |
-| `weight` | yes | Maximum points for this dimension |
-| `description` | no | Short description (informational) |
-| `levels` | no | Ordered score descriptions, highest first (e.g. `"5: Excellent..."`) — only used by `refine` rubric |
-
-The `refine` rubric uses `levels` to show labelled score bands in the judge prompt. The `review` and `security` rubrics do not use `levels`.
+Rubric dimensions are **not configured in `qode.yaml`**. They live in `.qode/scoring.yaml` so that re-running `qode init` never overwrites them. See [scoring-yaml-reference.md](scoring-yaml-reference.md) for the full rubric format and field reference.

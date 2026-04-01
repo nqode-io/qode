@@ -133,6 +133,48 @@ func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 	}
 }
 
+func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := runInitExisting(dir); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	scoringPath := filepath.Join(dir, ".qode", "scoring.yaml")
+	if _, err := os.Stat(scoringPath); os.IsNotExist(err) {
+		t.Error(".qode/scoring.yaml not created on first run")
+	}
+}
+
+func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := runInitExisting(dir); err != nil {
+		t.Fatalf("first runInitExisting: %v", err)
+	}
+
+	// Record scoring.yaml content after first run.
+	scoringPath := filepath.Join(dir, ".qode", "scoring.yaml")
+	firstScoring, err := os.ReadFile(scoringPath)
+	if err != nil {
+		t.Fatalf("reading scoring.yaml after first run: %v", err)
+	}
+
+	// Second run must succeed and must not overwrite .qode/scoring.yaml.
+	if err := runInitExisting(dir); err != nil {
+		t.Fatalf("second runInitExisting: %v", err)
+	}
+
+	secondScoring, err := os.ReadFile(scoringPath)
+	if err != nil {
+		t.Fatalf("reading scoring.yaml after second run: %v", err)
+	}
+
+	if string(firstScoring) != string(secondScoring) {
+		t.Error(".qode/scoring.yaml was overwritten on re-run")
+	}
+}
+
 func TestRootCmd_NoIDESubcommand(t *testing.T) {
 	// Confirm 'ide' is not a registered subcommand.
 	ideCmd, _, findErr := rootCmd.Find([]string{"ide"})

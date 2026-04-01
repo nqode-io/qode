@@ -17,7 +17,7 @@ func SetupCursor(root string, cfg *config.Config) error {
 	}
 
 	name := filepath.Base(root)
-	cmds := slashCommands(name, cfg)
+	cmds := slashCommands(name)
 	for cmdName, content := range cmds {
 		p := filepath.Join(root, cursorCommandsDir, cmdName+".mdc")
 		if err := writeFile(p, content); err != nil {
@@ -29,7 +29,7 @@ func SetupCursor(root string, cfg *config.Config) error {
 	return nil
 }
 
-func slashCommands(name string, cfg *config.Config) map[string]string {
+func slashCommands(name string) map[string]string {
 	return map[string]string{
 		"qode-plan-refine": fmt.Sprintf(`---
 description: Refine requirements for %s

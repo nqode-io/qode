@@ -13,6 +13,8 @@ const (
 	ConfigFileName = "qode.yaml"
 	// QodeDir is the per-project qode state directory.
 	QodeDir = ".qode"
+	// ScoringFileName is the per-project scoring rubric file inside QodeDir.
+	ScoringFileName = "scoring.yaml"
 )
 
 // Load reads and merges configuration from:
@@ -30,6 +32,12 @@ func Load(root string) (*Config, error) {
 		return nil, fmt.Errorf("loading %s: %w", projectPath, err)
 	}
 
+	// Try to load scoring rubrics from .qode/scoring.yaml (overrides defaults).
+	scoringPath := filepath.Join(root, QodeDir, ScoringFileName)
+	if err := mergeScoringFromFile(scoringPath, &cfg); err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("loading %s: %w", scoringPath, err)
+	}
+
 	// Try to load user-level config.
 	home, err := os.UserHomeDir()
 	if err == nil {
@@ -40,6 +48,21 @@ func Load(root string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func mergeScoringFromFile(path string, cfg *Config) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var sf ScoringFileConfig
+	if err := yaml.Unmarshal(data, &sf); err != nil {
+		return fmt.Errorf("parsing %s: %w", path, err)
+	}
+	if sf.Rubrics != nil {
+		cfg.Scoring.Rubrics = sf.Rubrics
+	}
+	return nil
 }
 
 // Save writes the config to qode.yaml in the given directory.
