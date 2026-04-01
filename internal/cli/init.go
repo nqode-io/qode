@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/nqode/qode/internal/config"
-	"github.com/nqode/qode/internal/ide"
 	"github.com/nqode/qode/internal/prompt"
+	"github.com/nqode/qode/internal/scaffold"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -86,7 +86,7 @@ func runInitExisting(root string) error {
 	}
 
 	// Generate IDE configs and slash commands using the loaded (or default) config.
-	if err := ide.Setup(root, &cfg); err != nil {
+	if err := scaffold.Setup(root, &cfg); err != nil {
 		return fmt.Errorf("setting up IDE configs: %w", err)
 	}
 

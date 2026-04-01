@@ -1,4 +1,4 @@
-package ide
+package scaffold
 
 import (
 	"os"
