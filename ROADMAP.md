@@ -16,9 +16,10 @@ Planned features for qode, in recommended implementation order. Items marked wit
 
 ## In Progress
 
+- [x] [#27](https://github.com/nqode-io/qode/issues/27) — **Replace ticket fetch with MCP** — Use MCP servers instead of built-in HTTP clients; support comments, attachments, linked resources
+
 ## Up Next (parallel — start after #24)
 
-- [ ] [#27](https://github.com/nqode-io/qode/issues/27) — **Replace ticket fetch with MCP** — Use MCP servers instead of built-in HTTP clients; support comments, attachments, linked resources
 - [ ] [#41](https://github.com/nqode-io/qode/issues/41) — **`qode init`: append gitignore rules** — Add qode-specific `.gitignore` entries (temp prompt files, ticket snapshots, scored iteration copies) during init
 - [ ] [#33](https://github.com/nqode-io/qode/issues/33) — **Worktree support** — Config flag `branch.use_worktrees` to create git worktrees via worktrunk, phantom, or `git worktree`; enables parallel task development
 - [ ] [#34](https://github.com/nqode-io/qode/issues/34) — **Add Codex IDE support** — Slash commands, IDE setup, templates, and documentation for OpenAI Codex, following the same convention as Cursor and Claude Code
