@@ -2,27 +2,14 @@ name: Release
 
 on:
   push:
+    branches: [main]
     tags: ["v*"]
 
 permissions:
   contents: write
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - run: go test ./...
-
-  # Runs only when a version tag (v*) is pushed.
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,10 +20,48 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: goreleaser/goreleaser-action@v6
+      - run: go test ./...
+
+      # Tagged release: full goreleaser release
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BUILD_NUMBER: ${{ github.run_number }}
+
+      # Push to main: snapshot build + update rolling "latest" release
+      - name: Resolve last version tag
+        id: last_tag
+        if: github.ref == 'refs/heads/main'
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 --match "v[0-9]*" 2>/dev/null || echo "v0.0.0")
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+          echo "tag_version=${LAST_TAG#v}" >> $GITHUB_OUTPUT
+
+      - name: Build
+        if: github.ref == 'refs/heads/main'
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --snapshot --clean
+        env:
+          GORELEASER_CURRENT_TAG: ${{ steps.last_tag.outputs.last_tag }}
+          BUILD_NUMBER: ${{ github.run_number }}
+
+      - name: Publish latest release
+        if: github.ref == 'refs/heads/main'
+        run: |
+          FULL_VERSION="${{ steps.last_tag.outputs.tag_version }}+${{ github.run_number }}"
+          gh release delete latest --yes 2>/dev/null || true
+          gh release create latest \
+            dist/qode_*.tar.gz dist/qode_*.zip dist/checksums.txt \
+            --title "latest (${FULL_VERSION})" \
+            --notes "Build from \`main\`. Binary version: \`${FULL_VERSION}\`." \
+            --latest \
+            --target main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
