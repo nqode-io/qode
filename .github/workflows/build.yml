@@ -43,7 +43,7 @@ jobs:
             dist/qode_*.tar.gz dist/qode_*.zip dist/checksums.txt \
             --title "latest (${FULL_VERSION})" \
             --notes "Snapshot build from \`main\`. Binary version: \`${FULL_VERSION}\`." \
-            --prerelease \
+            --latest \
             --target main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
