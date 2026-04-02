@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/nqode/qode/internal/config"
+	"github.com/nqode/qode/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -25,8 +27,9 @@ func Execute() error {
 
 func init() {
 	rootCmd = &cobra.Command{
-		Use:   "qode",
-		Short: "AI-assisted developer workflow CLI by nQode",
+		Use:               "qode",
+		Short:             "AI-assisted developer workflow CLI by nQode",
+		PersistentPreRunE: checkVersion,
 		Long: `qode is a general-purpose AI developer workflow tool by nQode.
 
 It standardises how developers use AI coding assistants across client projects
@@ -66,6 +69,31 @@ See 'qode workflow' for the full diagram.`,
 		newKnowledgeCmd(),
 		newWorkflowCmd(),
 	)
+}
+
+// checkVersion is the PersistentPreRunE hook that enforces version compatibility
+// between the running binary and the qode_version recorded in qode.yaml.
+func checkVersion(cmd *cobra.Command, _ []string) error {
+	// init is the remediation action — never block it.
+	if cmd.Name() == "init" {
+		return nil
+	}
+	// dev builds skip version checks entirely.
+	if rootCmd.Version == "dev" || rootCmd.Version == "" {
+		return nil
+	}
+	root, err := resolveRoot()
+	if err != nil {
+		return fmt.Errorf("project not initialised: run 'qode init'")
+	}
+	cfg, err := config.Load(root)
+	if err != nil {
+		return fmt.Errorf("project not initialised: run 'qode init'")
+	}
+	if cfg.QodeVersion == "" {
+		return fmt.Errorf("project not initialised: run 'qode init'")
+	}
+	return version.CheckCompatibility(rootCmd.Version, cfg.QodeVersion)
 }
 
 // resolveRoot returns the effective project root, preferring the --root flag,

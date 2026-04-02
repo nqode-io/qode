@@ -1,0 +1,49 @@
+name: Snapshot Build
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - run: go test ./...
+
+      - name: Resolve last release tag
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
+          echo "TAG_VERSION=${LAST_TAG#v}" >> $GITHUB_ENV
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --snapshot --clean
+        env:
+          GORELEASER_CURRENT_TAG: ${{ env.LAST_TAG }}
+          BUILD_NUMBER: ${{ github.run_number }}
+
+      - name: Publish rolling latest pre-release
+        run: |
+          FULL_VERSION="${{ env.TAG_VERSION }}+${{ github.run_number }}"
+          gh release delete latest --yes 2>/dev/null || true
+          gh release create latest \
+            dist/qode_*.tar.gz dist/qode_*.zip dist/checksums.txt \
+            --title "latest (${FULL_VERSION})" \
+            --notes "Snapshot build from \`main\`. Binary version: \`${FULL_VERSION}\`." \
+            --prerelease \
+            --target main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
