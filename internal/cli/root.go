@@ -65,7 +65,6 @@ See 'qode workflow' for the full diagram.`,
 		newStartCmd(),
 		newReviewCmd(),
 		newBranchCmd(),
-		newTicketCmd(),
 		newKnowledgeCmd(),
 		newWorkflowCmd(),
 	)

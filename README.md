@@ -29,17 +29,14 @@ qode init
 
 # Start a feature
 qode branch create feat-user-dashboard
-qode ticket fetch https://company.atlassian.net/browse/ENG-123
+# Then use /qode-ticket-fetch <url> in your IDE to fetch the ticket via MCP
 ```
-
-Do note that you will have to configure `.env` file with appropriate ticketing system API key or equivalent as described below.
 
 ## The Workflow
 
 ```markdown
 1. qode branch create <name>                 Create git branch + context folder
-2. qode ticket fetch <url>                   Fetch ticket into context
-   /qode-ticket-fetch <url>      (in IDE)    — or use the slash command
+2. /qode-ticket-fetch <url>      (in IDE)    Fetch ticket via MCP into context
 3. /qode-plan-refine             (in IDE)    Refine requirements — iterate to 25/25
 4. /qode-plan-spec               (in IDE)    Generate tech spec
 5. /qode-start                   (in IDE)    Run implementation prompt
@@ -110,8 +107,6 @@ qode init                                                      Initialise qode: 
 qode branch create <name>                                      Create feature branch + context folder
 qode branch remove <name>                                      Clean up branch and context
 
-qode ticket fetch <url>                                        Fetch ticket (Jira, Azure DevOps, Linear, GitHub Issues, Notion)
-
 qode plan refine                                               Generate worker refinement prompt to stdout (use in IDE via /qode-plan-refine)
 qode plan refine --to-file                                     Save worker prompt to file for debugging
 qode plan judge                                                Generate judge scoring prompt to stdout (requires refined-analysis.md)
@@ -151,9 +146,11 @@ my-project/
 cd my-project && qode init
 ```
 
-## Ticket System Setup
+## Ticket Fetch via MCP
 
-Credentials are auto-loaded from a `.env` file in the project root. See [docs/how-to-use-ticket-fetch.md](docs/how-to-use-ticket-fetch.md) for full setup instructions and token scope requirements.
+Ticket fetching uses IDE-native MCP servers — no API keys in qode itself. Configure the MCP server for your ticketing system (Jira, Linear, GitHub, Azure DevOps, Notion) and linked-resource services (Figma, Google Docs, Confluence, etc.) in your IDE, then use `/qode-ticket-fetch <url>` in Cursor or Claude Code.
+
+See [docs/how-to-use-ticket-fetch.md](docs/how-to-use-ticket-fetch.md) for full MCP setup instructions per service.
 
 ## Further Reading
 

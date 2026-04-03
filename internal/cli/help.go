@@ -197,7 +197,6 @@ const workflowList = `qode Workflow
     qode branch create <name>
 
 2.  Add context
-    qode ticket fetch <url>
     /qode-ticket-fetch <url>  (in Cursor/Claude Code)
 
 3.  Refine requirements  (iterate until pass threshold)

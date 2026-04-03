@@ -70,7 +70,7 @@ func newBranchCreateCmd() *cobra.Command {
 
 			// Stub files.
 			stubs := map[string]string{
-				"ticket.md": "# Ticket\n\nPaste ticket content here, or run: qode ticket fetch <url>\n",
+				"ticket.md": "# Ticket\n\nPaste ticket content here, or use /qode-ticket-fetch <url> in your IDE.\n",
 				"notes.md":  "# Notes\n\nAdd any additional context, decisions, or open questions here.\n",
 			}
 			for name, content := range stubs {
@@ -86,7 +86,7 @@ func newBranchCreateCmd() *cobra.Command {
 			fmt.Printf("Context folder: %s\n", contextDir)
 			fmt.Println()
 			fmt.Println("Next steps:")
-			fmt.Printf("  1. Add ticket: qode ticket fetch <url>\n")
+			fmt.Printf("  1. Fetch ticket: /qode-ticket-fetch <url>  (in IDE)\n")
 			fmt.Printf("     Or paste into: %s/ticket.md\n", contextDir)
 			fmt.Printf("  2. Add mockups / designs to: %s/\n", contextDir)
 			fmt.Printf("  3. Run: qode plan refine\n")
