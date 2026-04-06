@@ -2,27 +2,12 @@ package config
 
 // Config is the root configuration loaded from qode.yaml.
 type Config struct {
-	QodeVersion  string             `yaml:"qode_version,omitempty"`
-	TicketSystem TicketSystemConfig `yaml:"ticket_system,omitempty"`
-	Review       ReviewConfig       `yaml:"review,omitempty"`
+	QodeVersion string       `yaml:"qode_version,omitempty"`
+	Review      ReviewConfig `yaml:"review,omitempty"`
 	Scoring      ScoringConfig      `yaml:"scoring,omitempty"`
 	IDE          IDEConfig          `yaml:"ide,omitempty"`
 	Knowledge    KnowledgeConfig    `yaml:"knowledge,omitempty"`
 	Branch       BranchConfig       `yaml:"branch,omitempty"`
-}
-
-// TicketSystemConfig describes the external ticket system integration.
-type TicketSystemConfig struct {
-	Type       string     `yaml:"type,omitempty"` // jira, azure-devops, linear, github, notion, manual
-	URL        string     `yaml:"url,omitempty"`
-	ProjectKey string     `yaml:"project_key,omitempty"`
-	Auth       AuthConfig `yaml:"auth,omitempty"`
-}
-
-// AuthConfig holds authentication details for external integrations.
-type AuthConfig struct {
-	Method string `yaml:"method,omitempty"` // token, oauth, pat
-	EnvVar string `yaml:"env_var,omitempty"`
 }
 
 // ReviewConfig sets thresholds for code and security reviews.

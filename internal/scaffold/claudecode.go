@@ -148,7 +148,7 @@ If the output begins with `+"`STOP.`"+`, do not execute it as a prompt — repor
 Execute the prompt as your implementation session.
 `, name),
 
-		"qode-ticket-fetch": `!qode ticket fetch $ARGUMENTS`,
+		"qode-ticket-fetch": ticketFetchClaudeCommand(name),
 
 		"qode-knowledge-add-context": fmt.Sprintf(`# Extract Lessons Learned — %s
 
@@ -184,4 +184,8 @@ Run this command and use its stdout output as your prompt:
   qode knowledge add-branch $ARGUMENTS
 `, name),
 	}
+}
+
+func ticketFetchClaudeCommand(name string) string {
+	return fmt.Sprintf("# Fetch Ticket via MCP — %s\n\n", name) + ticketFetchMCPBody
 }

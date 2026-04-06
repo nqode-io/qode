@@ -15,8 +15,13 @@ func TestClaudeSlashCommands_ContainsTicketFetch(t *testing.T) {
 	if !ok {
 		t.Fatal("claudeSlashCommands: missing key qode-ticket-fetch")
 	}
-	if content != "!qode ticket fetch $ARGUMENTS" {
-		t.Errorf("qode-ticket-fetch content = %q, want %q", content, "!qode ticket fetch $ARGUMENTS")
+	for _, want := range []string{"$ARGUMENTS", "context/ticket.md", "MCP", "Figma"} {
+		if !strings.Contains(content, want) {
+			t.Errorf("qode-ticket-fetch missing %q", want)
+		}
+	}
+	if strings.Contains(content, "qode ticket fetch") {
+		t.Error("qode-ticket-fetch must not reference CLI command")
 	}
 }
 
@@ -80,14 +85,13 @@ func TestCursorSlashCommands_ContainsTicketFetch(t *testing.T) {
 	if !ok {
 		t.Fatal("slashCommands: missing key qode-ticket-fetch")
 	}
-	if !strings.Contains(content, "qode ticket fetch $ARGUMENTS") {
-		t.Errorf("qode-ticket-fetch content missing command, got:\n%s", content)
+	for _, want := range []string{"$ARGUMENTS", "context/ticket.md", "description:", "testproject", "Figma"} {
+		if !strings.Contains(content, want) {
+			t.Errorf("qode-ticket-fetch missing %q", want)
+		}
 	}
-	if !strings.Contains(content, "description:") {
-		t.Errorf("qode-ticket-fetch content missing YAML frontmatter description, got:\n%s", content)
-	}
-	if !strings.Contains(content, "testproject") {
-		t.Errorf("qode-ticket-fetch content missing project name %q, got:\n%s", "testproject", content)
+	if strings.Contains(content, "qode ticket fetch") {
+		t.Error("qode-ticket-fetch must not reference CLI command")
 	}
 }
 
@@ -156,8 +160,11 @@ func TestSetupClaudeCode_WritesTicketFetchCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading qode-ticket-fetch.md: %v", err)
 	}
-	if string(data) != "!qode ticket fetch $ARGUMENTS" {
-		t.Errorf("qode-ticket-fetch.md content = %q, want %q", string(data), "!qode ticket fetch $ARGUMENTS")
+	content := string(data)
+	for _, want := range []string{"$ARGUMENTS", "context/ticket.md", "MCP"} {
+		if !strings.Contains(content, want) {
+			t.Errorf("qode-ticket-fetch.md missing %q", want)
+		}
 	}
 }
 
@@ -216,8 +223,10 @@ func TestSetupCursor_WritesTicketFetchCommand(t *testing.T) {
 		t.Fatalf("reading qode-ticket-fetch.mdc: %v", err)
 	}
 	content := string(data)
-	if !strings.Contains(content, "qode ticket fetch $ARGUMENTS") {
-		t.Errorf("qode-ticket-fetch.mdc missing command, got:\n%s", content)
+	for _, want := range []string{"$ARGUMENTS", "context/ticket.md", "description:", "MCP"} {
+		if !strings.Contains(content, want) {
+			t.Errorf("qode-ticket-fetch.mdc missing %q", want)
+		}
 	}
 }
 

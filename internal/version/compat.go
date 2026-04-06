@@ -81,7 +81,7 @@ func CheckCompatibility(binaryVersion, configVersion string) error {
 		return nil
 	}
 	return fmt.Errorf(
-		"qode binary (%s) is incompatible with this project's config (%s)\nRun 'qode init' to refresh your configuration, prompts, and IDE commands.",
+		"qode binary (%s) is incompatible with this project's config (%s)\nRun 'qode init' to refresh your configuration, prompts, and IDE commands",
 		trimBuild(binaryVersion),
 		trimBuild(configVersion),
 	)

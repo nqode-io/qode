@@ -93,7 +93,7 @@ func runInitExisting(root string) error {
 	fmt.Println()
 	fmt.Println("Next steps:")
 	fmt.Println("  1. Run 'qode branch create <name>' to start your first feature")
-	fmt.Println("  2. Fetch your ticket with 'qode ticket fetch <url>' or edit .qode/branches/<name>/context/ticket.md")
+	fmt.Println("  2. Fetch your ticket with /qode-ticket-fetch <url> (in IDE) or edit .qode/branches/<name>/context/ticket.md")
 	fmt.Println("  3. Use /qode-plan-refine in your IDE to begin requirements refinement")
 
 	return nil

@@ -103,13 +103,7 @@ If the output begins with `+"`STOP.`"+`, do not execute it as a prompt — repor
 Execute the prompt as your implementation session.
 `, name),
 
-		"qode-ticket-fetch": fmt.Sprintf(`---
-description: Fetch a ticket into branch context for %s
----
-
-Run the following command with the ticket URL provided after the slash command:
-  qode ticket fetch $ARGUMENTS
-`, name),
+		"qode-ticket-fetch": ticketFetchCursorCommand(name),
 
 		"qode-knowledge-add-context": fmt.Sprintf(`---
 description: Extract lessons learned from current session for %s
@@ -146,6 +140,10 @@ Run this command and use its stdout output as your prompt:
   qode knowledge add-branch $ARGUMENTS
 `, name),
 	}
+}
+
+func ticketFetchCursorCommand(name string) string {
+	return fmt.Sprintf("---\ndescription: Fetch a ticket into branch context for %s\n---\n\n", name) + ticketFetchMCPBody
 }
 
 func writeFile(path, content string) error {

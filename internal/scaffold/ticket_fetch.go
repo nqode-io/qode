@@ -1,11 +1,17 @@
-# Fetch Ticket via MCP — qode
+package scaffold
 
-Fetch the ticket at the URL or ID provided in $ARGUMENTS using your available MCP tools.
+// ticketFetchMCPBody is the shared body of the /qode-ticket-fetch slash command.
+// Only the IDE-specific header (Claude Code heading vs. Cursor frontmatter) differs
+// between IDEs — the body is identical and lives here so a single edit propagates
+// to all generated IDE command files.
+const ticketFetchMCPBody = `Fetch the ticket at the URL or ID provided in $ARGUMENTS using your available MCP tools.
 
 **Steps:**
 1. Use the MCP tool for the appropriate ticketing system (Jira, Linear, GitHub Issues,
    Notion, or Azure DevOps). Prefer the official MCP server for the system. If no MCP
-   server is available, then STOP IMMEDIATELY and inform the user that they need to configure an appropriate MCP server for their ticketing system or copy the ticket contents manually into the ticket.md file.
+   server is available, STOP IMMEDIATELY and inform the user that they need to configure
+   an appropriate MCP server for their ticketing system or copy the ticket contents
+   manually into the ticket.md file.
 2. Collect: title, description, all comments (with author names and timestamps), any
    linked resources, and attachment summaries.
 3. For each linked resource, record its URL and title. If an MCP server is configured
@@ -18,3 +24,4 @@ Fetch the ticket at the URL or ID provided in $ARGUMENTS using your available MC
    - context/ticket-comments.md — all comments in chronological order (omit if no comments)
    - context/ticket-links.md — linked resources with summaries or fetched content (omit if no links)
 5. Report a one-line summary: "Fetched: <title> — <N> comments, <M> links."
+`

@@ -22,20 +22,12 @@ knowledge:
   path: .qode/knowledge
 ```
 
-> **Re-running `qode init` regenerates `qode.yaml` with these defaults.** Any customisations you have made to `qode.yaml` (score thresholds, `scoring.strict`, `ticket_system`, etc.) will be reset. Re-add them after running `qode init`, or run it only when you want a clean reset.
+> **Re-running `qode init` regenerates `qode.yaml` with these defaults.** Any customisations you have made to `qode.yaml` (score thresholds, `scoring.strict`, etc.) will be reset. Re-add them after running `qode init`, or run it only when you want a clean reset.
 
 ## Full reference
 
 ```yaml
 qode_version: "0.1"          # written by qode init; informational
-
-ticket_system:
-  type: jira                 # jira | azure-devops | linear | github | notion | manual
-  url: https://company.atlassian.net
-  project_key: ENG
-  auth:
-    method: token
-    env_var: JIRA_API_TOKEN
 
 review:
   min_code_score: 10.0
@@ -61,17 +53,6 @@ knowledge:
 ### `qode_version`
 
 Written by `qode init`. Identifies the qode configuration format version. Currently informational; version enforcement is planned for a future release.
-
-### `ticket_system.type`
-
-| Value | Env vars required |
-|---|---|
-| `jira` | `JIRA_EMAIL`, `JIRA_API_TOKEN` |
-| `azure-devops` | `AZURE_DEVOPS_PAT` |
-| `linear` | `LINEAR_API_KEY` |
-| `github` | `GITHUB_TOKEN` (private repos only) |
-| `notion` | `NOTION_API_KEY` |
-| `manual` | None — edit `context/ticket.md` directly |
 
 ### `review.min_code_score` / `review.min_security_score`
 
