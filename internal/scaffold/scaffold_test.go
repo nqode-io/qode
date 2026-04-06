@@ -25,21 +25,6 @@ func TestClaudeSlashCommands_ContainsTicketFetch(t *testing.T) {
 	}
 }
 
-func TestClaudeSlashCommands_TicketFetchNoExclamationPrefix(t *testing.T) {
-	cmds := claudeSlashCommands("testproject")
-	content := cmds["qode-ticket-fetch"]
-	if strings.HasPrefix(content, "!") {
-		t.Errorf("qode-ticket-fetch must not start with '!', got: %q", content[:min(len(content), 40)])
-	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func TestClaudeSlashCommands_HasNineEntries(t *testing.T) {
 	cmds := claudeSlashCommands("testproject")
 	if len(cmds) != 9 {

@@ -143,28 +143,7 @@ Run this command and use its stdout output as your prompt:
 }
 
 func ticketFetchCursorCommand(name string) string {
-	return fmt.Sprintf(`---
-description: Fetch a ticket into branch context for %s
----
-
-Fetch the ticket at the URL or ID provided in $ARGUMENTS using your available MCP tools.
-
-**Steps:**
-1. Use the MCP tool for the appropriate ticketing system (Jira, Linear, GitHub Issues,
-   Notion, or Azure DevOps). Prefer the official MCP server for the system. If no MCP
-   server is available, open the URL in a browser tool and extract the content.
-2. Collect: title, description, all comments (with author names and timestamps), any
-   linked resources, and attachment summaries.
-3. For each linked resource, fetch its content using the appropriate MCP server if one
-   is configured — e.g. Figma (designs), Google Docs/Drive, SharePoint, Confluence,
-   Miro boards. If no MCP server is available for a linked resource, record its URL
-   and title only.
-4. Write the following files under context/, creating the directory if needed:
-   - context/ticket.md — title, description, metadata
-   - context/ticket-comments.md — all comments in chronological order (omit if no comments)
-   - context/ticket-links.md — linked resources with summaries or fetched content (omit if no links)
-5. Report a one-line summary: "Fetched: <title> — <N> comments, <M> links."
-`, name)
+	return fmt.Sprintf("---\ndescription: Fetch a ticket into branch context for %s\n---\n\n", name) + ticketFetchMCPBody
 }
 
 func writeFile(path, content string) error {

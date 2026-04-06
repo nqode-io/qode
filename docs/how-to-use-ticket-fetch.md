@@ -4,6 +4,23 @@ qode uses IDE-native MCP (Model Context Protocol) servers to fetch ticket conten
 
 Use the `/qode-ticket-fetch <url>` slash command in Cursor or Claude Code. The AI will call the appropriate MCP server and write structured output to your branch context folder.
 
+## Quick reference
+
+| Category | Service | MCP server / docs |
+|---|---|---|
+| **Git provider** | GitHub | [github.com/modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/github) |
+| **Ticketing** | Jira | [developer.atlassian.com/cloud/jira/platform/mcp](https://developer.atlassian.com/cloud/jira/platform/mcp) |
+| **Ticketing** | Linear | [linear.app → Settings → API → MCP Server](https://linear.app/settings/api) |
+| **Ticketing** | Azure DevOps | [github.com/microsoft/azure-devops-mcp](https://github.com/microsoft/azure-devops-mcp) |
+| **Ticketing** | Notion | [github.com/notionhq/notion-mcp-server](https://github.com/notionhq/notion-mcp-server) |
+| **Designs** | Figma | [figma.com → Settings → MCP Server](https://www.figma.com/developers/mcp) |
+| **Docs** | Google Docs / Drive | [github.com/modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/gdrive) |
+| **Docs** | SharePoint / OneDrive | [github.com/microsoft/sharepoint-mcp](https://github.com/microsoft/sharepoint-mcp) |
+| **Docs** | Confluence | [developer.atlassian.com/cloud/confluence/mcp](https://developer.atlassian.com/cloud/confluence/mcp) |
+| **Whiteboard** | Miro | [miro.com → Apps → Developers → MCP](https://developers.miro.com/docs/mcp) |
+
+Jump to the relevant section below for install commands and auth setup.
+
 ---
 
 ## Ticketing systems
