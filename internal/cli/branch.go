@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,13 +47,13 @@ func newBranchCreateCmd() *cobra.Command {
 			if len(args) > 1 {
 				base = args[1]
 			}
-			return runBranchCreate(name, base)
+			return runBranchCreate(os.Stdout, name, base)
 		},
 	}
 	return cmd
 }
 
-func runBranchCreate(name, base string) error {
+func runBranchCreate(out io.Writer, name, base string) error {
 	if len(base) > 0 && base[0] == '-' {
 		return fmt.Errorf("invalid base branch %q: must not start with '-'", base)
 	}
@@ -91,14 +92,14 @@ func runBranchCreate(name, base string) error {
 		}
 	}
 
-	fmt.Printf("Created branch: %s\n", name)
-	fmt.Printf("Context folder: %s\n", contextDir)
-	fmt.Println()
-	fmt.Println("Next steps:")
-	fmt.Printf("  1. Fetch ticket: /qode-ticket-fetch <url>  (in IDE)\n")
-	fmt.Printf("     Or paste into: %s/ticket.md\n", contextDir)
-	fmt.Printf("  2. Add mockups / designs to: %s/\n", contextDir)
-	fmt.Printf("  3. Run: qode plan refine\n")
+	fmt.Fprintf(out, "Created branch: %s\n", name)
+	fmt.Fprintf(out, "Context folder: %s\n", contextDir)
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Next steps:")
+	fmt.Fprintf(out, "  1. Fetch ticket: /qode-ticket-fetch <url>  (in IDE)\n")
+	fmt.Fprintf(out, "     Or paste into: %s/ticket.md\n", contextDir)
+	fmt.Fprintf(out, "  2. Add mockups / designs to: %s/\n", contextDir)
+	fmt.Fprintf(out, "  3. Run: qode plan refine\n")
 	return nil
 }
 
@@ -109,14 +110,14 @@ func newBranchRemoveCmd() *cobra.Command {
 		Short: "Remove branch context folder and delete git branch",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runBranchRemove(args[0], keepBranchCtx)
+			return runBranchRemove(os.Stdout, os.Stderr, args[0], keepBranchCtx)
 		},
 	}
 	cmd.Flags().BoolVar(&keepBranchCtx, "keep-branch-context", false, "keep the .qode/branches/ context folder")
 	return cmd
 }
 
-func runBranchRemove(name string, keepCtx bool) error {
+func runBranchRemove(out, errOut io.Writer, name string, keepCtx bool) error {
 	root, err := resolveRoot()
 	if err != nil {
 		return err
@@ -136,13 +137,13 @@ func runBranchRemove(name string, keepCtx bool) error {
 		if err := os.RemoveAll(branchDir); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("removing context: %w", err)
 		}
-		fmt.Printf("Removed context for branch: %s\n", name)
+		fmt.Fprintf(out, "Removed context for branch: %s\n", name)
 	}
 
 	if err := git.DeleteBranch(root, name); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not delete git branch: %v\n", err)
+		fmt.Fprintf(errOut, "Warning: could not delete git branch: %v\n", err)
 	} else {
-		fmt.Printf("Deleted git branch: %s\n", name)
+		fmt.Fprintf(out, "Deleted git branch: %s\n", name)
 	}
 	return nil
 }

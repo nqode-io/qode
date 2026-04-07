@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,12 +30,12 @@ func newKnowledgeListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List knowledge base files",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKnowledgeList()
+			return runKnowledgeList(os.Stdout)
 		},
 	}
 }
 
-func runKnowledgeList() error {
+func runKnowledgeList(out io.Writer) error {
 	root, err := resolveRoot()
 	if err != nil {
 		return err
@@ -48,12 +49,12 @@ func runKnowledgeList() error {
 		return err
 	}
 	if len(files) == 0 {
-		fmt.Println("Knowledge base is empty.")
-		fmt.Printf("Add files with: qode knowledge add <path>\n")
+		fmt.Fprintln(out, "Knowledge base is empty.")
+		fmt.Fprintf(out, "Add files with: qode knowledge add <path>\n")
 		return nil
 	}
 	for _, f := range files {
-		fmt.Println(f)
+		fmt.Fprintln(out, f)
 	}
 	return nil
 }
@@ -64,12 +65,12 @@ func newKnowledgeAddCmd() *cobra.Command {
 		Short: "Add a file to the knowledge base",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKnowledgeAdd(args[0])
+			return runKnowledgeAdd(os.Stdout, args[0])
 		},
 	}
 }
 
-func runKnowledgeAdd(src string) error {
+func runKnowledgeAdd(out io.Writer, src string) error {
 	root, err := resolveRoot()
 	if err != nil {
 		return err
@@ -89,7 +90,7 @@ func runKnowledgeAdd(src string) error {
 	if err := iokit.WriteFile(dest, data, 0644); err != nil {
 		return err
 	}
-	fmt.Printf("Added to knowledge base: %s\n", dest)
+	fmt.Fprintf(out, "Added to knowledge base: %s\n", dest)
 	return nil
 }
 
@@ -99,12 +100,12 @@ func newKnowledgeSearchCmd() *cobra.Command {
 		Short: "Search the knowledge base",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKnowledgeSearch(args[0])
+			return runKnowledgeSearch(os.Stdout, args[0])
 		},
 	}
 }
 
-func runKnowledgeSearch(query string) error {
+func runKnowledgeSearch(out io.Writer, query string) error {
 	root, err := resolveRoot()
 	if err != nil {
 		return err
@@ -118,11 +119,11 @@ func runKnowledgeSearch(query string) error {
 		return err
 	}
 	if len(results) == 0 {
-		fmt.Printf("No results for %q\n", query)
+		fmt.Fprintf(out, "No results for %q\n", query)
 		return nil
 	}
 	for _, r := range results {
-		fmt.Printf("%s: %s\n", r.File, r.Snippet)
+		fmt.Fprintf(out, "%s: %s\n", r.File, r.Snippet)
 	}
 	return nil
 }
@@ -137,21 +138,21 @@ func newKnowledgeAddBranchCmd() *cobra.Command {
 		Long:  "Reads branch artifacts (ticket, spec, reviews, diff) and writes a lesson extraction prompt to stdout.",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKnowledgeAddBranch(args, toFile)
+			return runKnowledgeAddBranch(os.Stdout, os.Stderr, args, toFile)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
 	return cmd
 }
 
-func runKnowledgeAddBranch(args []string, toFile bool) error {
+func runKnowledgeAddBranch(out, errOut io.Writer, args []string, toFile bool) error {
 	sess, err := loadSession()
 	if err != nil {
 		return err
 	}
 
 	branches := parseBranchArgs(args)
-	fmt.Fprintf(os.Stderr, "Extracting lessons from branches: %s\n", strings.Join(branches, ", "))
+	fmt.Fprintf(errOut, "Extracting lessons from branches: %s\n", strings.Join(branches, ", "))
 
 	data, err := buildBranchLessonData(sess.Root, sess.Engine, branches, sess.Branch)
 	if err != nil {
@@ -169,11 +170,11 @@ func runKnowledgeAddBranch(args []string, toFile bool) error {
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "Lesson extraction prompt saved to:\n  %s\n", promptPath)
+		fmt.Fprintf(errOut, "Lesson extraction prompt saved to:\n  %s\n", promptPath)
 		return nil
 	}
 
-	_, err = fmt.Print(p)
+	_, err = fmt.Fprint(out, p)
 	return err
 }
 

@@ -2,6 +2,8 @@ package cli
 
 import (
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/branchcontext"
@@ -16,15 +18,15 @@ func newWorkflowCmd() *cobra.Command {
 		Use:   "workflow",
 		Short: "Show or inspect the qode workflow",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runWorkflow()
+			return runWorkflow(os.Stdout)
 		},
 	}
 	cmd.AddCommand(newWorkflowShowCmd(), newWorkflowStatusCmd())
 	return cmd
 }
 
-func runWorkflow() error {
-	fmt.Print(workflowList)
+func runWorkflow(out io.Writer) error {
+	fmt.Fprint(out, workflowList)
 	return nil
 }
 
@@ -43,12 +45,12 @@ func newWorkflowStatusCmd() *cobra.Command {
 		Use:   "status",
 		Short: "Show live completion status for each workflow step",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runWorkflowStatus()
+			return runWorkflowStatus(os.Stdout)
 		},
 	}
 }
 
-func runWorkflowStatus() error {
+func runWorkflowStatus(out io.Writer) error {
 	sess, err := loadSession()
 	if err != nil {
 		return err
@@ -58,11 +60,11 @@ func runWorkflowStatus() error {
 
 	lines, upNext := buildStatusLines(sess.Context, sess.Config, diff)
 	for _, line := range lines {
-		fmt.Println(line)
+		fmt.Fprintln(out, line)
 	}
 	if upNext != "" {
-		fmt.Println()
-		fmt.Println("Up next:", upNext)
+		fmt.Fprintln(out)
+		fmt.Fprintln(out, "Up next:", upNext)
 	}
 	return nil
 }

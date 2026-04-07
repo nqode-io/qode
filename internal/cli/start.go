@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,7 +24,7 @@ func newStartCmd() *cobra.Command {
 The prompt is written to stdout for the LLM to execute directly.
 Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md for debugging.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runStart(toFile, force)
+			return runStart(os.Stdout, os.Stderr, toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
@@ -31,7 +32,7 @@ Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md fo
 	return cmd
 }
 
-func runStart(toFile, force bool) error {
+func runStart(out, errOut io.Writer, toFile, force bool) error {
 	sess, err := loadSession()
 	if err != nil {
 		return err
@@ -45,14 +46,14 @@ func runStart(toFile, force bool) error {
 			if sess.Config.Scoring.Strict {
 				return fmt.Errorf("%s", result.Message)
 			}
-			fmt.Printf("STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
+			fmt.Fprintf(out, "STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
 			return nil
 		}
 	}
 
 	if !sess.Context.HasSpec() {
-		fmt.Fprintln(os.Stderr, "No spec.md found.")
-		fmt.Fprintf(os.Stderr, "Run /qode-plan-spec first and save the output to:\n  %s/spec.md\n", sess.Context.ContextDir)
+		fmt.Fprintln(errOut, "No spec.md found.")
+		fmt.Fprintf(errOut, "Run /qode-plan-spec first and save the output to:\n  %s/spec.md\n", sess.Context.ContextDir)
 		return fmt.Errorf("no spec")
 	}
 
@@ -80,10 +81,10 @@ func runStart(toFile, force bool) error {
 		if err := writePromptToFile(outPath, p); err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "Implementation prompt saved to:\n  %s\n", outPath)
+		fmt.Fprintf(errOut, "Implementation prompt saved to:\n  %s\n", outPath)
 		return nil
 	}
 
-	_, err = fmt.Print(p)
+	_, err = fmt.Fprint(out, p)
 	return err
 }

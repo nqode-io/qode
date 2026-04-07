@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +13,7 @@ import (
 func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -37,7 +38,7 @@ func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 func TestRunInitExisting_CreatesDirs(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -52,7 +53,7 @@ func TestRunInitExisting_CreatesDirs(t *testing.T) {
 func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -77,7 +78,7 @@ func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -95,7 +96,7 @@ func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
 func TestRunInitExisting_NoCursorRules(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -108,7 +109,7 @@ func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 	dir := t.TempDir()
 
 	output := captureStdout(t, func() {
-		if err := runInitExisting(dir); err != nil {
+		if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 			t.Errorf("runInitExisting: %v", err)
 		}
 	})
@@ -123,7 +124,7 @@ func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -136,7 +137,7 @@ func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
 func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("first runInitExisting: %v", err)
 	}
 
@@ -148,7 +149,7 @@ func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 	}
 
 	// Second run must succeed and must not overwrite .qode/scoring.yaml.
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("second runInitExisting: %v", err)
 	}
 

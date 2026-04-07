@@ -86,7 +86,7 @@ func TestRunPlanSpec_GuardBlocked_NoAnalysis_Strict(t *testing.T) {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
 
-	err := runPlanSpec(false, false)
+	err := runPlanSpec(os.Stdout, os.Stderr, false, false)
 	if err == nil {
 		t.Fatal("expected error for missing analysis in strict mode")
 	}
@@ -106,7 +106,7 @@ func TestRunPlanSpec_GuardBlocked_NonStrict(t *testing.T) {
 	var output string
 	var runErr error
 	output = captureStdout(t, func() {
-		runErr = runPlanSpec(false, false)
+		runErr = runPlanSpec(os.Stdout, os.Stderr, false, false)
 	})
 
 	if runErr != nil {
@@ -129,7 +129,7 @@ func TestRunPlanSpec_GuardBlocked_Unscored(t *testing.T) {
 	writePlanFile(t, root, "test-branch", "refined-analysis.md",
 		"<!-- qode:iteration=1 -->\n# Analysis\nContent.")
 
-	err := runPlanSpec(false, false)
+	err := runPlanSpec(os.Stdout, os.Stderr, false, false)
 	if err == nil {
 		t.Fatal("expected error for unscored analysis in strict mode")
 	}
@@ -148,7 +148,7 @@ func TestRunPlanSpec_Force_SkipsGuard(t *testing.T) {
 
 	// No refined-analysis.md — guard would block, but force bypasses it.
 	// The hard-error ("no refined analysis") fires instead of the guard error.
-	err := runPlanSpec(false, true)
+	err := runPlanSpec(os.Stdout, os.Stderr, false, true)
 	if err == nil {
 		t.Fatal("expected hard error for missing analysis file")
 	}
@@ -173,7 +173,7 @@ func TestRunPlanSpec_Pass(t *testing.T) {
 	var output string
 	var runErr error
 	output = captureStdout(t, func() {
-		runErr = runPlanSpec(false, false)
+		runErr = runPlanSpec(os.Stdout, os.Stderr, false, false)
 	})
 
 	if runErr != nil {

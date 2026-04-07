@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -27,7 +28,7 @@ for Cursor and Claude Code.`,
 			if err != nil {
 				return err
 			}
-			return runInitExisting(root)
+			return runInitExisting(os.Stdout, root)
 		},
 	}
 	return cmd
@@ -36,7 +37,7 @@ for Cursor and Claude Code.`,
 // runInitExisting writes qode.yaml with defaults, creates .qode/ dirs, copies
 // prompt templates, and generates IDE configs. .qode/scoring.yaml is only
 // written on first run so user-customised rubrics are never overwritten.
-func runInitExisting(root string) error {
+func runInitExisting(out io.Writer, root string) error {
 	cfg := config.DefaultConfig()
 	cfg.QodeVersion = rootCmd.Version
 	if cfg.QodeVersion == "" {
@@ -54,7 +55,7 @@ func runInitExisting(root string) error {
 	if err := iokit.WriteFile(outPath, data, 0644); err != nil {
 		return fmt.Errorf("writing %s: %w", outPath, err)
 	}
-	fmt.Printf("Generated: %s\n", outPath)
+	fmt.Fprintf(out, "Generated: %s\n", outPath)
 
 	// Create .qode directory structure.
 	for _, dir := range []string{
@@ -78,7 +79,7 @@ func runInitExisting(root string) error {
 		if err := iokit.WriteFile(scoringPath, scoringData, 0644); err != nil {
 			return fmt.Errorf("writing %s: %w", scoringPath, err)
 		}
-		fmt.Printf("Generated: %s\n", scoringPath)
+		fmt.Fprintf(out, "Generated: %s\n", scoringPath)
 	}
 
 	// Copy embedded prompt templates.
@@ -91,11 +92,11 @@ func runInitExisting(root string) error {
 		return fmt.Errorf("setting up IDE configs: %w", err)
 	}
 
-	fmt.Println()
-	fmt.Println("Next steps:")
-	fmt.Println("  1. Run 'qode branch create <name>' to start your first feature")
-	fmt.Println("  2. Fetch your ticket with /qode-ticket-fetch <url> (in IDE) or edit .qode/branches/<name>/context/ticket.md")
-	fmt.Println("  3. Use /qode-plan-refine in your IDE to begin requirements refinement")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Next steps:")
+	fmt.Fprintln(out, "  1. Run 'qode branch create <name>' to start your first feature")
+	fmt.Fprintln(out, "  2. Fetch your ticket with /qode-ticket-fetch <url> (in IDE) or edit .qode/branches/<name>/context/ticket.md")
+	fmt.Fprintln(out, "  3. Use /qode-plan-refine in your IDE to begin requirements refinement")
 
 	return nil
 }

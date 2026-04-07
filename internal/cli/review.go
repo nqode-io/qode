@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,7 +30,7 @@ func newReviewCodeCmd() *cobra.Command {
 		Use:   "code",
 		Short: "Generate a code review prompt for the current changes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runReview("code", toFile, force)
+			return runReview(os.Stdout, os.Stderr, "code", toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
@@ -44,7 +45,7 @@ func newReviewSecurityCmd() *cobra.Command {
 		Use:   "security",
 		Short: "Generate a security review prompt for the current changes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runReview("security", toFile, force)
+			return runReview(os.Stdout, os.Stderr, "security", toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
@@ -52,7 +53,7 @@ func newReviewSecurityCmd() *cobra.Command {
 	return cmd
 }
 
-func runReview(kind string, toFile, force bool) error {
+func runReview(out, errOut io.Writer, kind string, toFile, force bool) error {
 	sess, err := loadSession()
 	if err != nil {
 		return err
@@ -69,7 +70,7 @@ func runReview(kind string, toFile, force bool) error {
 		if sess.Config.Scoring.Strict {
 			return fmt.Errorf("no changes detected: commit code first before running a review")
 		}
-		fmt.Fprintln(os.Stderr, "No changes detected. Commit some code first.")
+		fmt.Fprintln(errOut, "No changes detected. Commit some code first.")
 		return nil
 	}
 
@@ -102,11 +103,11 @@ func runReview(kind string, toFile, force bool) error {
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "%s review prompt saved to:\n  %s\n", capitalize(kind), promptPath)
+		fmt.Fprintf(errOut, "%s review prompt saved to:\n  %s\n", capitalize(kind), promptPath)
 		return nil
 	}
 
-	_, err = fmt.Print(p)
+	_, err = fmt.Fprint(out, p)
 	return err
 }
 
