@@ -47,6 +47,10 @@ func Load(root string) (*Config, error) {
 		}
 	}
 
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid qode config: %w", err)
+	}
+
 	return &cfg, nil
 }
 
