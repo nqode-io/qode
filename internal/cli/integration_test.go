@@ -102,8 +102,9 @@ func setupProject(t *testing.T, branch string, opts ...setupOption) string {
 // the already-configured project root and captures stdout.
 //
 // It sets rootCmd.Args so the full cobra hierarchy is exercised, then calls
-// rootCmd.Execute(). CLI handlers write to os.Stdout via the io.Writer parameter,
-// so captureStdout redirects correctly.
+// rootCmd.Execute(). captureStdout replaces os.Stdout before Execute() is called;
+// each cobra RunE closure passes os.Stdout (evaluated at call time, after replacement)
+// to its run function, so output is captured correctly.
 func runCommand(t *testing.T, args ...string) (stdout string, err error) {
 	t.Helper()
 	var runErr error

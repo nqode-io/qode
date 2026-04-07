@@ -1,10 +1,10 @@
 # Code Review — qode / refactoring-and-code-cleanup
 
-> **Incident pre-mortem:** The scaffold templates shipped. On the next `qode init`, 1,500 teams regenerated their IDE slash commands — and every single one came out blank, because the template engine resolved `.IDE` to an empty string and both branches of every `{{if eq .IDE "cursor"}}` block produced nothing useful. The Cursor commands had no frontmatter; the Claude commands had no heading. Developers assumed qode was broken and filed issues. The fix was a one-liner in `SetupClaudeCode`/`SetupCursor`, but nobody caught it because the tests only checked that files were written, not that their content was IDE-correct.
+> **Incident pre-mortem:** The scaffold template migration shipped. A dev on a shared workstation runs `qode plan refine` on a feature branch. A teammate opens `.qode/branches/feat-login/.refine-prompt.md` and reads the confidential ticket spec for the unreleased feature. Nobody noticed: the file was always 0600 before, now it's 0644. The directory went from 0700 to 0755. The content was already there — just newly readable.
 >
 > Now read the diff. Did that ship?
 
-It did not — `data.IDE` is set to `"claude"` or `"cursor"` explicitly before the loop in each Setup function. The pre-mortem scenario is ruled out. The review documents what was actually found.
+It did. `writePromptToFile` now calls `iokit.AtomicWrite(path, []byte(content), 0644)`. The old code used `os.CreateTemp` (implicit 0600, no chmod) inside a 0700 directory. The diff file in `runReview` explicitly keeps 0600 — the inconsistency confirms this was unintentional.
 
 ---
 
@@ -12,9 +12,13 @@ It did not — `data.IDE` is set to `"claude"` or `"cursor"` explicitly before t
 
 - `internal/branchcontext/context.go` (renamed from `internal/context/context.go`)
 - `internal/cli/session.go` (new), `util.go` (new)
-- `internal/cli/branch.go`, `help.go`, `init.go`, `plan.go`, `review.go`, `start.go`, `knowledge_cmd.go`
-- `internal/cli/integration_test.go` (new), `init_test.go`, `plan_test.go`, `review_test.go`
-- `internal/config/validate.go` (new), `validate_test.go` (new)
+- `internal/cli/branch.go`, `branch_test.go`
+- `internal/cli/help.go`, `init.go`, `init_test.go`
+- `internal/cli/plan.go`, `plan_test.go`
+- `internal/cli/review.go`, `review_test.go`
+- `internal/cli/start.go`, `knowledge_cmd.go`
+- `internal/cli/integration_test.go` (new), `root.go`
+- `internal/config/validate.go` (new), `validate_test.go` (new), `config.go`, `defaults.go`
 - `internal/iokit/iokit.go` (new), `iokit_test.go` (new)
 - `internal/log/log.go` (new)
 - `internal/prompt/renderer.go` (new), `engine.go`
@@ -29,16 +33,25 @@ It did not — `data.IDE` is set to `"claude"` or `"cursor"` explicitly before t
 ## Assumptions, Unverified Invariants, and Silent Failure Points
 
 **What the code assumes:**
-- `flagRoot`, `flagStrict`, and `rootCmd` are never accessed concurrently during integration tests.
-- `loadSession()` callers always need branch, context, and engine (eager loading).
-- The `kind` parameter to `runReview` is always "code" or "security".
-- `os.CreateTemp` + `Chmod` + `Rename` is atomic enough for prompt and diff files.
-- After `qode init`, users will re-run `qode init` to pick up updated scaffold commands.
 
-**Where it can fail silently:**
-- `runReview`'s `switch kind` has no default: unknown kind writes an empty review file with no error.
-- `EnsureDir` returns `os.MkdirAll` errors without explicit path wrapping (the error string from `os.MkdirAll` does include the path, so diagnostic value is retained, but callers that don't wrap may lose context).
-- `runKnowledgeAddBranch` logs a `log.Warn` when a branch context fails to load, then continues — the resulting prompt could be incomplete with no indication to the caller.
+- `loadSession()` callers always need all five fields (root, config, branch, context, engine). No lazy loading — commands that only need config still pay the full session init cost.
+- `flagStrict`, `flagRoot`, and `rootCmd` are never accessed concurrently during tests; the cleanup (`t.Cleanup`) restores them sequentially.
+- `os.Stdout` in cobra `RunE` closures is evaluated at call time, not captured at function definition. `captureStdout` in integration tests relies on this.
+- Prompt files (`.refine-prompt.md`, etc.) need no stronger access control than the project directory they live in.
+- `.qode/prompts/scaffold/` is always deleted at the end of `runInitExisting`, so the local-override-first strategy in the prompt engine never picks them up on subsequent runs.
+
+**Verified as safe:**
+
+- `branchcontext.Load()` uses `iokit.ReadFileOrString` throughout — safe when the context dir or its files don't exist.
+- `ParseIterationFromOutput` previously silenced write errors (`_ = os.WriteFile`); now they propagate. Correct.
+- `runReview` explicitly calls `EnsureContextDir` after the diff is fetched to handle the no-`branch-create` path. The comment explains why.
+- Integration test cleanup resets `flagRoot`, `flagStrict`, and `rootCmd.SetArgs(nil)`.
+- `runReview` switch has a `default` case returning an explicit error for unknown kind.
+- `stubName` (not `name`) is used in the stubs loop — no shadowing of the branch name parameter.
+- All `plan_test.go` tests that were using `captureStdout` now use `bytes.Buffer` or `io.Discard`.
+- `EnsureDir` wraps the `os.MkdirAll` error with the path: `fmt.Errorf("ensure dir %s: %w", path, err)`.
+- `AtomicWrite` sequences correctly: write → close → chmod → rename; defer removes the temp on failure after a successful rename the Remove is a no-op (file moved), error silently swallowed, which is correct.
+- Scaffold `.IDE` field is always set to `"claude"` or `"cursor"` by the callers before rendering.
 
 ---
 
@@ -48,128 +61,109 @@ It did not — `data.IDE` is set to `"claude"` or `"cursor"` explicitly before t
 
 ### Medium
 
-**1. Integration tests mutate global state without complete cleanup**
+#### 1. Prompt file permissions regressed from 0600 → 0644 and directory from 0700 → 0755
 
 - **Severity:** Medium
-- **File:** [internal/cli/integration_test.go](internal/cli/integration_test.go#L895-L898)
-- **Issue:** `flagRoot`, `flagStrict`, and `rootCmd.SetArgs()` are package-level state mutated per test. The `t.Cleanup` restores `flagRoot` and `flagStrict` but does **not** reset `rootCmd.Args`. After each `rootCmd.Execute()`, the cobra command retains the args from the previous `SetArgs(args)` call. If a test fails between `SetArgs` and `Execute`, the next test inherits stale args.
-- **Suggestion:**
+- **File:** [internal/iokit/iokit.go:73-93](internal/iokit/iokit.go), [internal/cli/util.go:22-26](internal/cli/util.go)
+- **Issue:** `writePromptToFile` now calls `iokit.AtomicWrite(path, []byte(content), 0644)`. `AtomicWrite` calls `EnsureDir` (0755) before `os.CreateTemp` + `os.Chmod(tmp.Name(), 0644)` + `Rename`. The old `writePromptToFile` created the directory at 0700 and relied on `os.CreateTemp`'s implicit 0600 for the file, so final files were 0600 in a 0700 directory. Prompt files contain rendered ticket content, specs, and code snippets. The diff file in `runReview` explicitly keeps `0600` (`iokit.WriteFile(diffPath, []byte(diff), 0600)`), confirming the author was aware of permissions — making the prompt file change appear unintentional.
+- **Suggestion:** Either change `writePromptToFile` to use `0600`, or introduce a separate `AtomicWritePrivate` that applies 0600 and uses 0700 for the directory:
+
   ```go
-  t.Cleanup(func() {
-      flagRoot = ""
-      flagStrict = false
-      rootCmd.SetArgs(nil)  // add this
-  })
-  ```
-
----
-
-**2. `plan_test.go` partially bypasses the `io.Writer` refactoring**
-
-- **Severity:** Medium
-- **File:** [internal/cli/plan_test.go](internal/cli/plan_test.go#L1549-L1587)
-- **Issue:** Several `runPlanSpec` tests still pass `os.Stdout`/`os.Stderr` and use `captureStdout()` (OS-level fd redirection). The `init_test.go` tests were properly updated to pass `bytes.Buffer`. These are inconsistent. The `captureStdout` path is fragile: if the function writes to the injected `io.Writer` instead of `os.Stdout` (as it now does), the capture would miss output but the test would still pass. This was verified: `runPlanSpec(os.Stdout, ...)` + `captureStdout` works only because the OS stdout fd is redirected — it's fragile and defeats the purpose of the refactoring.
-- **Suggestion:** Update plan tests to use `bytes.Buffer` directly:
-  ```go
-  var buf bytes.Buffer
-  err := runPlanSpec(&buf, io.Discard, false, false)
-  output := buf.String()
-  ```
-
----
-
-**3. `context.Load()` no longer creates the context subdirectory**
-
-- **Severity:** Medium
-- **File:** [internal/branchcontext/context.go](internal/branchcontext/context.go)
-- **Issue:** The old `Load()` called `os.MkdirAll(ctxSubDir, 0755)` as a side effect, ensuring the context dir always existed. The new code removes this; `EnsureContextDir` is only called from `runReview`. Commands `plan refine`, `plan spec`, `plan judge`, `start`, and `knowledge add-branch` no longer guarantee the context subdirectory exists. File reads are safe (handled by `ReadFileOrString`). The impact is on non-canonical setups where the user manually initialises a branch directory without running `branch create` or `review`: the `context/` subdirectory and its stubs (`ticket.md`, `notes.md`) are never created.
-- **What was verified:** `branch create` still calls `iokit.EnsureDir(contextDir)` and writes stubs. The canonical path is safe.
-- **Suggestion:** Add a comment in `runReview` explaining the explicit call to `EnsureContextDir`, and document in `Load()` that it no longer creates directories.
-
----
-
-**4. `EnsureDir` errors lack explicit path wrapping**
-
-- **Severity:** Medium
-- **File:** [internal/iokit/iokit.go](internal/iokit/iokit.go#L418-L420)
-- **Issue:** `EnsureDir` returns `os.MkdirAll`'s error directly. `os.MkdirAll` does include the path in its error string (e.g., `mkdir /path: permission denied`), so diagnostic value is preserved in the happy-path error chain. However, `EnsureDir` is public, and callers that don't add their own wrapping will produce errors without layered context. Callers inside `WriteFile` add wrapping ("write %s: %w"), but the dir-creation failure inside `WriteFile` loses its path context since `EnsureDir`'s error is returned unwrapped.
-- **Suggestion:**
-  ```go
-  func EnsureDir(path string) error {
-      if err := os.MkdirAll(path, 0755); err != nil {
-          return fmt.Errorf("ensure dir %s: %w", path, err)
-      }
-      return nil
+  func writePromptToFile(path, content string) error {
+      return iokit.AtomicWrite(path, []byte(content), 0600)
   }
   ```
+
+  And in `AtomicWrite` (or a new variant), preserve the directory permission that existed before:
+
+  ```go
+  if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil { ... }
+  ```
+
+---
+
+#### 2. `integration_test.go:runCommand` captures output via a fragile `os.Stdout` replacement
+
+- **Severity:** Medium
+- **File:** [internal/cli/integration_test.go:1062-1070](internal/cli/integration_test.go)
+- **Issue:** `runCommand` calls `captureStdout(t, func() { rootCmd.Execute() })`. The cobra `RunE` handlers pass `os.Stdout` as the writer: `return runPlanRefine(os.Stdout, os.Stderr, ...)`. This only works because `os.Stdout` is the global `*os.File` variable evaluated at the time `RunE` executes inside `captureStdout`'s redirection scope. The comment says "CLI handlers write to os.Stdout via the io.Writer parameter, so captureStdout redirects correctly" — this misattributes the mechanism. The redirection works because `os.Stdout` is lazily evaluated at call time, not because of the `io.Writer` parameter. If any future handler stores `os.Stdout` in a local variable before `captureStdout` redirects it (e.g., middleware), the capture silently produces empty output. The test `if out == ""` guard would catch the breakage, but the root cause would be non-obvious.
+- **Suggestion:** Fix the comment, and consider passing a writer through cobra's `SetOut`:
+
+  ```go
+  // captureStdout works here because os.Stdout is evaluated inside captureStdout's
+  // redirection scope, not at cobra registration time. This is fragile.
+  ```
+
+  Long-term, cobra supports `cmd.SetOut(writer)` and `cmd.OutOrStdout()` — using that would make capture deterministic.
 
 ---
 
 ### Low
 
-**5. `runReview` silently no-ops on unknown `kind`**
+#### 3. No compile-time interface guard for `*Engine` implementing `Renderer`
 
 - **Severity:** Low
-- **File:** [internal/cli/review.go](internal/cli/review.go#L1695-L1702)
-- **Issue:** The `switch kind` has no `default` branch. If `kind` is neither "code" nor "security", `p` remains `""`, no error is returned, and an empty file is written. Both callers pass hardcoded strings so this cannot happen today. But the function accepts a string parameter and the implicit contract is invisible.
-- **Suggestion:**
+- **File:** [internal/prompt/renderer.go](internal/prompt/renderer.go)
+- **Issue:** `Renderer` is the central interface used across `plan`, `review`, `scaffold`, and `knowledge` packages. If `Engine` ever drops or renames `Render` or `ProjectName`, the compiler will not catch it until something passes `*Engine` where `Renderer` is expected. In a test-heavy codebase with mock implementations, interface drift is a real risk.
+- **Suggestion:** Add to `renderer.go` or `engine.go`:
+
   ```go
-  default:
-      return fmt.Errorf("unknown review kind %q", kind)
+  var _ Renderer = (*Engine)(nil)
   ```
 
 ---
 
-**6. Variable shadowing: `name` in `runBranchCreate`**
+#### 4. `internal/log` package has no tests
 
 - **Severity:** Low
-- **File:** [internal/cli/branch.go](internal/cli/branch.go#L367)
-- **Issue:** `for name, content := range stubs` shadows the function parameter `name` (branch name). No bug exists because `branchDir`/`contextDir` are resolved before the loop. But a future reader could be misled.
-- **Suggestion:**
+- **File:** [internal/log/log.go](internal/log/log.go)
+- **Issue:** `Init()` parses `QODE_LOG_LEVEL` and sets the package-level `logger`. Invalid values (e.g., `"verbose"`, `"trace"`) silently fall through to the default `slog.LevelInfo`. There are no tests asserting: (a) valid log level strings produce the correct handler level; (b) invalid strings fall back to INFO without panicking; (c) uninitialized logger (before `Init()`) works safely. Functions calling `log.Warn` in tests (e.g., `buildBranchLessonData` when a branch context is missing) will write to the default `slog` handler, producing noisy test output.
+- **Suggestion:** Add a `TestInit` in `log_test.go` that sets `QODE_LOG_LEVEL` and verifies the handler level. Consider accepting the level as a parameter to `Init` to make it testable without env var mutation.
+
+---
+
+#### 5. `TestRunBranchCreate_OutputMentionsBranchName` has a dead assignment
+
+- **Severity:** Low
+- **File:** [internal/cli/branch_test.go:532-533](internal/cli/branch_test.go)
+- **Issue:** `root := setupBranchTestRoot(t)` followed immediately by `_ = root`. The return value is unused; the side effect (setting `flagRoot`) is why `setupBranchTestRoot` is called. This is a misleading pattern: a reader wonders why `root` was captured. It also means the test doesn't assert that the output contains a path relative to `root` — a stronger check that was available.
+- **Suggestion:** Either remove the return value capture entirely if the side effect is all that's needed, or use `root` in a path assertion:
+
   ```go
-  for stubName, content := range stubs {
-      p := filepath.Join(contextDir, stubName)
+  root := setupBranchTestRoot(t)
+  // ... after runBranchCreate:
+  if !strings.Contains(out, root) {
+      t.Errorf("expected output to contain root path, got: %q", out)
+  }
   ```
 
 ---
 
-**7. No unit tests for `runBranchCreate` / `runBranchRemove`**
+### Nit
 
-- **Severity:** Low
-- **File:** [internal/cli/branch.go](internal/cli/branch.go)
-- **Issue:** Both functions were extracted from cobra closures to enable unit testing — the primary motivation for the `io.Writer` refactoring. Neither has a corresponding test. The `keepCtx` logic in `runBranchRemove` (merging flag with config) is particularly worth covering.
-- **Suggestion:** Add tests using `io.Discard` and `t.TempDir()`:
-  ```go
-  func TestRunBranchRemove_KeepCtxFromConfig(t *testing.T) { ... }
-  func TestRunBranchRemove_KeepCtxFromFlag(t *testing.T) { ... }
-  ```
-
----
-
-**8. `log.Logger` is a mutable exported var — no documented thread-safety**
-
-- **Severity:** Low
-- **File:** [internal/log/log.go](internal/log/log.go#L13-L14)
-- **Issue:** `Logger` is exported and reassigned in `Init()`. In practice, `Init()` is called once at program start before goroutines, so there is no race. But the exported var can be accessed externally (e.g., from tests calling log functions before/after Init). No synchronisation or documentation exists.
-- **Suggestion:** Make `Logger` unexported and expose only the package-level helper functions, or document the single-init constraint explicitly.
-
----
-
-### Nits
-
-**9. Scaffold templates are copied then immediately deleted — worth a comment**
+#### 6. Integration test helper `withQodeYAML` bypasses `iokit.WriteFile`
 
 - **Severity:** Nit
-- **File:** [internal/cli/init.go](internal/cli/init.go#L651-L657)
-- **Issue:** `copyEmbeddedTemplates` writes scaffold templates to `.qode/prompts/scaffold/`, `scaffold.Setup` renders them, then they are deleted via `os.RemoveAll`. The round-trip is necessary (local-override-first strategy) but non-obvious.
-- **Suggestion:** Add an inline comment explaining why deletion is correct.
+- **File:** [internal/cli/integration_test.go:998-1002](internal/cli/integration_test.go)
+- **Issue:** `withQodeYAML` uses `os.WriteFile` directly while all production code and the other helpers (`withTicket`, `withRefinedAnalysis`) use `iokit.WriteFile`. The inconsistency is harmless here (parent dir is always a `t.TempDir()` that exists) but breaks the convention established by the refactoring.
+- **Suggestion:**
 
-**10. `TestSetupClaudeCode_WritesTicketFetchCommand` checks for "Figma" — fragile sentinel**
+  ```go
+  if err := iokit.WriteFile(filepath.Join(root, "qode.yaml"), []byte(content), 0644); err != nil {
+  ```
+
+#### 7. `captureStdout` mechanism deserves a doc comment in the integration test
 
 - **Severity:** Nit
-- **File:** [internal/scaffold/scaffold_test.go](internal/scaffold/scaffold_test.go#L3813-L3815)
-- **Issue:** The test asserts `"Figma"` is in the rendered ticket-fetch command. This string lives in the embedded template, not in test code. If the template reference to Figma is updated, the test breaks with an opaque assertion failure rather than a meaningful test name.
-- **Suggestion:** Either remove the "Figma" check (structural checks like `"MCP"` and `"$ARGUMENTS"` are sufficient) or add an inline comment explaining the purpose.
+- **File:** [internal/cli/integration_test.go:1058-1070](internal/cli/integration_test.go)
+- **Issue:** The comment "CLI handlers write to os.Stdout via the io.Writer parameter, so captureStdout redirects correctly" is inaccurate (see Medium #2). Without a correct explanation, the next developer maintaining `runCommand` will either perpetuate the misunderstanding or break the capture.
+- **Suggestion:** Replace the comment with a precise one:
+
+  ```go
+  // captureStdout replaces os.Stdout before Execute() is called. Each RunE
+  // closure passes os.Stdout (evaluated at call time, after replacement) to
+  // its run function, so output is captured correctly.
+  ```
 
 ---
 
@@ -179,19 +173,19 @@ It did not — `data.IDE` is set to `"claude"` or `"cursor"` explicitly before t
 |----------|-------|
 | Critical | 0 |
 | High | 0 |
-| Medium | 4 |
-| Low | 4 |
+| Medium | 2 |
+| Low | 3 |
 | Nit | 2 |
 
-**Overall assessment:** The refactoring achieves its goals cleanly. The `internal/context` → `internal/branchcontext` rename eliminates stdlib shadowing. The `io.Writer` injection makes functions unit-testable. The `iokit` package consolidates repeated OS primitives correctly. The `Session` struct removes copy-paste boilerplate across six command handlers. The `config.Validate()` addition is well-tested and catches bad YAML at load time. The scaffold template extraction from Go string literals to `.md.tmpl` files eliminates duplicate content maintenance across two IDE generators.
+**Overall assessment:** This is a disciplined refactoring. The `internal/context` → `internal/branchcontext` rename eliminates a real stdlib collision hazard. The `io.Writer` injection is applied consistently across all six command handlers and their tests. The `Session` struct removes identical five-line boilerplate from every command. `iokit` consolidates repeated OS primitives correctly — `AtomicWrite` handles the failure path and temp cleanup properly. `config.Validate()` surfaces bad YAML at load time with field-level error messages and tests covering all paths. `ParseIterationFromOutput` now propagates write errors that were previously silenced. The scaffold template extraction from Go string literals to `.md.tmpl` files eliminates duplicated content between Cursor and Claude Code generators.
 
-The plan_test.go inconsistency (Medium #2) is the most important corrective action: the refactoring's testability goal was to avoid OS-level stdout capture, and the plan tests still use it. The integration test global state (Medium #1) is a latent brittleness worth addressing before the test suite grows.
+The permissions regression (Medium #1) is the most important fix before merging — prompt files contain project-sensitive content and the intentional 0700/0600 posture from the old code was deliberately protective. The integration test stdout capture assumption (Medium #2) is correct today but worth a comment and a longer-term fix.
 
 **Top 3 most important things to fix before merging:**
 
-1. **Medium #2 — Update `plan_test.go` to use `bytes.Buffer`** — the `io.Writer` injection was the primary stated goal; leaving these tests on `captureStdout` defeats the purpose.
-2. **Medium #1 — Add `rootCmd.SetArgs(nil)` to integration test cleanup** — the global `rootCmd` state is not fully restored between tests.
-3. **Low #7 — Add unit tests for `runBranchCreate` / `runBranchRemove`** — these were extracted specifically to enable testing; adding coverage completes the refactoring's intent.
+1. **Medium #1 — Restore 0600/0700 permissions for prompt files** — prompt content (tickets, specs, AI analysis) changed from owner-only to world-readable. The diff file in `runReview` explicitly uses 0600, confirming the intent was to keep these private.
+2. **Medium #2 — Fix the misleading comment in `runCommand`** — the explanation of why `captureStdout` works is incorrect and will mislead future maintainers.
+3. **Low #3 — Add compile-time interface guard for `*Engine`** — `Renderer` is the central interface; interface drift will only surface at use-site, not at the interface definition.
 
 ---
 
@@ -199,14 +193,14 @@ The plan_test.go inconsistency (Medium #2) is the most important corrective acti
 
 | Dimension | Score | What you verified (not what you assumed) |
 |-----------|-------|------------------------------------------|
-| Correctness (0–3) | 3 | Traced `context.Load()` dir-creation removal through all callers; confirmed `branch create` still creates context dir; confirmed `iokit.WriteFile` creates parent dirs via `EnsureDir`; verified `AtomicWrite` temp-file lifecycle (chmod-before-rename, cleanup-on-failure deferred); confirmed `kind` fallthrough cannot happen with current callers; verified `flagStrict` mutation only affects in-memory Config |
-| CLI Contract (0–2) | 2 | Confirmed prompts go to the `out` writer (stdout), status messages to `errOut` (stderr); confirmed `--strict` is PersistentFlag applied correctly in plan/review/start; confirmed `--force` bypass paths are preserved in all three commands; confirmed `STOP.` output goes to `out` not `errOut` |
-| Go Idioms & Code Quality (0–2) | 1.5 | `Renderer` interface is idiomatic; `Session` struct is clean; `branchcontext` naming is unambiguous; `iokit` functions are correctly sized; variable shadowing of `name` in branch loop is a real smell; `EnsureDir` lacks defensive error wrapping; `runReview` switch has no default |
-| Error Handling & UX (0–2) | 1.5 | Previously swallowed errors in `ParseIterationFromOutput` now propagate correctly; `config.Validate()` surfaces bad YAML at load time with field-level messages; `EnsureDir` errors lack layered path context; `runReview` unknown kind silently writes empty file |
-| Test Coverage (0–2) | 1.5 | `iokit` tests are thorough (7 cases including idempotency and permissions); `config.Validate` tests cover all error paths including multi-error accumulation; integration tests exercise full cobra command path; plan tests inconsistently bypass io.Writer injection; `runBranchCreate`/`runBranchRemove` have no unit tests |
-| Template Safety (0–1) | 1 | Templates use `text/template` (correct for markdown); conditionals are simple equality checks on a controlled field; no user-controlled data reaches template execution; `.IDE` is always "claude" or "cursor" as set by callers |
+| Correctness (0–3) | 2.8 | Traced `branchcontext.Load()` through all callers — safe on missing dirs via `ReadFileOrString`; confirmed `EnsureContextDir` is called in `runReview` for non-canonical setups; verified `AtomicWrite` sequences (write → close → chmod → rename, defer cleanup is a no-op after successful rename); confirmed `ParseIterationFromOutput` now propagates errors; confirmed `runReview` switch has default. Deduction: prompt file permissions regression (0600 → 0644) is a behavioral change not covered by any test or comment |
+| CLI Contract (0–2) | 2.0 | Verified stdout → `out` writer, stderr → `errOut` writer across plan/review/start/knowledge/branch; `STOP.` messages go to `out`; `--strict` is a PersistentFlag applied after `loadSession()` (in-memory only, no re-validation); `--force` bypass preserved in plan spec, start, review; `EnsureContextDir` called before diff write in review |
+| Go Idioms & Code Quality (0–2) | 1.8 | `Renderer` interface is idiomatic; `Session` struct eliminates boilerplate; `iokit` functions correctly sized; `EnsureDir` wraps errors with path; `branchcontext` naming avoids stdlib collision; `stubName` used correctly (no shadowing). Deductions: no compile-time `*Engine` implements `Renderer` guard; `_ = root` dead assignment in one test |
+| Error Handling & UX (0–2) | 1.8 | `ParseIterationFromOutput` write errors now propagate; `config.Validate()` surfaces bad YAML at load with all violations collected; `EnsureDir` path-wrapped errors; `runReview` unknown kind returns explicit error; `runKnowledgeAddBranch` logs warning on missing branch context and continues. Deduction: permission change on prompt files has no test and no comment explaining the intentionality |
+| Test Coverage (0–2) | 1.7 | `iokit` tests cover all cases including idempotency, permissions, and temp-file cleanup; `config.Validate` tests cover every validation path and multi-error accumulation; `branch_test.go` adds unit tests for extracted `runBranchCreate` / `runBranchRemove`; integration tests exercise full cobra command path with build tag. Gaps: `log` package entirely untested; `runWorkflow` extracted function untested; integration test's `captureStdout` relies on a fragile assumption |
+| Template Safety (0–1) | 1.0 | `.IDE` is always `"claude"` or `"cursor"` set by callers before rendering; conditionals are simple equality checks; no user-controlled data reaches template execution; scaffold templates are well-formed Go templates; `{{if eq .IDE "cursor"}}` / `{{else}}` branches verified to produce correct output for both IDE values |
 
-**Total Score: 10.5/12**
+**Total Score: 11.1/12**
 **Minimum passing score: 10/12** ✅
 
-What makes this better than most shipped refactors: the `io.Writer` injection is disciplined — every function that writes output has been updated. `iokit.AtomicWrite` is correct (chmod before rename, defer cleanup-on-failure). The scaffold template extraction eliminates duplicate content maintenance with zero complexity added to the render path. `config.Validate()` closes a gap where malformed rubric configs would silently produce zero scores at review time. The `Renderer` interface allows plan/review packages to be tested without a full engine setup.
+What makes this better than most shipped refactors: the `io.Writer` injection is applied completely and consistently — every function that emits output was updated, and the corresponding tests were updated to use `bytes.Buffer` rather than OS-level stdout capture. The `iokit.AtomicWrite` failure path is correct (the deferred `Remove` is a no-op after rename, not a resource leak). `config.Validate()` closes a gap where malformed rubric configs would silently produce 0/0 scores at review time. The `Renderer` interface decouples plan, review, and scaffold packages from the concrete engine, enabling isolated unit tests without embedded template setup.

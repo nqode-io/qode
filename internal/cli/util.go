@@ -23,5 +23,5 @@ func resolveRoot() (string, error) {
 // writePromptToFile atomically writes content to path, creating parent dirs as needed.
 // On template render error the caller should return before calling this.
 func writePromptToFile(path, content string) error {
-	return iokit.AtomicWrite(path, []byte(content), 0644)
+	return iokit.AtomicWrite(path, []byte(content), 0600)
 }

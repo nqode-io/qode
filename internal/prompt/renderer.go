@@ -5,3 +5,6 @@ type Renderer interface {
 	Render(name string, data TemplateData) (string, error)
 	ProjectName() string
 }
+
+// compile-time check: *Engine must satisfy Renderer.
+var _ Renderer = (*Engine)(nil)
