@@ -149,7 +149,7 @@ func runKnowledgeAddBranch(args []string, toFile bool) error {
 	branches := parseBranchArgs(args)
 	fmt.Fprintf(os.Stderr, "Extracting lessons from branches: %s\n", strings.Join(branches, ", "))
 
-	data, err := buildBranchLessonData(root, engine, branches)
+	data, err := buildBranchLessonData(root, engine, branches, branch)
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func runKnowledgeAddBranch(args []string, toFile bool) error {
 	return err
 }
 
-func buildBranchLessonData(root string, engine *prompt.Engine, branches []string) (prompt.TemplateData, error) {
+func buildBranchLessonData(root string, engine *prompt.Engine, branches []string, currentBranch string) (prompt.TemplateData, error) {
 	var allTicket, allAnalysis, allSpec, allExtra strings.Builder
 	var diff string
 
@@ -216,11 +216,11 @@ func buildBranchLessonData(root string, engine *prompt.Engine, branches []string
 	lessons, _ := knowledge.ListLessons(root)
 	lessonsStr := formatLessonsList(lessons)
 
-	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branches[0]))
+	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(currentBranch))
 
 	return prompt.TemplateData{
 		Project:   prompt.TemplateProject{Name: engine.ProjectName()},
-		Branch:    branches[0],
+		Branch:    currentBranch,
 		Ticket:    allTicket.String(),
 		Analysis:  allAnalysis.String(),
 		Spec:      allSpec.String(),
