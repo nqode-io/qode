@@ -45,26 +45,14 @@ func newWorkflowStatusCmd() *cobra.Command {
 }
 
 func runWorkflowStatus() error {
-	root, err := resolveRoot()
-	if err != nil {
-		return err
-	}
-	cfg, err := config.Load(root)
-	if err != nil {
-		return err
-	}
-	branch, err := git.CurrentBranch(root)
-	if err != nil {
-		return err
-	}
-	ctx, err := gocontext.Load(root, branch)
+	sess, err := loadSession()
 	if err != nil {
 		return err
 	}
 
-	diff, _ := git.DiffFromBase(root, "")
+	diff, _ := git.DiffFromBase(sess.Root, "")
 
-	lines, upNext := buildStatusLines(ctx, cfg, diff)
+	lines, upNext := buildStatusLines(sess.Context, sess.Config, diff)
 	for _, line := range lines {
 		fmt.Println(line)
 	}

@@ -6,12 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/nqode/qode/internal/config"
-	gocontext "github.com/nqode/qode/internal/context"
-	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/knowledge"
 	"github.com/nqode/qode/internal/plan"
-	"github.com/nqode/qode/internal/prompt"
 	"github.com/nqode/qode/internal/workflow"
 	"github.com/spf13/cobra"
 )
@@ -27,78 +23,64 @@ func newStartCmd() *cobra.Command {
 The prompt is written to stdout for the LLM to execute directly.
 Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md for debugging.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := resolveRoot()
-			if err != nil {
-				return err
-			}
-			cfg, err := config.Load(root)
-			if err != nil {
-				return err
-			}
-			branch, err := git.CurrentBranch(root)
-			if err != nil {
-				return err
-			}
-
-			ctx, err := gocontext.Load(root, branch)
-			if err != nil {
-				return err
-			}
-
-			if !toFile && !force {
-				if result := workflow.CheckStep("start", ctx, cfg); result.Blocked {
-					if cfg.Scoring.Strict {
-						return fmt.Errorf("%s", result.Message)
-					}
-					fmt.Printf("STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
-					return nil
-				}
-			}
-
-			if !ctx.HasSpec() {
-				fmt.Fprintln(os.Stderr, "No spec.md found.")
-				fmt.Fprintf(os.Stderr, "Run /qode-plan-spec first and save the output to:\n  %s/spec.md\n", ctx.ContextDir)
-				return fmt.Errorf("no spec")
-			}
-
-			paths, _ := knowledge.List(root, cfg)
-			var kb string
-			refs := make([]string, 0, len(paths))
-			for _, p := range paths {
-				rel, relErr := filepath.Rel(root, p)
-				if relErr != nil {
-					rel = p
-				}
-				refs = append(refs, "- "+rel)
-			}
-			if len(refs) > 0 {
-				kb = "Read the following knowledge base files:\n" + strings.Join(refs, "\n")
-			}
-
-			engine, err := prompt.NewEngine(root)
-			if err != nil {
-				return err
-			}
-
-			p, err := plan.BuildStartPrompt(engine, cfg, ctx, kb)
-			if err != nil {
-				return err
-			}
-
-			if toFile {
-				outPath := filepath.Join(ctx.ContextDir, ".start-prompt.md")
-				if err := writePromptToFile(outPath, p); err != nil {
-					return err
-				}
-				fmt.Fprintf(os.Stderr, "Implementation prompt saved to:\n  %s\n", outPath)
-				return nil
-			}
-
-			_, err = fmt.Print(p)
-			return err
+			return runStart(toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
 	cmd.Flags().BoolVar(&force, "force", false, "bypass step guard checks")
 	return cmd
+}
+
+func runStart(toFile, force bool) error {
+	sess, err := loadSession()
+	if err != nil {
+		return err
+	}
+
+	if !toFile && !force {
+		if result := workflow.CheckStep("start", sess.Context, sess.Config); result.Blocked {
+			if sess.Config.Scoring.Strict {
+				return fmt.Errorf("%s", result.Message)
+			}
+			fmt.Printf("STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
+			return nil
+		}
+	}
+
+	if !sess.Context.HasSpec() {
+		fmt.Fprintln(os.Stderr, "No spec.md found.")
+		fmt.Fprintf(os.Stderr, "Run /qode-plan-spec first and save the output to:\n  %s/spec.md\n", sess.Context.ContextDir)
+		return fmt.Errorf("no spec")
+	}
+
+	paths, _ := knowledge.List(sess.Root, sess.Config)
+	var kb string
+	refs := make([]string, 0, len(paths))
+	for _, p := range paths {
+		rel, relErr := filepath.Rel(sess.Root, p)
+		if relErr != nil {
+			rel = p
+		}
+		refs = append(refs, "- "+rel)
+	}
+	if len(refs) > 0 {
+		kb = "Read the following knowledge base files:\n" + strings.Join(refs, "\n")
+	}
+
+	p, err := plan.BuildStartPrompt(sess.Engine, sess.Config, sess.Context, kb)
+	if err != nil {
+		return err
+	}
+
+	if toFile {
+		outPath := filepath.Join(sess.Context.ContextDir, ".start-prompt.md")
+		if err := writePromptToFile(outPath, p); err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stderr, "Implementation prompt saved to:\n  %s\n", outPath)
+		return nil
+	}
+
+	_, err = fmt.Print(p)
+	return err
 }

@@ -6,10 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/nqode/qode/internal/config"
-	gocontext "github.com/nqode/qode/internal/context"
 	"github.com/nqode/qode/internal/git"
-	"github.com/nqode/qode/internal/prompt"
 	"github.com/nqode/qode/internal/review"
 	"github.com/spf13/cobra"
 )
@@ -54,46 +51,28 @@ func newReviewSecurityCmd() *cobra.Command {
 }
 
 func runReview(kind string, toFile, force bool) error {
-	root, err := resolveRoot()
-	if err != nil {
-		return err
-	}
-	cfg, err := config.Load(root)
-	if err != nil {
-		return err
-	}
-	branch, err := git.CurrentBranch(root)
+	sess, err := loadSession()
 	if err != nil {
 		return err
 	}
 
-	diff, err := git.DiffFromBase(root, "")
+	diff, err := git.DiffFromBase(sess.Root, "")
 	if err != nil {
 		return fmt.Errorf("getting diff: %w", err)
 	}
 	if diff == "" && !force {
-		if cfg.Scoring.Strict {
+		if sess.Config.Scoring.Strict {
 			return fmt.Errorf("no changes detected: commit code first before running a review")
 		}
 		fmt.Fprintln(os.Stderr, "No changes detected. Commit some code first.")
 		return nil
 	}
 
-	ctx, err := gocontext.Load(root, branch)
-	if err != nil {
-		return err
-	}
-
-	branchDir := ctx.ContextDir
+	branchDir := sess.Context.ContextDir
 
 	diffPath := filepath.Join(branchDir, "diff.md")
 	if err := os.WriteFile(diffPath, []byte(diff), 0600); err != nil {
 		return fmt.Errorf("saving diff snapshot: %w", err)
-	}
-
-	engine, err := prompt.NewEngine(root)
-	if err != nil {
-		return err
 	}
 
 	outputPath := filepath.Join(branchDir, fmt.Sprintf("%s-review.md", kind))
@@ -102,9 +81,9 @@ func runReview(kind string, toFile, force bool) error {
 	var p string
 	switch kind {
 	case "code":
-		p, err = review.BuildCodePrompt(engine, cfg, ctx, outputPath)
+		p, err = review.BuildCodePrompt(sess.Engine, sess.Config, sess.Context, outputPath)
 	case "security":
-		p, err = review.BuildSecurityPrompt(engine, cfg, ctx, outputPath)
+		p, err = review.BuildSecurityPrompt(sess.Engine, sess.Config, sess.Context, outputPath)
 	}
 	if err != nil {
 		return err

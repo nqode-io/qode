@@ -133,15 +133,7 @@ func newKnowledgeAddBranchCmd() *cobra.Command {
 }
 
 func runKnowledgeAddBranch(args []string, toFile bool) error {
-	root, err := resolveRoot()
-	if err != nil {
-		return err
-	}
-	branch, err := git.CurrentBranch(root)
-	if err != nil {
-		return err
-	}
-	engine, err := prompt.NewEngine(root)
+	sess, err := loadSession()
 	if err != nil {
 		return err
 	}
@@ -149,18 +141,18 @@ func runKnowledgeAddBranch(args []string, toFile bool) error {
 	branches := parseBranchArgs(args)
 	fmt.Fprintf(os.Stderr, "Extracting lessons from branches: %s\n", strings.Join(branches, ", "))
 
-	data, err := buildBranchLessonData(root, engine, branches)
+	data, err := buildBranchLessonData(sess.Root, sess.Engine, branches)
 	if err != nil {
 		return err
 	}
 
-	p, err := engine.Render("knowledge/add-branch", data)
+	p, err := sess.Engine.Render("knowledge/add-branch", data)
 	if err != nil {
 		return err
 	}
 
 	if toFile {
-		branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
+		branchDir := filepath.Join(sess.Root, config.QodeDir, "branches", git.SanitizeBranchName(sess.Branch))
 		promptPath := filepath.Join(branchDir, ".knowledge-add-branch-prompt.md")
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
