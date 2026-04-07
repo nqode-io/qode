@@ -8,6 +8,7 @@ import (
 
 	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/branchcontext"
+	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/knowledge"
 	"github.com/nqode/qode/internal/prompt"
@@ -75,7 +76,7 @@ func runKnowledgeAdd(src string) error {
 	}
 
 	kbDir := filepath.Join(root, config.QodeDir, "knowledge")
-	if err := os.MkdirAll(kbDir, 0755); err != nil {
+	if err := iokit.EnsureDir(kbDir); err != nil {
 		return err
 	}
 
@@ -85,7 +86,7 @@ func runKnowledgeAdd(src string) error {
 	}
 
 	dest := filepath.Join(kbDir, filepath.Base(src))
-	if err := os.WriteFile(dest, data, 0644); err != nil {
+	if err := iokit.WriteFile(dest, data, 0644); err != nil {
 		return err
 	}
 	fmt.Printf("Added to knowledge base: %s\n", dest)

@@ -8,6 +8,7 @@ import (
 
 	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/git"
+	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/review"
 	"github.com/spf13/cobra"
 )
@@ -76,7 +77,7 @@ func runReview(kind string, toFile, force bool) error {
 	}
 
 	diffPath := filepath.Join(branchDir, "diff.md")
-	if err := os.WriteFile(diffPath, []byte(diff), 0600); err != nil {
+	if err := iokit.WriteFile(diffPath, []byte(diff), 0600); err != nil {
 		return fmt.Errorf("saving diff snapshot: %w", err)
 	}
 

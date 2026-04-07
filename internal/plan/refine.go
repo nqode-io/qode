@@ -2,13 +2,13 @@ package plan
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/git"
+	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/prompt"
 	"github.com/nqode/qode/internal/scoring"
 )
@@ -86,13 +86,13 @@ func BuildStartPrompt(engine prompt.Renderer, cfg *config.Config, ctx *branchcon
 // and returns its path.
 func SaveIterationFiles(root, branch string, out *RefineOutput) (workerPath string, err error) {
 	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
-	if err := os.MkdirAll(branchDir, 0755); err != nil {
+	if err := iokit.EnsureDir(branchDir); err != nil {
 		return "", err
 	}
 
 	// Primary "current" prompt — always overwritten.
 	workerPath = filepath.Join(branchDir, ".refine-prompt.md")
-	if err := os.WriteFile(workerPath, []byte(out.WorkerPrompt), 0644); err != nil {
+	if err := iokit.WriteFile(workerPath, []byte(out.WorkerPrompt), 0644); err != nil {
 		return "", err
 	}
 
@@ -120,18 +120,18 @@ func BuildJudgePrompt(engine prompt.Renderer, cfg *config.Config, ctx *branchcon
 // judge output rather than parsed from the analysis text.
 func SaveIterationResult(root, branch string, iteration int, analysisText string, result scoring.Result) error {
 	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
-	if err := os.MkdirAll(branchDir, 0755); err != nil {
+	if err := iokit.EnsureDir(branchDir); err != nil {
 		return err
 	}
 
 	iterFile := filepath.Join(branchDir, fmt.Sprintf("refined-analysis-%d-score-%d.md", iteration, result.TotalScore))
-	if err := os.WriteFile(iterFile, []byte(analysisText), 0644); err != nil {
+	if err := iokit.WriteFile(iterFile, []byte(analysisText), 0644); err != nil {
 		return err
 	}
 
 	latestFile := filepath.Join(branchDir, "refined-analysis.md")
 	header := buildAnalysisHeader(iteration, result)
-	return os.WriteFile(latestFile, []byte(header+analysisText), 0644)
+	return iokit.WriteFile(latestFile, []byte(header+analysisText), 0644)
 }
 
 // ParseIterationFromOutput tries to extract a score and save the analysis file.
@@ -143,20 +143,20 @@ func ParseIterationFromOutput(root, branch string, iteration int, analysisText s
 	}
 
 	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
-	if err := os.MkdirAll(branchDir, 0755); err != nil {
+	if err := iokit.EnsureDir(branchDir); err != nil {
 		return result, fmt.Errorf("create branch directory %q: %w", branchDir, err)
 	}
 
 	// Save numbered iteration file.
 	iterFile := filepath.Join(branchDir, fmt.Sprintf("refined-analysis-%d-score-%d.md", iteration, result.TotalScore))
-	if err := os.WriteFile(iterFile, []byte(analysisText), 0644); err != nil {
+	if err := iokit.WriteFile(iterFile, []byte(analysisText), 0644); err != nil {
 		return result, fmt.Errorf("write iteration file %q: %w", iterFile, err)
 	}
 
 	// Always update the canonical "latest" file.
 	latestFile := filepath.Join(branchDir, "refined-analysis.md")
 	header := buildAnalysisHeader(iteration, result)
-	if err := os.WriteFile(latestFile, []byte(header+analysisText), 0644); err != nil {
+	if err := iokit.WriteFile(latestFile, []byte(header+analysisText), 0644); err != nil {
 		return result, fmt.Errorf("write canonical analysis file %q: %w", latestFile, err)
 	}
 

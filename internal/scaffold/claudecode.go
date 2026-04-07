@@ -2,9 +2,9 @@ package scaffold
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
+	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/prompt"
 )
 
@@ -23,7 +23,7 @@ var claudeCommands = []string{
 // SetupClaudeCode generates Claude Code configuration files.
 func SetupClaudeCode(root string) error {
 	commandsDir := filepath.Join(root, ".claude", "commands")
-	if err := os.MkdirAll(commandsDir, 0755); err != nil {
+	if err := iokit.EnsureDir(commandsDir); err != nil {
 		return err
 	}
 
@@ -39,7 +39,7 @@ func SetupClaudeCode(root string) error {
 		if err != nil {
 			return fmt.Errorf("render %s: %w", cmd, err)
 		}
-		if err := os.WriteFile(filepath.Join(commandsDir, cmd+".md"), []byte(content), 0644); err != nil {
+		if err := iokit.WriteFile(filepath.Join(commandsDir, cmd+".md"), []byte(content), 0644); err != nil {
 			return err
 		}
 	}

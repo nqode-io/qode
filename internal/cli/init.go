@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/nqode/qode/internal/config"
+	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/prompt"
 	"github.com/nqode/qode/internal/scaffold"
 	"github.com/spf13/cobra"
@@ -50,7 +51,7 @@ func runInitExisting(root string) error {
 		return fmt.Errorf("marshaling config: %w", err)
 	}
 	outPath := filepath.Join(root, config.ConfigFileName)
-	if err := os.WriteFile(outPath, data, 0644); err != nil {
+	if err := iokit.WriteFile(outPath, data, 0644); err != nil {
 		return fmt.Errorf("writing %s: %w", outPath, err)
 	}
 	fmt.Printf("Generated: %s\n", outPath)
@@ -61,7 +62,7 @@ func runInitExisting(root string) error {
 		filepath.Join(root, config.QodeDir, "knowledge"),
 		filepath.Join(root, config.QodeDir, "prompts"),
 	} {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := iokit.EnsureDir(dir); err != nil {
 			return err
 		}
 	}
@@ -74,7 +75,7 @@ func runInitExisting(root string) error {
 		if err != nil {
 			return fmt.Errorf("marshaling scoring config: %w", err)
 		}
-		if err := os.WriteFile(scoringPath, scoringData, 0644); err != nil {
+		if err := iokit.WriteFile(scoringPath, scoringData, 0644); err != nil {
 			return fmt.Errorf("writing %s: %w", scoringPath, err)
 		}
 		fmt.Printf("Generated: %s\n", scoringPath)
@@ -109,10 +110,7 @@ func copyEmbeddedTemplates(root string) error {
 	}
 	for name, content := range templates {
 		dst := filepath.Join(root, config.QodeDir, "prompts", name+".md.tmpl")
-		if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
-			return err
-		}
-		if err := os.WriteFile(dst, content, 0644); err != nil {
+		if err := iokit.WriteFile(dst, content, 0644); err != nil {
 			return fmt.Errorf("writing template %s: %w", dst, err)
 		}
 	}

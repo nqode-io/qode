@@ -2,9 +2,9 @@ package scaffold
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
+	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/prompt"
 )
 
@@ -24,7 +24,7 @@ var cursorCommands = []string{
 
 // SetupCursor generates Cursor IDE configuration files.
 func SetupCursor(root string) error {
-	if err := os.MkdirAll(filepath.Join(root, cursorCommandsDir), 0755); err != nil {
+	if err := iokit.EnsureDir(filepath.Join(root, cursorCommandsDir)); err != nil {
 		return err
 	}
 
@@ -41,7 +41,7 @@ func SetupCursor(root string) error {
 			return fmt.Errorf("render %s: %w", cmd, err)
 		}
 		p := filepath.Join(root, cursorCommandsDir, cmd+".mdc")
-		if err := os.WriteFile(p, []byte(content), 0644); err != nil {
+		if err := iokit.WriteFile(p, []byte(content), 0644); err != nil {
 			return err
 		}
 	}

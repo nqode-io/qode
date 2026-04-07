@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/nqode/qode/internal/iokit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -76,7 +77,7 @@ func Save(root string, cfg *Config) error {
 		return fmt.Errorf("marshaling config: %w", err)
 	}
 	path := filepath.Join(root, ConfigFileName)
-	return os.WriteFile(path, data, 0644)
+	return iokit.WriteFile(path, data, 0644)
 }
 
 // FindRoot walks up from dir looking for qode.yaml and returns the directory

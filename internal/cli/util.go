@@ -3,7 +3,8 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+
+	"github.com/nqode/qode/internal/iokit"
 )
 
 // resolveRoot returns the effective project root, preferring the --root flag,
@@ -22,21 +23,5 @@ func resolveRoot() (string, error) {
 // writePromptToFile atomically writes content to path, creating parent dirs as needed.
 // On template render error the caller should return before calling this.
 func writePromptToFile(path, content string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-		return err
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".qode-prompt-*")
-	if err != nil {
-		return err
-	}
-	tmpName := tmp.Name()
-	defer func() { _ = os.Remove(tmpName) }()
-	if _, err := tmp.WriteString(content); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmpName, path)
+	return iokit.AtomicWrite(path, []byte(content), 0644)
 }

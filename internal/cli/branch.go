@@ -8,6 +8,7 @@ import (
 
 	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/git"
+	"github.com/nqode/qode/internal/iokit"
 	"github.com/spf13/cobra"
 )
 
@@ -72,7 +73,7 @@ func runBranchCreate(name, base string) error {
 		return err
 	}
 	contextDir := filepath.Join(branchDir, "context")
-	if err := os.MkdirAll(contextDir, 0755); err != nil {
+	if err := iokit.EnsureDir(contextDir); err != nil {
 		return fmt.Errorf("creating context dir: %w", err)
 	}
 
@@ -84,7 +85,7 @@ func runBranchCreate(name, base string) error {
 	for name, content := range stubs {
 		p := filepath.Join(contextDir, name)
 		if _, err := os.Stat(p); os.IsNotExist(err) {
-			if err := os.WriteFile(p, []byte(content), 0644); err != nil {
+			if err := iokit.WriteFile(p, []byte(content), 0644); err != nil {
 				return err
 			}
 		}
