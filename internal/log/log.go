@@ -6,9 +6,11 @@ import (
 	"strings"
 )
 
-// Logger is the package-level structured logger.
-// Initialised to slog.Default() so callers never encounter a nil Logger before Init() is called.
-var Logger = slog.Default()
+// logger is the package-level structured logger.
+// Initialised to slog.Default() so callers never encounter a nil logger before Init() is called.
+// Init() must be called before any goroutines are started; after that, only the
+// package-level functions (Info, Warn, Error, Debug) should be used.
+var logger = slog.Default()
 
 // Init configures the package-level logger.
 // It respects the QODE_LOG_LEVEL environment variable (debug, info, warn, error).
@@ -27,17 +29,17 @@ func Init() {
 			level = slog.LevelError
 		}
 	}
-	Logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+	logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
 }
 
 // Info logs at info level.
-func Info(msg string, args ...any) { Logger.Info(msg, args...) }
+func Info(msg string, args ...any) { logger.Info(msg, args...) }
 
 // Warn logs at warn level.
-func Warn(msg string, args ...any) { Logger.Warn(msg, args...) }
+func Warn(msg string, args ...any) { logger.Warn(msg, args...) }
 
 // Error logs at error level.
-func Error(msg string, args ...any) { Logger.Error(msg, args...) }
+func Error(msg string, args ...any) { logger.Error(msg, args...) }
 
 // Debug logs at debug level.
-func Debug(msg string, args ...any) { Logger.Debug(msg, args...) }
+func Debug(msg string, args ...any) { logger.Debug(msg, args...) }

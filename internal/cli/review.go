@@ -77,7 +77,8 @@ func runReview(out, errOut io.Writer, kind string, toFile, force bool) error {
 	branchDir := sess.Context.ContextDir
 
 	// Ensure context/ exists so the user can populate ticket.md etc.
-	// (not needed for the writes below, which create their own parent dirs)
+	// Load() no longer creates this directory as a side effect, so review is
+	// the natural first command that needs it when 'branch create' was skipped.
 	if err := branchcontext.EnsureContextDir(sess.Root, sess.Branch); err != nil {
 		return fmt.Errorf("creating context directory: %w", err)
 	}
@@ -96,6 +97,8 @@ func runReview(out, errOut io.Writer, kind string, toFile, force bool) error {
 		p, err = review.BuildCodePrompt(sess.Engine, sess.Config, sess.Context, outputPath)
 	case "security":
 		p, err = review.BuildSecurityPrompt(sess.Engine, sess.Config, sess.Context, outputPath)
+	default:
+		return fmt.Errorf("unknown review kind %q", kind)
 	}
 	if err != nil {
 		return err

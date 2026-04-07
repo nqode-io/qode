@@ -39,6 +39,10 @@ type Context struct {
 }
 
 // Load reads the context folder for a branch.
+// Note: Load does not create any directories as a side effect. Callers that
+// need the context/ subdirectory to exist (e.g. for writing user files) must
+// call EnsureContextDir explicitly. The canonical path is via 'branch create',
+// which creates the directory and stub files up front.
 func Load(root, branch string) (*Context, error) {
 	dir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
 	ctx := &Context{

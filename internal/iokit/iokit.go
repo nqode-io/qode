@@ -52,5 +52,8 @@ func AtomicWrite(path string, data []byte, perm os.FileMode) error {
 
 // EnsureDir creates a directory and all parents if they don't exist.
 func EnsureDir(path string) error {
-	return os.MkdirAll(path, 0755)
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return fmt.Errorf("ensure dir %s: %w", path, err)
+	}
+	return nil
 }

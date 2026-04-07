@@ -83,8 +83,8 @@ func runBranchCreate(out io.Writer, name, base string) error {
 		"ticket.md": "# Ticket\n\nPaste ticket content here, or use /qode-ticket-fetch <url> in your IDE.\n",
 		"notes.md":  "# Notes\n\nAdd any additional context, decisions, or open questions here.\n",
 	}
-	for name, content := range stubs {
-		p := filepath.Join(contextDir, name)
+	for stubName, content := range stubs {
+		p := filepath.Join(contextDir, stubName)
 		if _, err := os.Stat(p); os.IsNotExist(err) {
 			if err := iokit.WriteFile(p, []byte(content), 0644); err != nil {
 				return err

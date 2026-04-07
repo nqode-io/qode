@@ -86,7 +86,7 @@ func TestRunPlanSpec_GuardBlocked_NoAnalysis_Strict(t *testing.T) {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
 
-	err := runPlanSpec(os.Stdout, os.Stderr, false, false)
+	err := runPlanSpec(io.Discard, io.Discard, false, false)
 	if err == nil {
 		t.Fatal("expected error for missing analysis in strict mode")
 	}
@@ -103,17 +103,14 @@ func TestRunPlanSpec_GuardBlocked_NonStrict(t *testing.T) {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
 
-	var output string
-	var runErr error
-	output = captureStdout(t, func() {
-		runErr = runPlanSpec(os.Stdout, os.Stderr, false, false)
-	})
+	var buf bytes.Buffer
+	runErr := runPlanSpec(&buf, io.Discard, false, false)
 
 	if runErr != nil {
 		t.Fatalf("expected nil error in non-strict mode, got: %v", runErr)
 	}
-	if !strings.Contains(output, "STOP") {
-		t.Errorf("expected STOP instruction on stdout, got: %q", output)
+	if !strings.Contains(buf.String(), "STOP") {
+		t.Errorf("expected STOP instruction on stdout, got: %q", buf.String())
 	}
 }
 
@@ -129,7 +126,7 @@ func TestRunPlanSpec_GuardBlocked_Unscored(t *testing.T) {
 	writePlanFile(t, root, "test-branch", "refined-analysis.md",
 		"<!-- qode:iteration=1 -->\n# Analysis\nContent.")
 
-	err := runPlanSpec(os.Stdout, os.Stderr, false, false)
+	err := runPlanSpec(io.Discard, io.Discard, false, false)
 	if err == nil {
 		t.Fatal("expected error for unscored analysis in strict mode")
 	}
@@ -148,7 +145,7 @@ func TestRunPlanSpec_Force_SkipsGuard(t *testing.T) {
 
 	// No refined-analysis.md — guard would block, but force bypasses it.
 	// The hard-error ("no refined analysis") fires instead of the guard error.
-	err := runPlanSpec(os.Stdout, os.Stderr, false, true)
+	err := runPlanSpec(io.Discard, io.Discard, false, true)
 	if err == nil {
 		t.Fatal("expected hard error for missing analysis file")
 	}
@@ -170,15 +167,13 @@ func TestRunPlanSpec_Pass(t *testing.T) {
 	writePlanFile(t, root, "test-branch", "refined-analysis.md",
 		"<!-- qode:iteration=1 score=25/25 -->\n# Analysis\nContent.")
 
-	var output string
-	var runErr error
-	output = captureStdout(t, func() {
-		runErr = runPlanSpec(os.Stdout, os.Stderr, false, false)
-	})
+	var buf bytes.Buffer
+	runErr := runPlanSpec(&buf, io.Discard, false, false)
 
 	if runErr != nil {
 		t.Fatalf("expected nil error for passing score, got: %v", runErr)
 	}
+	output := buf.String()
 	if strings.Contains(output, "STOP") {
 		t.Errorf("guard should not emit STOP for a passing score, got: %q", output)
 	}

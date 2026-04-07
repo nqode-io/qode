@@ -92,6 +92,7 @@ func setupProject(t *testing.T, branch string, opts ...setupOption) string {
 	t.Cleanup(func() {
 		flagRoot = ""
 		flagStrict = false
+		rootCmd.SetArgs(nil)
 	})
 
 	return root
