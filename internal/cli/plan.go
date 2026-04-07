@@ -5,11 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/nqode/qode/internal/config"
-	gocontext "github.com/nqode/qode/internal/context"
-	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/plan"
-	"github.com/nqode/qode/internal/prompt"
 	"github.com/nqode/qode/internal/workflow"
 	"github.com/spf13/cobra"
 )
@@ -86,41 +82,23 @@ Use --to-file to write the prompt to disk for debugging the judge template.`,
 }
 
 func runPlanJudge(toFile bool) error {
-	root, err := resolveRoot()
-	if err != nil {
-		return err
-	}
-	cfg, err := config.Load(root)
-	if err != nil {
-		return err
-	}
-	branch, err := git.CurrentBranch(root)
+	sess, err := loadSession()
 	if err != nil {
 		return err
 	}
 
-	ctx, err := gocontext.Load(root, branch)
-	if err != nil {
-		return err
-	}
-
-	if !ctx.HasRefinedAnalysis() {
+	if !sess.Context.HasRefinedAnalysis() {
 		fmt.Fprintln(os.Stderr, "No refined analysis found.")
-		fmt.Fprintf(os.Stderr, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", ctx.ContextDir)
+		fmt.Fprintf(os.Stderr, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", sess.Context.ContextDir)
 		return fmt.Errorf("no refined analysis")
 	}
 
-	engine, err := prompt.NewEngine(root)
+	p, err := plan.BuildJudgePrompt(sess.Engine, sess.Config, sess.Context)
 	if err != nil {
 		return err
 	}
 
-	p, err := plan.BuildJudgePrompt(engine, cfg, ctx)
-	if err != nil {
-		return err
-	}
-
-	branchDir := ctx.ContextDir
+	branchDir := sess.Context.ContextDir
 	promptPath := filepath.Join(branchDir, ".refine-judge-prompt.md")
 
 	if toFile {
@@ -136,39 +114,21 @@ func runPlanJudge(toFile bool) error {
 }
 
 func runPlanRefine(ticketURL string, toFile bool) error {
-	root, err := resolveRoot()
-	if err != nil {
-		return err
-	}
-	cfg, err := config.Load(root)
-	if err != nil {
-		return err
-	}
-	branch, err := git.CurrentBranch(root)
+	sess, err := loadSession()
 	if err != nil {
 		return err
 	}
 
-	ctx, err := gocontext.Load(root, branch)
-	if err != nil {
-		return err
-	}
-
-	engine, err := prompt.NewEngine(root)
-	if err != nil {
-		return err
-	}
-
-	branchDir := ctx.ContextDir
+	branchDir := sess.Context.ContextDir
 	analysisPath := filepath.Join(branchDir, "refined-analysis.md")
 
-	out, err := plan.BuildRefinePromptWithOutput(engine, cfg, ctx, ticketURL, 0, analysisPath)
+	out, err := plan.BuildRefinePromptWithOutput(sess.Engine, sess.Config, sess.Context, ticketURL, 0, analysisPath)
 	if err != nil {
 		return err
 	}
 
 	if toFile {
-		workerPath, err := plan.SaveIterationFiles(root, branch, out)
+		workerPath, err := plan.SaveIterationFiles(sess.Root, sess.Branch, out)
 		if err != nil {
 			return err
 		}
@@ -181,27 +141,14 @@ func runPlanRefine(ticketURL string, toFile bool) error {
 }
 
 func runPlanSpec(toFile, force bool) error {
-	root, err := resolveRoot()
-	if err != nil {
-		return err
-	}
-	cfg, err := config.Load(root)
-	if err != nil {
-		return err
-	}
-	branch, err := git.CurrentBranch(root)
-	if err != nil {
-		return err
-	}
-
-	ctx, err := gocontext.Load(root, branch)
+	sess, err := loadSession()
 	if err != nil {
 		return err
 	}
 
 	if !toFile && !force {
-		if result := workflow.CheckStep("spec", ctx, cfg); result.Blocked {
-			if cfg.Scoring.Strict {
+		if result := workflow.CheckStep("spec", sess.Context, sess.Config); result.Blocked {
+			if sess.Config.Scoring.Strict {
 				return fmt.Errorf("%s", result.Message)
 			}
 			fmt.Printf("STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
@@ -209,22 +156,17 @@ func runPlanSpec(toFile, force bool) error {
 		}
 	}
 
-	if !ctx.HasRefinedAnalysis() {
+	if !sess.Context.HasRefinedAnalysis() {
 		fmt.Fprintln(os.Stderr, "No refined analysis found.")
-		fmt.Fprintf(os.Stderr, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", ctx.ContextDir)
+		fmt.Fprintf(os.Stderr, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", sess.Context.ContextDir)
 		return fmt.Errorf("no refined analysis")
 	}
 
-	engine, err := prompt.NewEngine(root)
-	if err != nil {
-		return err
-	}
-
-	branchDir := ctx.ContextDir
+	branchDir := sess.Context.ContextDir
 	specPath := filepath.Join(branchDir, "spec.md")
 	promptPath := filepath.Join(branchDir, ".spec-prompt.md")
 
-	p, err := plan.BuildSpecPromptWithOutput(engine, cfg, ctx, specPath)
+	p, err := plan.BuildSpecPromptWithOutput(sess.Engine, sess.Config, sess.Context, specPath)
 	if err != nil {
 		return err
 	}

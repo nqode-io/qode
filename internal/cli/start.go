@@ -6,12 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/nqode/qode/internal/config"
-	gocontext "github.com/nqode/qode/internal/context"
-	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/knowledge"
 	"github.com/nqode/qode/internal/plan"
-	"github.com/nqode/qode/internal/prompt"
 	"github.com/nqode/qode/internal/workflow"
 	"github.com/spf13/cobra"
 )
@@ -36,27 +32,14 @@ Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md fo
 }
 
 func runStart(toFile, force bool) error {
-	root, err := resolveRoot()
-	if err != nil {
-		return err
-	}
-	cfg, err := config.Load(root)
-	if err != nil {
-		return err
-	}
-	branch, err := git.CurrentBranch(root)
-	if err != nil {
-		return err
-	}
-
-	ctx, err := gocontext.Load(root, branch)
+	sess, err := loadSession()
 	if err != nil {
 		return err
 	}
 
 	if !toFile && !force {
-		if result := workflow.CheckStep("start", ctx, cfg); result.Blocked {
-			if cfg.Scoring.Strict {
+		if result := workflow.CheckStep("start", sess.Context, sess.Config); result.Blocked {
+			if sess.Config.Scoring.Strict {
 				return fmt.Errorf("%s", result.Message)
 			}
 			fmt.Printf("STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
@@ -64,17 +47,17 @@ func runStart(toFile, force bool) error {
 		}
 	}
 
-	if !ctx.HasSpec() {
+	if !sess.Context.HasSpec() {
 		fmt.Fprintln(os.Stderr, "No spec.md found.")
-		fmt.Fprintf(os.Stderr, "Run /qode-plan-spec first and save the output to:\n  %s/spec.md\n", ctx.ContextDir)
+		fmt.Fprintf(os.Stderr, "Run /qode-plan-spec first and save the output to:\n  %s/spec.md\n", sess.Context.ContextDir)
 		return fmt.Errorf("no spec")
 	}
 
-	paths, _ := knowledge.List(root, cfg)
+	paths, _ := knowledge.List(sess.Root, sess.Config)
 	var kb string
 	refs := make([]string, 0, len(paths))
 	for _, p := range paths {
-		rel, relErr := filepath.Rel(root, p)
+		rel, relErr := filepath.Rel(sess.Root, p)
 		if relErr != nil {
 			rel = p
 		}
@@ -84,18 +67,13 @@ func runStart(toFile, force bool) error {
 		kb = "Read the following knowledge base files:\n" + strings.Join(refs, "\n")
 	}
 
-	engine, err := prompt.NewEngine(root)
-	if err != nil {
-		return err
-	}
-
-	p, err := plan.BuildStartPrompt(engine, cfg, ctx, kb)
+	p, err := plan.BuildStartPrompt(sess.Engine, sess.Config, sess.Context, kb)
 	if err != nil {
 		return err
 	}
 
 	if toFile {
-		outPath := filepath.Join(ctx.ContextDir, ".start-prompt.md")
+		outPath := filepath.Join(sess.Context.ContextDir, ".start-prompt.md")
 		if err := writePromptToFile(outPath, p); err != nil {
 			return err
 		}
