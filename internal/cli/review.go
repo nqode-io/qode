@@ -57,6 +57,9 @@ func runReview(kind string, toFile, force bool) error {
 	if err != nil {
 		return err
 	}
+	if flagStrict {
+		sess.Config.Scoring.Strict = true
+	}
 
 	diff, err := git.DiffFromBase(sess.Root, "")
 	if err != nil {

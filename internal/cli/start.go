@@ -36,6 +36,9 @@ func runStart(toFile, force bool) error {
 	if err != nil {
 		return err
 	}
+	if flagStrict {
+		sess.Config.Scoring.Strict = true
+	}
 
 	if !toFile && !force {
 		if result := workflow.CheckStep("start", sess.Context, sess.Config); result.Blocked {

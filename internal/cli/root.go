@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	rootCmd  *cobra.Command
-	flagRoot string
+	rootCmd    *cobra.Command
+	flagRoot   string
+	flagStrict bool
 )
 
 // SetVersion sets the version string displayed by --version.
@@ -56,6 +57,7 @@ See 'qode workflow' for the full diagram.`,
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	rootCmd.PersistentFlags().StringVar(&flagRoot, "root", "", "project root directory (default: auto-detected)")
+	rootCmd.PersistentFlags().BoolVar(&flagStrict, "strict", false, "enforce strict mode: gate violations cause non-zero exit")
 
 	rootCmd.AddCommand(
 		newInitCmd(),

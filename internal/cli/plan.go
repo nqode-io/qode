@@ -145,6 +145,9 @@ func runPlanSpec(toFile, force bool) error {
 	if err != nil {
 		return err
 	}
+	if flagStrict {
+		sess.Config.Scoring.Strict = true
+	}
 
 	if !toFile && !force {
 		if result := workflow.CheckStep("spec", sess.Context, sess.Config); result.Blocked {
