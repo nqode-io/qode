@@ -34,10 +34,13 @@ func SetupCursor(out io.Writer, root string) error {
 		return err
 	}
 
-	data := prompt.TemplateData{Project: prompt.TemplateProject{Name: filepath.Base(root)}}
+	data := prompt.TemplateData{
+		IDE:     "cursor",
+		Project: prompt.TemplateProject{Name: filepath.Base(root)},
+	}
 
 	for _, cmd := range cursorCommands {
-		content, err := engine.Render("scaffold/"+cmd+".cursor", data)
+		content, err := engine.Render("scaffold/"+cmd, data)
 		if err != nil {
 			return fmt.Errorf("render %s: %w", cmd, err)
 		}

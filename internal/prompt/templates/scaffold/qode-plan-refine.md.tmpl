@@ -1,7 +1,8 @@
----
+{{if eq .IDE "cursor"}}---
 description: Refine requirements for {{.Project.Name}}
 ---
-
+{{else}}# Refine Requirements — {{.Project.Name}}
+{{end}}
 **Worker pass:** Run this command and use its stdout output as your worker prompt:
   qode plan refine
 

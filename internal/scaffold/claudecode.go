@@ -33,10 +33,13 @@ func SetupClaudeCode(out io.Writer, root string) error {
 		return err
 	}
 
-	data := prompt.TemplateData{Project: prompt.TemplateProject{Name: filepath.Base(root)}}
+	data := prompt.TemplateData{
+		IDE:     "claude",
+		Project: prompt.TemplateProject{Name: filepath.Base(root)},
+	}
 
 	for _, cmd := range claudeCommands {
-		content, err := engine.Render("scaffold/"+cmd+".claude", data)
+		content, err := engine.Render("scaffold/"+cmd, data)
 		if err != nil {
 			return fmt.Errorf("render %s: %w", cmd, err)
 		}

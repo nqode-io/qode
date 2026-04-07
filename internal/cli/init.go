@@ -92,6 +92,14 @@ func runInitExisting(out io.Writer, root string) error {
 		return fmt.Errorf("setting up IDE configs: %w", err)
 	}
 
+	// Remove scaffold prompt overrides: these templates are one-time scaffolding
+	// tools used only during init. Deleting them ensures future qode versions
+	// can update the generated commands without local overrides blocking the update.
+	scaffoldPromptsDir := filepath.Join(root, config.QodeDir, "prompts", "scaffold")
+	if err := os.RemoveAll(scaffoldPromptsDir); err != nil {
+		return fmt.Errorf("removing scaffold prompts: %w", err)
+	}
+
 	_, _ = fmt.Fprintln(out)
 	_, _ = fmt.Fprintln(out, "Next steps:")
 	_, _ = fmt.Fprintln(out, "  1. Run 'qode branch create <name>' to start your first feature")

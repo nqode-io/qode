@@ -1,7 +1,8 @@
----
+{{if eq .IDE "cursor"}}---
 description: Start implementation session for {{.Project.Name}}
 ---
-
+{{else}}# Start Implementation — {{.Project.Name}}
+{{end}}
 Run this command and use its stdout output as your prompt:
   qode start
 

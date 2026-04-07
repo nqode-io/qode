@@ -1,5 +1,8 @@
-# Code Review — {{.Project.Name}}
-
+{{if eq .IDE "cursor"}}---
+description: Code review for {{.Project.Name}}
+---
+{{else}}# Code Review — {{.Project.Name}}
+{{end}}
 Run this command and use its stdout output as your prompt:
   qode review code
 

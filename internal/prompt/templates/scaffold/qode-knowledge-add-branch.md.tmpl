@@ -1,6 +1,7 @@
----
+{{if eq .IDE "cursor"}}---
 description: Extract lessons learned from branch context for {{.Project.Name}}
 ---
-
+{{else}}# Extract Lessons from Branch — {{.Project.Name}}
+{{end}}
 Run this command and use its stdout output as your prompt:
   qode knowledge add-branch $ARGUMENTS

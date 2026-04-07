@@ -1,5 +1,8 @@
-# Security Review — {{.Project.Name}}
-
+{{if eq .IDE "cursor"}}---
+description: Security review for {{.Project.Name}}
+---
+{{else}}# Security Review — {{.Project.Name}}
+{{end}}
 Run this command and use its stdout output as your prompt:
   qode review security
 

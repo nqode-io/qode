@@ -1,5 +1,8 @@
-# Fetch Ticket via MCP — {{.Project.Name}}
-
+{{if eq .IDE "cursor"}}---
+description: Fetch a ticket into branch context for {{.Project.Name}}
+---
+{{else}}# Fetch Ticket via MCP — {{.Project.Name}}
+{{end}}
 Fetch the ticket at the URL or ID provided in $ARGUMENTS using your available MCP tools.
 
 **Steps:**
