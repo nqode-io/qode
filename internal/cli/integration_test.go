@@ -3,16 +3,14 @@
 package cli
 
 import (
-	"flag"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
-)
 
-// update regenerates golden files when -update is passed to go test.
-var update = flag.Bool("update", false, "update golden files")
+	"github.com/nqode/qode/internal/iokit"
+)
 
 // setupOption is a functional option for setupProject.
 type setupOption func(root, branchDir string, t *testing.T)
@@ -22,7 +20,7 @@ func withTicket(content string) setupOption {
 	return func(root, branchDir string, t *testing.T) {
 		t.Helper()
 		ctxDir := filepath.Join(branchDir, "context")
-		if err := os.WriteFile(filepath.Join(ctxDir, "ticket.md"), []byte(content), 0644); err != nil {
+		if err := iokit.WriteFile(filepath.Join(ctxDir, "ticket.md"), []byte(content), 0644); err != nil {
 			t.Fatalf("withTicket: %v", err)
 		}
 	}
@@ -32,7 +30,7 @@ func withTicket(content string) setupOption {
 func withRefinedAnalysis(content string) setupOption {
 	return func(root, branchDir string, t *testing.T) {
 		t.Helper()
-		if err := os.WriteFile(filepath.Join(branchDir, "refined-analysis.md"), []byte(content), 0644); err != nil {
+		if err := iokit.WriteFile(filepath.Join(branchDir, "refined-analysis.md"), []byte(content), 0644); err != nil {
 			t.Fatalf("withRefinedAnalysis: %v", err)
 		}
 	}
@@ -103,8 +101,8 @@ func setupProject(t *testing.T, branch string, opts ...setupOption) string {
 // the already-configured project root and captures stdout.
 //
 // It sets rootCmd.Args so the full cobra hierarchy is exercised, then calls
-// rootCmd.Execute(). CLI handlers use fmt.Print which goes to os.Stdout, so
-// we redirect via the captureStdout helper.
+// rootCmd.Execute(). CLI handlers write to os.Stdout via the io.Writer parameter,
+// so captureStdout redirects correctly.
 func runCommand(t *testing.T, args ...string) (stdout string, err error) {
 	t.Helper()
 	var runErr error
@@ -113,29 +111,6 @@ func runCommand(t *testing.T, args ...string) (stdout string, err error) {
 		runErr = rootCmd.Execute()
 	})
 	return out, runErr
-}
-
-// assertGolden compares got against a golden file under testdata/.
-// Pass -update to regenerate golden files.
-func assertGolden(t *testing.T, got, name string) {
-	t.Helper()
-	goldenPath := filepath.Join("testdata", name+".golden")
-	if *update {
-		if err := os.MkdirAll(filepath.Dir(goldenPath), 0755); err != nil {
-			t.Fatalf("assertGolden mkdir: %v", err)
-		}
-		if err := os.WriteFile(goldenPath, []byte(got), 0644); err != nil {
-			t.Fatalf("assertGolden write: %v", err)
-		}
-		return
-	}
-	expected, err := os.ReadFile(goldenPath)
-	if err != nil {
-		t.Fatalf("golden file missing (run with -update to create): %s", goldenPath)
-	}
-	if got != string(expected) {
-		t.Errorf("output mismatch for %s\ngot:\n%s\nwant:\n%s", name, got, string(expected))
-	}
 }
 
 // TestIntegration_PlanRefine_DefaultRubric verifies that 'plan refine' renders

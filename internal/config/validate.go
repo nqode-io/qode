@@ -30,7 +30,7 @@ func (c *Config) Validate() error {
 
 	for key, rubric := range c.Scoring.Rubrics {
 		if _, ok := validRubricKeys[key]; !ok {
-			errs = append(errs, fmt.Sprintf("scoring.rubrics: unknown rubric key %q (allowed: refine, review, security)", key))
+			errs = append(errs, fmt.Sprintf("scoring.rubrics: unknown rubric key %q (allowed: refine, review, security; if this key was added in a later version, upgrade your qode binary)", key))
 		}
 
 		if len(rubric.Dimensions) == 0 {

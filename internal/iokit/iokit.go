@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 )
 
-// ReadFileOrString reads a file and returns defaultVal if it doesn't exist.
+// ReadFileOrString reads a file and returns defaultVal on any error.
+// Any error (including permission denied) returns defaultVal.
 func ReadFileOrString(path, defaultVal string) string {
 	data, err := os.ReadFile(path)
 	if err != nil {

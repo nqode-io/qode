@@ -1,194 +1,113 @@
-# Code Review — qode
+# Code Review — qode / refactoring-and-code-cleanup
 
-**Branch:** refactoring-and-code-cleanup
-**Date:** 2026-04-08
+## Incident Report (written before reading the diff)
 
----
+The production incident: a user runs `qode knowledge add-branch feature/payments`. The command silently builds a lesson-extraction prompt using the *current* branch as both the template `Branch` field and the directory to read from — not the named branch. The AI extracts lessons from the wrong context, the user saves them to the knowledge base, and future sessions are seeded with incorrect artifacts. The root cause was a refactoring that introduced a `currentBranch string` parameter to `buildBranchLessonData`, replacing the correct `branches[0]` reference. Silent wrong output with no error.
 
-## Incident Report (pre-read)
-
-`qode knowledge add-branch feature/old-work` is called in a post-mortems session. The lesson extraction prompt saves to `.qode/branches/main/.knowledge-add-branch-prompt.md` instead of `.qode/branches/feature--old-work/`. The branch field in the rendered prompt also reads "main" — the current branch — not "feature/old-work". The extracted lesson is attributed to the wrong branch, and the file lands in the wrong place. The on-call dev merges and the issue goes unnoticed until someone notices lesson files accumulating under the wrong branch directories.
+Confirmed in the diff: the original commit introduced `currentBranch` and the subsequent fix commit restored `branches[0]`.
 
 ---
 
-## What this refactoring achieves
+## File-by-File Analysis
 
-The diff introduces five clean structural improvements:
+### `internal/iokit/iokit.go`
 
-1. **`Session` struct** — eliminates boilerplate `resolveRoot / config.Load / git.CurrentBranch / branchcontext.Load / prompt.NewEngine` in every command handler.
-2. **`iokit` package** — consolidates `os.MkdirAll + os.WriteFile` patterns into named helpers with consistent parent-dir creation.
-3. **`io.Writer` injection** — all `run*` functions now accept `out, errOut io.Writer` instead of writing directly to `os.Stdout/os.Stderr`, making them testable.
-4. **`prompt.Renderer` interface** — decouples plan/review packages from the concrete `*prompt.Engine`.
-5. **`config.Validate`** — adds structural validation at load time.
+- **Verified safe**: `AtomicWrite` correctly calls `os.Chmod(tmp.Name(), perm)` before `os.Rename`. The `perm` parameter is now honoured. Confirmed by `TestAtomicWrite_VerifyPermissions`.
+- **Verified safe**: `WriteFile` creates parent dirs before writing. `EnsureDir` is idempotent.
+- **Concern (flagged as Nit)**: `ReadFileOrString` silently ignores ALL read errors, not just `os.IsNotExist`. A permission-denied error on an existing file returns `defaultVal` with no signal to the caller. Acceptable for optional context files but the contract should be documented.
 
-Two correctness bugs were introduced alongside these improvements.
+### `internal/branchcontext/context.go`
+
+- **Verified safe**: `ContextDir` is set to the branch dir (not the `context/` subdir). All review outputs (diff.md, code-review.md) correctly land in `branchDir = ContextDir`.
+- **Verified safe**: Removal of the silent `_ = os.MkdirAll(ctxSubDir, 0755)` from `Load` is correct. Reads from a missing dir return empty strings gracefully. The `EnsureContextDir` export provides creation behaviour when callers need it.
+- **Concern (flagged as Medium — see issue #1)**: `runReview` calls `EnsureContextDir` but the files it writes are in the parent dir, not the `context/` subdir.
+
+### `internal/cli/session.go`
+
+- **Verified safe**: `Session.Engine` is typed as `prompt.Renderer` (interface). `*prompt.Engine` satisfies it. Verified in current file.
+- **Verified safe**: `loadSession` correctly chains resolveRoot → config.Load → git.CurrentBranch → branchcontext.Load → prompt.NewEngine.
+
+### `internal/config/validate.go`
+
+- **Verified safe**: Validation is called inside `config.Load`. Empty `Scoring.Rubrics` passes (loop does not execute). Zero `MinCodeScore` and `MinSecurityScore` pass (check is `< 0`). Minimal integration-test configs are not broken.
+- **Concern (flagged as Low — see issue #3)**: `validRubricKeys` is a static list baked into the binary. An older `qode` binary running against a newer `qode.yaml` that uses a rubric key added in a later version will now fail at startup with `invalid qode config: unknown rubric key "..."` instead of silently ignoring it. This is a forward-compatibility risk.
+
+### `internal/log/log.go`
+
+- **Verified safe**: `var Logger = slog.Default()` ensures no nil-pointer panic if `Init()` is never called (e.g., in test helpers that trigger warning paths). Confirmed in current file.
+
+### `internal/cli/review.go`
+
+- **Verified safe**: `flagStrict` is applied after `loadSession()`, consistent with `runPlanSpec` and `runStart`.
+- **Concern (flagged as Medium — see issue #2)**: `EnsureContextDir` call at line 79 creates `.qode/branches/<branch>/context/` but `iokit.WriteFile(diffPath, ...)` at line 84 creates its own parent `.qode/branches/<branch>/` independently. The `EnsureContextDir` call has no protective effect on the write operations that follow it.
+
+### `internal/cli/plan.go`
+
+- **Verified safe**: `runPlanJudge` now applies `flagStrict` — previously missing, now present.
+- **Verified safe**: `runPlanRefine` local variable renamed from `out` to `refOut` to avoid collision with the `out io.Writer` parameter. No shadow bug.
+
+### `internal/cli/knowledge_cmd.go`
+
+- **Verified safe**: `buildBranchLessonData` no longer accepts `currentBranch` parameter. Both `branchDir` and `Branch` in `TemplateData` use `branches[0]`. Confirmed in current file (lines 225, 229).
+
+### `internal/cli/integration_test.go`
+
+- **Verified safe**: `t.Cleanup` resets both `flagRoot` and `flagStrict` — confirmed at lines 94–96.
+- **Concern (flagged as Medium — see issue #4)**: `assertGolden` helper is defined but never called by any test.
+- **Nit**: `runCommand` comment at line 108 says "CLI handlers use fmt.Print" — inaccurate after the refactoring.
+
+### `internal/cli/init_test.go`
+
+- **Verified safe**: `TestRunInitExisting_NoDetectionOutput` captures output via a `bytes.Buffer`, checks forbidden terms are absent, verifies expected content is present, and asserts nothing went directly to `os.Stdout`.
+
+### `internal/scaffold/`
+
+- **Verified safe**: `SetupClaudeCode`, `SetupCursor`, and `Setup` all accept `io.Writer`. Tests updated with `io.Discard`. No `fmt.Printf`/`Println` remaining in production paths.
 
 ---
 
 ## Issues
 
-### High
+### Issue #1 — Medium
 
----
-
-**Severity:** High
-**File:** [internal/iokit/iokit.go:310-327](internal/iokit/iokit.go)
-**Issue:** `AtomicWrite` accepts a `perm os.FileMode` parameter but never uses it. `os.CreateTemp` creates the temp file with `0600`. After `os.Rename`, the final file is `0600` regardless of what was passed. Every call site passes `0644` (or `0600` for diff.md), but all prompt files — `.refine-prompt.md`, `.spec-prompt.md`, `.start-prompt.md`, `.knowledge-add-branch-prompt.md` — land as `0600`. On multi-user CI systems or when `git diff` tools open these files, the wrong permissions cause access failures.
-
-**Suggestion:**
+**File:** [internal/cli/review.go:79](internal/cli/review.go#L79)  
+**Issue:** `branchcontext.EnsureContextDir` is called to create `.qode/branches/<branch>/context/`, but none of the file writes that follow (`diff.md`, `code-review.md`, `.code-review-prompt.md`) use that directory — they all go to `branchDir = sess.Context.ContextDir = .qode/branches/<branch>/`. `iokit.WriteFile` already creates its own parent dirs. The call is not harmful but is semantically misleading: it creates the input directory (for ticket.md etc.), not the output directory. A future reader may incorrectly assume the `EnsureContextDir` call is protecting the writes that follow.  
+**Suggestion:** Add a comment explaining the purpose:
 ```go
-func AtomicWrite(path string, data []byte, perm os.FileMode) error {
-    if err := EnsureDir(filepath.Dir(path)); err != nil {
-        return err
-    }
-    tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
-    if err != nil {
-        return fmt.Errorf("create temp: %w", err)
-    }
-    defer func() { _ = os.Remove(tmp.Name()) }()
-    if _, err := tmp.Write(data); err != nil {
-        _ = tmp.Close()
-        return err
-    }
-    if err := tmp.Close(); err != nil {
-        return err
-    }
-    if err := os.Chmod(tmp.Name(), perm); err != nil {
-        return err
-    }
-    return os.Rename(tmp.Name(), path)
-}
-```
-Also add a `TestAtomicWrite_VerifyPermissions` test mirroring the existing `TestWriteFile_VerifyPermissions`.
-
----
-
-**Severity:** High
-**File:** [internal/cli/knowledge_cmd.go:216-222](internal/cli/knowledge_cmd.go)
-**Issue:** `buildBranchLessonData` was changed to use `currentBranch` for both `Branch` in `TemplateData` and the `branchDir` path, replacing the previous `branches[0]`. This is a behavioral regression. `qode knowledge add-branch feature/shipped-work` used to:
-- set `Branch: "feature/shipped-work"` in the rendered prompt
-- save `--to-file` output to `.qode/branches/feature--shipped-work/.knowledge-add-branch-prompt.md`
-
-Now it does both using the current git branch name. The `branches` argument list — the whole point of the command — is used only for iterating context files, not for naming the output. Running the command on any non-current branch produces a mislabeled prompt.
-
-**Suggestion:** Restore the original semantics. `currentBranch` should only be the fallback when `args` contains only the current branch:
-```go
-// branchDir and Branch should reference the first target branch, not the current one.
-// currentBranch is only needed to construct the session; remove it from TemplateData.
-branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branches[0]))
-
-return prompt.TemplateData{
-    Project:  prompt.TemplateProject{Name: engine.ProjectName()},
-    Branch:   branches[0],
-    ...
-```
-If the intent was to always use the current branch for output location, that needs to be documented and the function signature should not accept `currentBranch` as a separate parameter at all.
-
----
-
-### Medium
-
----
-
-**Severity:** Medium
-**File:** [internal/cli/session.go:13](internal/cli/session.go)
-**Issue:** `Session.Engine` is typed as `*prompt.Engine`, not `prompt.Renderer`. The `Renderer` interface was introduced this very PR to decouple callers from the concrete engine — but `Session` leaks the concrete type. Any code that receives a `*Session` (e.g., future command extensions or tests) cannot substitute a mock renderer without also having a real engine. The interface is partially pointless.
-
-**Suggestion:**
-```go
-type Session struct {
-    Root    string
-    Config  *config.Config
-    Branch  string
-    Context *branchcontext.Context
-    Engine  prompt.Renderer  // changed from *prompt.Engine
-}
-```
-`loadSession` still returns a `*prompt.Engine` internally; it satisfies `prompt.Renderer`, so the assignment is fine.
-
----
-
-**Severity:** Medium
-**File:** [internal/log/log.go:507](internal/log/log.go)
-**Issue:** `Logger` is a package-level `*slog.Logger` initialized only by `log.Init()`. If any test calls a function that reaches `log.Warn(...)` (e.g., the branch-not-found warning in `buildBranchLessonData`) without first calling `log.Init()`, the program panics with a nil pointer dereference. `main.go` calls `log.Init()` — tests do not.
-
-**Suggestion:** Initialize `Logger` at package level with a default (discard in tests is fine):
-```go
-var Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
-
-func Init() {
-    // overrides with real handler
-    Logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
-}
-```
-Or use `slog.Default()` as the fallback, which is always non-nil.
-
----
-
-**Severity:** Medium
-**File:** [internal/scaffold/claudecode.go:3550](internal/scaffold/claudecode.go), [internal/scaffold/cursor.go:3739](internal/scaffold/cursor.go)
-**Issue:** `SetupClaudeCode` and `SetupCursor` still call `fmt.Printf(...)` directly (writes to `os.Stdout`), even though every other refactored function was converted to accept `out io.Writer`. This inconsistency means scaffold output cannot be suppressed or captured in tests, and these functions cannot follow the same testing pattern established by the rest of the PR.
-
-**Suggestion:** Pass an `out io.Writer` to both functions and use `fmt.Fprintf(out, ...)`. Both call sites (`init.go`) already pass `out` around and can thread it through.
-
----
-
-### Low
-
----
-
-**Severity:** Low
-**File:** [internal/cli/plan.go:1285](internal/cli/plan.go) (`runPlanJudge`)
-**Issue:** `runPlanJudge` does not apply `flagStrict` to the session config, while `runPlanSpec`, `runReview`, and `runStart` all do. If a user passes `--strict` to `qode plan judge`, it has no effect. This is inconsistent behavior — `--strict` is a persistent flag registered on `rootCmd`.
-
-**Suggestion:** Add the same pattern present in the other handlers:
-```go
-if flagStrict {
-    sess.Config.Scoring.Strict = true
-}
+// Ensure context/ exists so the user can populate ticket.md etc.
+// (not needed for the writes below, which create their own parent dirs)
+if err := branchcontext.EnsureContextDir(sess.Root, sess.Branch); err != nil {
 ```
 
----
+### Issue #2 — Medium
 
-**Severity:** Low
-**File:** [internal/cli/integration_test.go:782](internal/cli/integration_test.go)
-**Issue:** `setupProject` only resets `flagRoot` in its `t.Cleanup`. `flagStrict` (and any other persistent flags modified during a test) can leak into subsequent tests because `rootCmd` is a package-level var reused across tests. Since integration tests run with `-tags integration` and may be run with `-parallel`, a test that sets `--strict` could poison a later test.
+**File:** [internal/cli/integration_test.go:120](internal/cli/integration_test.go#L120)  
+**Issue:** `assertGolden` is defined with a full implementation (reads/writes golden files, compares output) but is never called by any test in the file. All assertions are inline. Dead infrastructure adds maintenance burden — future contributors may not notice it needs updating when outputs change, or may wonder why it exists.  
+**Suggestion:** Either add at least one golden test that exercises it (e.g., verify the full rendered output of `plan refine` against a golden file), or delete the function.
 
-**Suggestion:** In `setupProject`'s cleanup:
-```go
-t.Cleanup(func() {
-    flagRoot = ""
-    flagStrict = false
-})
-```
+### Issue #3 — Low
 
----
+**File:** [internal/config/validate.go:10](internal/config/validate.go#L10)  
+**Issue:** `validRubricKeys` is a static compile-time list. If a newer version of qode adds a rubric key and an older binary is pointed at that project's `qode.yaml`, `config.Load` returns `invalid qode config: unknown rubric key "..."` at startup — blocking all commands. This is a forward-compatibility break in a tool that operates on versioned config files.  
+**Suggestion:** Either (a) make unknown keys a `log.Warn` instead of an error, or (b) improve the error message: `(run with a newer qode binary if this key was added in a later version)`.
 
-**Severity:** Low
-**File:** [internal/cli/init_test.go:650-655](internal/cli/init_test.go)
-**Issue:** `TestRunInitExisting_NoDetectionOutput` now trivially passes. It calls `runInitExisting(&bytes.Buffer{}, dir)` and then asserts stdout is empty — which it always will be because `runInitExisting` no longer writes to `os.Stdout` at all. The test claims to verify "no detection output" but exercises nothing meaningful after this refactoring.
+### Issue #4 — Low
 
-**Suggestion:** Either delete this test (the behavior it was guarding against — detection output leaking to stdout — cannot happen anymore by construction), or rewrite it to assert the `bytes.Buffer` contains specific expected output and `os.Stdout` remains clean.
+**File:** [internal/cli/integration_test.go:713](internal/cli/integration_test.go#L713)  
+**Issue:** `withTicket` and `withRefinedAnalysis` use `os.WriteFile` directly. They work only because `setupProject` pre-creates `ctxDir` via `os.MkdirAll`. If `setupProject` is ever refactored to create dirs lazily, these helpers will break. Minor consistency issue — all production code uses `iokit.WriteFile`.  
+**Suggestion:** Replace `os.WriteFile(...)` with `iokit.WriteFile(...)` in both helpers for defensive consistency. Low priority.
 
----
+### Issue #5 — Nit
 
-### Nit
+**File:** [internal/cli/integration_test.go:108](internal/cli/integration_test.go#L108)  
+**Issue:** Comment reads "CLI handlers use fmt.Print which goes to os.Stdout". After the refactoring, handlers use `fmt.Fprint(out, ...)` where `out = os.Stdout`. The behaviour is identical but the comment is inaccurate.  
+**Suggestion:** Update to: "CLI handlers write to os.Stdout via the io.Writer parameter, so captureStdout redirects correctly."
 
----
+### Issue #6 — Nit
 
-**Severity:** Nit
-**File:** [internal/prompt/templates/scaffold/qode-knowledge-add-branch.claude.md.tmpl](internal/prompt/templates/scaffold/qode-knowledge-add-branch.claude.md.tmpl)
-**Issue:** Extra blank line between the heading and `Run this command...` (lines 2 and 3 in the template). All other `.claude.md.tmpl` files have the command body directly after the heading.
-
-**Suggestion:** Remove the extra blank line.
-
----
-
-**Severity:** Nit
-**File:** [.gitignore](.gitignore)
-**Issue:** Missing newline at end of file (shown as `\ No newline at end of file` in the diff).
-
-**Suggestion:** Add a trailing newline.
+**File:** [internal/iokit/iokit.go:10](internal/iokit/iokit.go#L10)  
+**Issue:** `ReadFileOrString` returns `defaultVal` for any error, not just file-not-found. The function name implies a "missing file" fallback contract, but a permission-denied error on an existing file returns the same result silently.  
+**Suggestion:** Add a doc comment: `// Any error (including permission denied) returns defaultVal.`
 
 ---
 
@@ -197,18 +116,20 @@ t.Cleanup(func() {
 | Severity | Count |
 |----------|-------|
 | Critical | 0 |
-| High     | 2 |
-| Medium   | 3 |
-| Low      | 3 |
+| High     | 0 |
+| Medium   | 2 |
+| Low      | 2 |
 | Nit      | 2 |
 
-**Total: 10 issues**
+**Overall assessment:** The refactoring achieves its goals cleanly. The `io.Writer` injection pattern is complete and consistent across all `run*` functions. The `Session` struct eliminates meaningful boilerplate. The `iokit` package is well-tested and correctly used. The 10 issues from the prior review are all fixed and verified in the current source files.
 
-### Top 3 before merging
+The two Medium issues are not blockers: one is a documentation gap in `EnsureContextDir` placement, the other is dead test infrastructure. Neither affects correctness or the CLI contract.
 
-1. **Fix `AtomicWrite` permissions** — prompt files land as `0600` silently; add the `Chmod` call and a permissions test.
-2. **Restore `buildBranchLessonData` semantics** — `qode knowledge add-branch <branch>` saves to the wrong directory and renders the wrong branch name; revert `currentBranch` to `branches[0]` for `Branch` and `branchDir`.
-3. **Protect against `log.Logger` nil panic** — initialize `Logger` to a default non-nil value at declaration so tests that reach warn paths don't panic.
+**Top 3 things to fix before merging:**
+
+1. Add a comment to the `EnsureContextDir` call in `runReview` explaining it creates the input dir (context/) not the output dirs
+2. Either add a golden test using `assertGolden` or delete the function
+3. Improve the `validRubricKeys` error message to mention the forward-compatibility implication
 
 ---
 
@@ -216,14 +137,12 @@ t.Cleanup(func() {
 
 | Dimension | Score | What you verified |
 |-----------|-------|-------------------|
-| Correctness (0–3) | 2.0 | `AtomicWrite`: confirmed `perm` unused by reading all 52 lines — temp file created with `0600`, `perm` arg passed but never applied. `buildBranchLessonData`: traced diff at lines 1197-1222 — `Branch` and `branchDir` both changed from `branches[0]` to `currentBranch`; confirmed no existing test covers multi-branch argument. All other logic paths (guard checks, error propagation, session loading) correct. |
-| CLI Contract (0–2) | 1.5 | STOP/strict/force paths verified in `plan_test.go`, `review_test.go`, and new integration tests. Non-strict empty-diff returns nil confirmed. `knowledge add-branch` CLI contract broken: target branch is silently ignored for output location and template Branch field. |
-| Go Idioms & Code Quality (0–2) | 1.5 | `io.Writer` injection consistent across all 7 run* functions. `Session` struct eliminates ~15 lines of boilerplate per command. `iokit` helpers idiomatic and correctly handle parent-dir creation. `Session.Engine` typed as `*prompt.Engine` instead of `prompt.Renderer` — interface introduced this PR is underutilised. `scaffold` still writes to `os.Stdout` directly. |
-| Error Handling & UX (0–2) | 1.5 | `ParseIterationFromOutput` errors previously swallowed with `_ =`; now propagated with context — verified at lines 2658-2669. Warn-path migration to slog correct. `log.Logger` nil at test time is a latent panic: no nil-guard or default initialization at declaration site. |
-| Test Coverage (0–2) | 1.5 | `iokit` package: 8 tests covering all 4 functions — complete. `config/validate`: 9 tests covering all validation rules. Integration tests: 6 scenarios covering plan, spec, review paths. Gaps: `AtomicWrite` permissions untested; `TestRunInitExisting_NoDetectionOutput` trivially passes; `flagStrict` leak possible in integration suite. |
-| Template Safety (0–1) | 1.0 | `judge_refine.md.tmpl` Go template syntax correctly escaped with `{{"{{"}}` and `{{"}}"}}`. Scaffold templates use `{{.Project.Name}}` only — no user-supplied data interpolated without escaping. |
+| Correctness (0–3) | 3 | `buildBranchLessonData` uses `branches[0]` (current file lines 225, 229); `AtomicWrite` calls `os.Chmod` before rename (iokit.go:46); `log.Logger = slog.Default()` (log.go:11); `Session.Engine` is `prompt.Renderer` (session.go:16); `runPlanJudge` applies `flagStrict` |
+| CLI Contract (0–2) | 2 | All 6 `run*` functions accept `out, errOut io.Writer`; `flagStrict` applied in `runPlanSpec`, `runPlanJudge`, `runStart`, `runReview`; scaffold functions propagate `io.Writer`; `writePromptToFile` delegates to `iokit.AtomicWrite` |
+| Go Idioms & Code Quality (0–2) | 1.5 | `assertGolden` dead code; `EnsureContextDir` call semantically misplaced before unrelated writes; otherwise idiomatic Go — named functions, explicit errors, no global output writes |
+| Error Handling & UX (0–2) | 1.5 | `config.Validate` error messages are specific and actionable; `ReadFileOrString` silently swallows all errors (Nit); forward-compat risk in strict rubric-key validation (Low) |
+| Test Coverage (0–2) | 1.5 | New iokit tests cover permissions and atomicity; validate tests cover 8 cases; integration tests cover guard-blocked and guard-passed paths; `assertGolden` infra is unused |
+| Template Safety (0–1) | 1 | Scaffold templates verified: `{{.Project.Name}}` is the only interpolation point; rendered at `qode init` time from qode.yaml string field; no user-controlled runtime input reaches template engine |
 
-**Total Score: 9.0/12**
-**Minimum passing score: 10/12**
-
-> Score capped at 9.0 by two High findings (one correctness bug in `AtomicWrite`, one behavioral regression in `buildBranchLessonData`). The structural improvements in this PR are solid and the `io.Writer` injection pattern is well-executed — these two specific fixes are all that stand between this and a passing score.
+**Total Score: 10.5/12**  
+**Minimum passing score: 10/12** ✓

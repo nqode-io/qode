@@ -76,6 +76,8 @@ func runReview(out, errOut io.Writer, kind string, toFile, force bool) error {
 
 	branchDir := sess.Context.ContextDir
 
+	// Ensure context/ exists so the user can populate ticket.md etc.
+	// (not needed for the writes below, which create their own parent dirs)
 	if err := branchcontext.EnsureContextDir(sess.Root, sess.Branch); err != nil {
 		return fmt.Errorf("creating context directory: %w", err)
 	}
