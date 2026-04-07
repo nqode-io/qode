@@ -23,7 +23,8 @@ func DefaultConfig() Config {
 }
 
 // DefaultRubricConfigs returns the built-in rubric configurations.
-// These mirror the hardcoded Default*Rubric vars in internal/scoring/rubric.go.
+// This is the single source of truth for rubric data; internal/scoring/rubric.go
+// derives its Default*Rubric vars from these values.
 func DefaultRubricConfigs() map[string]RubricConfig {
 	return map[string]RubricConfig{
 		"refine": {

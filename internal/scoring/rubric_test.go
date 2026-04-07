@@ -128,27 +128,6 @@ func TestBuildRubric_ReviewOverride(t *testing.T) {
 	}
 }
 
-func TestBuildRubric_DefaultReviewSecurityMirrorConfig(t *testing.T) {
-	defaults := config.DefaultRubricConfigs()
-
-	reviewCfg, ok := defaults["review"]
-	if !ok {
-		t.Fatal("DefaultRubricConfigs missing 'review' key")
-	}
-	if len(reviewCfg.Dimensions) != len(DefaultReviewRubric.Dimensions) {
-		t.Errorf("DefaultRubricConfigs[review] has %d dims, DefaultReviewRubric has %d — they must mirror each other",
-			len(reviewCfg.Dimensions), len(DefaultReviewRubric.Dimensions))
-	}
-	for i, dc := range reviewCfg.Dimensions {
-		d := DefaultReviewRubric.Dimensions[i]
-		if dc.Name != d.Name {
-			t.Errorf("dim[%d] name mismatch: config %q vs rubric %q", i, dc.Name, d.Name)
-		}
-		if dc.Weight != d.Weight {
-			t.Errorf("dim[%d] weight mismatch: config %d vs rubric %d", i, dc.Weight, d.Weight)
-		}
-	}
-}
 
 func TestDefaultRefineRubricLevels(t *testing.T) {
 	dims := DefaultRefineRubric.Dimensions
