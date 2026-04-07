@@ -77,10 +77,10 @@ func TestClaudeSlashCommands_NoPromptOnly(t *testing.T) {
 	}
 }
 
-// --- slashCommands (Cursor) ---
+// --- cursorSlashCommands (Cursor) ---
 
 func TestCursorSlashCommands_ContainsTicketFetch(t *testing.T) {
-	cmds := slashCommands("testproject")
+	cmds := cursorSlashCommands("testproject")
 	content, ok := cmds["qode-ticket-fetch"]
 	if !ok {
 		t.Fatal("slashCommands: missing key qode-ticket-fetch")
@@ -96,14 +96,14 @@ func TestCursorSlashCommands_ContainsTicketFetch(t *testing.T) {
 }
 
 func TestCursorSlashCommands_HasNineEntries(t *testing.T) {
-	cmds := slashCommands("testproject")
+	cmds := cursorSlashCommands("testproject")
 	if len(cmds) != 9 {
 		t.Errorf("slashCommands: len = %d, want 9", len(cmds))
 	}
 }
 
 func TestCursorSlashCommands_IncludesKnowledge(t *testing.T) {
-	cmds := slashCommands("testproject")
+	cmds := cursorSlashCommands("testproject")
 	for _, key := range []string{"qode-knowledge-add-context", "qode-knowledge-add-branch"} {
 		content, ok := cmds[key]
 		if !ok {
@@ -117,7 +117,7 @@ func TestCursorSlashCommands_IncludesKnowledge(t *testing.T) {
 }
 
 func TestCursorSlashCommands_IncludesQodeCheck(t *testing.T) {
-	cmds := slashCommands("testproject")
+	cmds := cursorSlashCommands("testproject")
 	content, ok := cmds["qode-check"]
 	if !ok {
 		t.Fatal("slashCommands: missing key qode-check")
@@ -139,7 +139,7 @@ func TestCursorSlashCommands_IncludesQodeCheck(t *testing.T) {
 }
 
 func TestCursorSlashCommands_NoPromptOnly(t *testing.T) {
-	cmds := slashCommands("testproject")
+	cmds := cursorSlashCommands("testproject")
 	for name, content := range cmds {
 		if strings.Contains(content, "--prompt-only") {
 			t.Errorf("slashCommands: %s contains --prompt-only", name)
