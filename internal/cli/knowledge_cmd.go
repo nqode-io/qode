@@ -12,6 +12,7 @@ import (
 	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/knowledge"
+	"github.com/nqode/qode/internal/log"
 	"github.com/nqode/qode/internal/prompt"
 	"github.com/spf13/cobra"
 )
@@ -185,7 +186,7 @@ func buildBranchLessonData(root string, engine prompt.Renderer, branches []strin
 	for _, b := range branches {
 		ctx, err := branchcontext.Load(root, b)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: branch context %q: %v\n", b, err)
+			log.Warn("could not load branch context", "branch", b, "error", err)
 			continue
 		}
 		if ctx.Ticket != "" {

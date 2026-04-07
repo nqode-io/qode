@@ -7,12 +7,14 @@ import (
 	"github.com/nqode/qode/internal/cli"
 	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/env"
+	"github.com/nqode/qode/internal/log"
 )
 
 // version is set at build time via ldflags.
 var version = "dev"
 
 func main() {
+	log.Init()
 	cli.SetVersion(version)
 	loadDotEnv()
 	if err := cli.Execute(); err != nil {
@@ -34,6 +36,6 @@ func loadDotEnv() {
 	}
 
 	if err := env.Load(root); err != nil {
-		fmt.Fprintln(os.Stderr, "Warning: could not load .env file:", err)
+		log.Warn("could not load .env file", "error", err)
 	}
 }
