@@ -20,13 +20,13 @@ type RefineOutput struct {
 }
 
 // BuildRefinePrompt generates the worker refinement prompt.
-func BuildRefinePrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Context, ticketURL string, iteration int) (*RefineOutput, error) {
+func BuildRefinePrompt(engine prompt.Renderer, cfg *config.Config, ctx *context.Context, ticketURL string, iteration int) (*RefineOutput, error) {
 	return BuildRefinePromptWithOutput(engine, cfg, ctx, ticketURL, iteration, "")
 }
 
 // BuildRefinePromptWithOutput generates the worker refinement prompt with an
 // optional output path so the AI writes its analysis directly to that file.
-func BuildRefinePromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx *context.Context, ticketURL string, iteration int, outputPath string) (*RefineOutput, error) {
+func BuildRefinePromptWithOutput(engine prompt.Renderer, cfg *config.Config, ctx *context.Context, ticketURL string, iteration int, outputPath string) (*RefineOutput, error) {
 	if iteration == 0 {
 		iteration = len(ctx.Iterations) + 1
 	}
@@ -55,13 +55,13 @@ func BuildRefinePromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx 
 }
 
 // BuildSpecPrompt generates the spec creation prompt.
-func BuildSpecPrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Context) (string, error) {
+func BuildSpecPrompt(engine prompt.Renderer, cfg *config.Config, ctx *context.Context) (string, error) {
 	return BuildSpecPromptWithOutput(engine, cfg, ctx, "")
 }
 
 // BuildSpecPromptWithOutput generates the spec creation prompt with an optional
 // output path so the AI writes the spec directly to that file.
-func BuildSpecPromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx *context.Context, outputPath string) (string, error) {
+func BuildSpecPromptWithOutput(engine prompt.Renderer, cfg *config.Config, ctx *context.Context, outputPath string) (string, error) {
 	data := prompt.TemplateData{
 		Project:    prompt.TemplateProject{Name: engine.ProjectName()},
 		Branch:     ctx.Branch,
@@ -72,7 +72,7 @@ func BuildSpecPromptWithOutput(engine *prompt.Engine, cfg *config.Config, ctx *c
 }
 
 // BuildStartPrompt generates the implementation kickoff prompt.
-func BuildStartPrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Context, kb string) (string, error) {
+func BuildStartPrompt(engine prompt.Renderer, cfg *config.Config, ctx *context.Context, kb string) (string, error) {
 	data := prompt.TemplateData{
 		Project:   prompt.TemplateProject{Name: engine.ProjectName()},
 		Branch:    ctx.Branch,
@@ -101,7 +101,7 @@ func SaveIterationFiles(root, branch string, out *RefineOutput) (workerPath stri
 
 // BuildJudgePrompt generates the judge scoring prompt.
 // The template references refined-analysis.md by path; no file read is performed here.
-func BuildJudgePrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Context) (string, error) {
+func BuildJudgePrompt(engine prompt.Renderer, cfg *config.Config, ctx *context.Context) (string, error) {
 	rubric := scoring.BuildRubric(scoring.RubricRefine, cfg)
 	targetScore := rubric.Total()
 	if cfg != nil && cfg.Scoring.TargetScore > 0 {
