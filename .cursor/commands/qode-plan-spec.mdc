@@ -7,5 +7,6 @@ Run this command and use its stdout output as your prompt:
 
 If the output begins with `STOP.`, do not execute it as a prompt — report the prerequisite message to the user and wait for instructions. Use `qode plan spec --force` to bypass score gates when needed.
 
-After generating the spec, save it to:
-  .qode/branches/$(git branch --show-current | sed 's|/|--|g')/spec.md
+After generating the spec:
+- Save it to: .qode/branches/$(git branch --show-current | sed 's|/|--|g')/spec.md
+- Suggest copying it to the ticket system for team review
