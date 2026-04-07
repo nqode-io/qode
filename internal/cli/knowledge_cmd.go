@@ -173,7 +173,7 @@ func runKnowledgeAddBranch(args []string, toFile bool) error {
 	return err
 }
 
-func buildBranchLessonData(root string, engine *prompt.Engine, branches []string, currentBranch string) (prompt.TemplateData, error) {
+func buildBranchLessonData(root string, engine prompt.Renderer, branches []string, currentBranch string) (prompt.TemplateData, error) {
 	var allTicket, allAnalysis, allSpec, allExtra strings.Builder
 	var diff string
 

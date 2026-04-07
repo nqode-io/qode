@@ -9,7 +9,7 @@ import (
 
 // BuildCodePrompt generates the code review prompt.
 // When outputPath is non-empty the rendered prompt includes file-write instructions.
-func BuildCodePrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Context, outputPath string) (string, error) {
+func BuildCodePrompt(engine prompt.Renderer, cfg *config.Config, ctx *context.Context, outputPath string) (string, error) {
 	data := prompt.TemplateData{
 		Project:      prompt.TemplateProject{Name: engine.ProjectName()},
 		Branch:       ctx.Branch,
@@ -23,7 +23,7 @@ func BuildCodePrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Con
 
 // BuildSecurityPrompt generates the security review prompt.
 // When outputPath is non-empty the rendered prompt includes file-write instructions.
-func BuildSecurityPrompt(engine *prompt.Engine, cfg *config.Config, ctx *context.Context, outputPath string) (string, error) {
+func BuildSecurityPrompt(engine prompt.Renderer, cfg *config.Config, ctx *context.Context, outputPath string) (string, error) {
 	data := prompt.TemplateData{
 		Project:      prompt.TemplateProject{Name: engine.ProjectName()},
 		Branch:       ctx.Branch,
