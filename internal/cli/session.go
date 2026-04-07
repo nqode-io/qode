@@ -13,7 +13,7 @@ type Session struct {
 	Config  *config.Config
 	Branch  string
 	Context *branchcontext.Context
-	Engine  *prompt.Engine
+	Engine  prompt.Renderer
 }
 
 func loadSession() (*Session, error) {

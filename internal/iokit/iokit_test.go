@@ -79,6 +79,22 @@ func TestAtomicWrite_ContentCorrect(t *testing.T) {
 	}
 }
 
+func TestAtomicWrite_VerifyPermissions(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "out.txt")
+	const perm os.FileMode = 0644
+	if err := iokit.AtomicWrite(path, []byte("data"), perm); err != nil {
+		t.Fatalf("AtomicWrite: %v", err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("Stat: %v", err)
+	}
+	if got := info.Mode().Perm(); got != perm {
+		t.Errorf("permissions: got %o, want %o", got, perm)
+	}
+}
+
 func TestAtomicWrite_NoTempFileLeft(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "out.txt")

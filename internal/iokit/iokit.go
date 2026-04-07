@@ -43,6 +43,9 @@ func AtomicWrite(path string, data []byte, perm os.FileMode) error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
+	if err := os.Chmod(tmp.Name(), perm); err != nil {
+		return err
+	}
 	return os.Rename(tmp.Name(), path)
 }
 

@@ -2,6 +2,7 @@ package scaffold
 
 import (
 	"fmt"
+	"io"
 	"path/filepath"
 
 	"github.com/nqode/qode/internal/iokit"
@@ -23,7 +24,7 @@ var cursorCommands = []string{
 }
 
 // SetupCursor generates Cursor IDE configuration files.
-func SetupCursor(root string) error {
+func SetupCursor(out io.Writer, root string) error {
 	if err := iokit.EnsureDir(filepath.Join(root, cursorCommandsDir)); err != nil {
 		return err
 	}
@@ -46,6 +47,6 @@ func SetupCursor(root string) error {
 		}
 	}
 
-	fmt.Printf("  Cursor: .cursor/commands/ (%d commands)\n", len(cursorCommands))
+	_, _ = fmt.Fprintf(out, "  Cursor: .cursor/commands/ (%d commands)\n", len(cursorCommands))
 	return nil
 }

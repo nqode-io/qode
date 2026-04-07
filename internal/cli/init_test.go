@@ -108,16 +108,33 @@ func TestRunInitExisting_NoCursorRules(t *testing.T) {
 func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 	dir := t.TempDir()
 
-	output := captureStdout(t, func() {
-		if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	var buf bytes.Buffer
+	var stdoutOutput string
+	stdoutOutput = captureStdout(t, func() {
+		if err := runInitExisting(&buf, dir); err != nil {
 			t.Errorf("runInitExisting: %v", err)
 		}
 	})
 
+	// Nothing should reach os.Stdout — all output goes through the writer.
+	if stdoutOutput != "" {
+		t.Errorf("expected nothing on stdout, got: %s", stdoutOutput)
+	}
+
+	// The writer must not contain legacy detection phrases.
+	out := buf.String()
 	for _, forbidden := range []string{"Detected", "Scanning", "qode ide setup"} {
-		if strings.Contains(output, forbidden) {
-			t.Errorf("output must not contain %q, got: %s", forbidden, output)
+		if strings.Contains(out, forbidden) {
+			t.Errorf("output must not contain %q, got: %s", forbidden, out)
 		}
+	}
+
+	// Sanity-check that the writer received expected content.
+	if !strings.Contains(out, "Generated:") {
+		t.Errorf("expected 'Generated:' in output, got: %s", out)
+	}
+	if !strings.Contains(out, "Next steps:") {
+		t.Errorf("expected 'Next steps:' in output, got: %s", out)
 	}
 }
 

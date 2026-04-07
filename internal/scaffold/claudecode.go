@@ -2,6 +2,7 @@ package scaffold
 
 import (
 	"fmt"
+	"io"
 	"path/filepath"
 
 	"github.com/nqode/qode/internal/iokit"
@@ -21,7 +22,7 @@ var claudeCommands = []string{
 }
 
 // SetupClaudeCode generates Claude Code configuration files.
-func SetupClaudeCode(root string) error {
+func SetupClaudeCode(out io.Writer, root string) error {
 	commandsDir := filepath.Join(root, ".claude", "commands")
 	if err := iokit.EnsureDir(commandsDir); err != nil {
 		return err
@@ -44,6 +45,6 @@ func SetupClaudeCode(root string) error {
 		}
 	}
 
-	fmt.Printf("  Claude Code: %d slash commands\n", len(claudeCommands))
+	_, _ = fmt.Fprintf(out, "  Claude Code: %d slash commands\n", len(claudeCommands))
 	return nil
 }

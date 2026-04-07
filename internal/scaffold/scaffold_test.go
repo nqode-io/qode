@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,7 +43,7 @@ func readCursorCommand(t *testing.T, root, name string) string {
 
 func TestSetupClaudeCode_WritesTicketFetchCommand(t *testing.T) {
 	dir := t.TempDir()
-	if err := SetupClaudeCode(dir); err != nil {
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
@@ -59,7 +60,7 @@ func TestSetupClaudeCode_WritesTicketFetchCommand(t *testing.T) {
 
 func TestSetupClaudeCode_WritesNineCommands(t *testing.T) {
 	dir := t.TempDir()
-	if err := SetupClaudeCode(dir); err != nil {
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
@@ -74,7 +75,7 @@ func TestSetupClaudeCode_WritesNineCommands(t *testing.T) {
 
 func TestSetupClaudeCode_WritesKnowledgeCommands(t *testing.T) {
 	dir := t.TempDir()
-	if err := SetupClaudeCode(dir); err != nil {
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
@@ -88,7 +89,7 @@ func TestSetupClaudeCode_WritesKnowledgeCommands(t *testing.T) {
 
 func TestSetupClaudeCode_IncludesQodeCheck(t *testing.T) {
 	dir := t.TempDir()
-	if err := SetupClaudeCode(dir); err != nil {
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
@@ -110,7 +111,7 @@ func TestSetupClaudeCode_IncludesQodeCheck(t *testing.T) {
 
 func TestSetupClaudeCode_NoPromptOnly(t *testing.T) {
 	dir := t.TempDir()
-	if err := SetupClaudeCode(dir); err != nil {
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
@@ -124,7 +125,7 @@ func TestSetupClaudeCode_NoPromptOnly(t *testing.T) {
 
 func TestSetupClaudeCode_CommandsContainRootName(t *testing.T) {
 	projectDir := setupProject(t, "myproject")
-	if err := SetupClaudeCode(projectDir); err != nil {
+	if err := SetupClaudeCode(io.Discard, projectDir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
@@ -138,7 +139,7 @@ func TestSetupClaudeCode_CommandsContainRootName(t *testing.T) {
 
 func TestSetupCursor_WritesTicketFetchCommand(t *testing.T) {
 	dir := t.TempDir()
-	if err := SetupCursor(dir); err != nil {
+	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
@@ -155,7 +156,7 @@ func TestSetupCursor_WritesTicketFetchCommand(t *testing.T) {
 
 func TestSetupCursor_WritesNineCommands(t *testing.T) {
 	dir := t.TempDir()
-	if err := SetupCursor(dir); err != nil {
+	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
@@ -170,7 +171,7 @@ func TestSetupCursor_WritesNineCommands(t *testing.T) {
 
 func TestSetupCursor_WritesKnowledgeCommands(t *testing.T) {
 	dir := t.TempDir()
-	if err := SetupCursor(dir); err != nil {
+	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
@@ -184,7 +185,7 @@ func TestSetupCursor_WritesKnowledgeCommands(t *testing.T) {
 
 func TestSetupCursor_IncludesQodeCheck(t *testing.T) {
 	dir := t.TempDir()
-	if err := SetupCursor(dir); err != nil {
+	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
@@ -206,7 +207,7 @@ func TestSetupCursor_IncludesQodeCheck(t *testing.T) {
 
 func TestSetupCursor_NoPromptOnly(t *testing.T) {
 	dir := t.TempDir()
-	if err := SetupCursor(dir); err != nil {
+	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
@@ -220,7 +221,7 @@ func TestSetupCursor_NoPromptOnly(t *testing.T) {
 
 func TestSetupCursor_NoCursorRulesDir(t *testing.T) {
 	dir := t.TempDir()
-	if err := SetupCursor(dir); err != nil {
+	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
@@ -231,7 +232,7 @@ func TestSetupCursor_NoCursorRulesDir(t *testing.T) {
 
 func TestSetupCursor_CommandsContainRootName(t *testing.T) {
 	projectDir := setupProject(t, "myproject")
-	if err := SetupCursor(projectDir); err != nil {
+	if err := SetupCursor(io.Discard, projectDir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 

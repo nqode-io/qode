@@ -91,7 +91,10 @@ func setupProject(t *testing.T, branch string, opts ...setupOption) string {
 
 	// Point the CLI at this temp root and restore on cleanup.
 	flagRoot = root
-	t.Cleanup(func() { flagRoot = "" })
+	t.Cleanup(func() {
+		flagRoot = ""
+		flagStrict = false
+	})
 
 	return root
 }

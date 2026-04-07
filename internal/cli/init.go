@@ -88,7 +88,7 @@ func runInitExisting(out io.Writer, root string) error {
 	}
 
 	// Generate IDE configs and slash commands using the loaded (or default) config.
-	if err := scaffold.Setup(root, &cfg); err != nil {
+	if err := scaffold.Setup(out, root, &cfg); err != nil {
 		return fmt.Errorf("setting up IDE configs: %w", err)
 	}
 

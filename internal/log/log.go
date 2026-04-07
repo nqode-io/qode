@@ -7,7 +7,8 @@ import (
 )
 
 // Logger is the package-level structured logger.
-var Logger *slog.Logger
+// Initialised to slog.Default() so callers never encounter a nil Logger before Init() is called.
+var Logger = slog.Default()
 
 // Init configures the package-level logger.
 // It respects the QODE_LOG_LEVEL environment variable (debug, info, warn, error).

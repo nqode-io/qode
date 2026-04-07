@@ -87,6 +87,9 @@ func runPlanJudge(out, errOut io.Writer, toFile bool) error {
 	if err != nil {
 		return err
 	}
+	if flagStrict {
+		sess.Config.Scoring.Strict = true
+	}
 
 	if !sess.Context.HasRefinedAnalysis() {
 		_, _ = fmt.Fprintln(errOut, "No refined analysis found.")
