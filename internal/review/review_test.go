@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/nqode/qode/internal/config"
-	"github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/prompt"
 )
 
@@ -18,7 +18,7 @@ func TestBuildCodePrompt_OmitsDiffAndSpec(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:     "test-branch",
 		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
 		Spec:       "spec sentinel content here",
@@ -62,7 +62,7 @@ func TestBuildCodePrompt_PctConstraints(t *testing.T) {
 		},
 	}
 
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:     "test-branch",
 		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
 	}
@@ -89,7 +89,7 @@ func TestBuildSecurityPrompt_OmitsDiff(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:     "test-branch",
 		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
 	}
@@ -116,7 +116,7 @@ func TestBuildCodePrompt_ContainsProjectName(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:     "test-branch",
 		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
 	}
@@ -143,7 +143,7 @@ func TestBuildSecurityPrompt_ContainsProjectName(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:     "test-branch",
 		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
 	}

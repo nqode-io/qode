@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/nqode/qode/internal/config"
-	gocontext "github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/knowledge"
 	"github.com/nqode/qode/internal/prompt"
@@ -181,7 +181,7 @@ func buildBranchLessonData(root string, engine prompt.Renderer, branches []strin
 	var diff string
 
 	for _, b := range branches {
-		ctx, err := gocontext.Load(root, b)
+		ctx, err := branchcontext.Load(root, b)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: branch context %q: %v\n", b, err)
 			continue

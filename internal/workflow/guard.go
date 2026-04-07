@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/nqode/qode/internal/config"
-	"github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/scoring"
 )
 
@@ -21,7 +21,7 @@ type CheckResult struct {
 // Guarded steps: "spec", "start".
 // Review steps ("review-code", "review-security") use the diff-empty check in
 // runReview instead of this function. Unknown steps are treated as unblocked.
-func CheckStep(step string, ctx *context.Context, cfg *config.Config) CheckResult {
+func CheckStep(step string, ctx *branchcontext.Context, cfg *config.Config) CheckResult {
 	switch step {
 	case "spec":
 		return checkSpec(ctx, cfg)
@@ -31,7 +31,7 @@ func CheckStep(step string, ctx *context.Context, cfg *config.Config) CheckResul
 	return CheckResult{}
 }
 
-func checkSpec(ctx *context.Context, cfg *config.Config) CheckResult {
+func checkSpec(ctx *branchcontext.Context, cfg *config.Config) CheckResult {
 	if !ctx.HasRefinedAnalysis() {
 		return CheckResult{
 			Blocked: true,
@@ -58,7 +58,7 @@ func checkSpec(ctx *context.Context, cfg *config.Config) CheckResult {
 	return CheckResult{}
 }
 
-func checkStart(ctx *context.Context) CheckResult {
+func checkStart(ctx *branchcontext.Context) CheckResult {
 	if !ctx.HasSpec() {
 		return CheckResult{
 			Blocked: true,

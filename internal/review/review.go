@@ -2,14 +2,14 @@ package review
 
 import (
 	"github.com/nqode/qode/internal/config"
-	"github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/prompt"
 	"github.com/nqode/qode/internal/scoring"
 )
 
 // BuildCodePrompt generates the code review prompt.
 // When outputPath is non-empty the rendered prompt includes file-write instructions.
-func BuildCodePrompt(engine prompt.Renderer, cfg *config.Config, ctx *context.Context, outputPath string) (string, error) {
+func BuildCodePrompt(engine prompt.Renderer, cfg *config.Config, ctx *branchcontext.Context, outputPath string) (string, error) {
 	data := prompt.TemplateData{
 		Project:      prompt.TemplateProject{Name: engine.ProjectName()},
 		Branch:       ctx.Branch,
@@ -23,7 +23,7 @@ func BuildCodePrompt(engine prompt.Renderer, cfg *config.Config, ctx *context.Co
 
 // BuildSecurityPrompt generates the security review prompt.
 // When outputPath is non-empty the rendered prompt includes file-write instructions.
-func BuildSecurityPrompt(engine prompt.Renderer, cfg *config.Config, ctx *context.Context, outputPath string) (string, error) {
+func BuildSecurityPrompt(engine prompt.Renderer, cfg *config.Config, ctx *branchcontext.Context, outputPath string) (string, error) {
 	data := prompt.TemplateData{
 		Project:      prompt.TemplateProject{Name: engine.ProjectName()},
 		Branch:       ctx.Branch,

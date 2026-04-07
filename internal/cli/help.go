@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/nqode/qode/internal/config"
-	gocontext "github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/scoring"
 	"github.com/nqode/qode/internal/workflow"
@@ -67,7 +67,7 @@ func runWorkflowStatus() error {
 	return nil
 }
 
-func buildStatusLines(ctx *gocontext.Context, cfg *config.Config, diff string) (lines []string, upNext string) {
+func buildStatusLines(ctx *branchcontext.Context, cfg *config.Config, diff string) (lines []string, upNext string) {
 	step := func(n int, label, status string) string {
 		return fmt.Sprintf("%d. %s - %s", n, label, status)
 	}
@@ -121,7 +121,7 @@ func buildStatusLines(ctx *gocontext.Context, cfg *config.Config, diff string) (
 	return lines, upNext
 }
 
-func refineStatus(ctx *gocontext.Context, cfg *config.Config, upNext *string) string {
+func refineStatus(ctx *branchcontext.Context, cfg *config.Config, upNext *string) string {
 	if !ctx.HasRefinedAnalysis() {
 		if *upNext == "" {
 			*upNext = "Run /qode-plan-refine."
@@ -147,7 +147,7 @@ func refineStatus(ctx *gocontext.Context, cfg *config.Config, upNext *string) st
 	return fmt.Sprintf("%d iteration(s), latest score: %d/%d.", n, score, maxScore)
 }
 
-func reviewStatus(ctx *gocontext.Context, cfg *config.Config, upNext *string) []string {
+func reviewStatus(ctx *branchcontext.Context, cfg *config.Config, upNext *string) []string {
 	var lines []string
 	codeMax := scoring.BuildRubric(scoring.RubricReview, cfg).Total()
 	secMax := scoring.BuildRubric(scoring.RubricSecurity, cfg).Total()

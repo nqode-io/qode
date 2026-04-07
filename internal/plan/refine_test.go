@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/nqode/qode/internal/config"
-	"github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/prompt"
 	"github.com/nqode/qode/internal/scoring"
 )
@@ -92,7 +92,7 @@ func TestBuildSpecPromptWithOutput_OmitsAnalysis(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:          "test-branch",
 		ContextDir:      filepath.Join(root, ".qode", "branches", "test-branch"),
 		RefinedAnalysis: "full refined analysis sentinel text",
@@ -118,7 +118,7 @@ func TestBuildStartPrompt_OmitsSpec(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:     "test-branch",
 		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
 		Spec:       "spec sentinel content here",
@@ -145,7 +145,7 @@ func TestBuildJudgePrompt_ReferencesRefinedAnalysis(t *testing.T) {
 	}
 
 	branchDir := filepath.Join(root, ".qode", "branches", "test-branch")
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:     "test-branch",
 		ContextDir: branchDir,
 	}
@@ -183,7 +183,7 @@ func TestBuildJudgePrompt_CustomRubric(t *testing.T) {
 	}
 
 	branchDir := filepath.Join(root, ".qode", "branches", "test-branch")
-	ctx := &context.Context{Branch: "test-branch", ContextDir: branchDir}
+	ctx := &branchcontext.Context{Branch: "test-branch", ContextDir: branchDir}
 
 	got, err := BuildJudgePrompt(engine, cfg, ctx)
 	if err != nil {
@@ -274,7 +274,7 @@ func TestBuildRefinePromptWithOutput_OmitsAnalysisAndTicket(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:          "test-branch",
 		ContextDir:      filepath.Join(root, ".qode", "branches", "test-branch"),
 		RefinedAnalysis: "previous iteration analysis sentinel",
@@ -306,7 +306,7 @@ func TestBuildRefinePromptWithOutput_ContainsProjectName(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:     "test-branch",
 		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
 	}

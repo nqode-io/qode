@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	gocontext "github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/review"
 	"github.com/spf13/cobra"
@@ -71,7 +71,7 @@ func runReview(kind string, toFile, force bool) error {
 
 	branchDir := sess.Context.ContextDir
 
-	if err := gocontext.EnsureContextDir(sess.Root, sess.Branch); err != nil {
+	if err := branchcontext.EnsureContextDir(sess.Root, sess.Branch); err != nil {
 		return fmt.Errorf("creating context directory: %w", err)
 	}
 

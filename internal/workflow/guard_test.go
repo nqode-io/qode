@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/nqode/qode/internal/config"
-	"github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/branchcontext"
 )
 
 func TestCheckStep(t *testing.T) {
@@ -16,7 +16,7 @@ func TestCheckStep(t *testing.T) {
 	cases := []struct {
 		name        string
 		step        string
-		ctx         *context.Context
+		ctx         *branchcontext.Context
 		cfg         *config.Config
 		wantBlocked bool
 		wantMsg     string // substring that must appear in Message when blocked
@@ -24,7 +24,7 @@ func TestCheckStep(t *testing.T) {
 		{
 			name:        "spec/no-analysis",
 			step:        "spec",
-			ctx:         &context.Context{},
+			ctx:         &branchcontext.Context{},
 			cfg:         &defaultCfg,
 			wantBlocked: true,
 			wantMsg:     "refined-analysis.md",
@@ -32,9 +32,9 @@ func TestCheckStep(t *testing.T) {
 		{
 			name: "spec/unscored",
 			step: "spec",
-			ctx: &context.Context{
+			ctx: &branchcontext.Context{
 				RefinedAnalysis: "some content",
-				Iterations:      []context.Iteration{{Number: 1, Score: 0}},
+				Iterations:      []branchcontext.Iteration{{Number: 1, Score: 0}},
 			},
 			cfg:         &defaultCfg,
 			wantBlocked: true,
@@ -43,9 +43,9 @@ func TestCheckStep(t *testing.T) {
 		{
 			name: "spec/below-default-min",
 			step: "spec",
-			ctx: &context.Context{
+			ctx: &branchcontext.Context{
 				RefinedAnalysis: "some content",
-				Iterations:      []context.Iteration{{Number: 1, Score: 20}},
+				Iterations:      []branchcontext.Iteration{{Number: 1, Score: 20}},
 			},
 			cfg:         &defaultCfg,
 			wantBlocked: true,
@@ -54,9 +54,9 @@ func TestCheckStep(t *testing.T) {
 		{
 			name: "spec/meets-default-min",
 			step: "spec",
-			ctx: &context.Context{
+			ctx: &branchcontext.Context{
 				RefinedAnalysis: "some content",
-				Iterations:      []context.Iteration{{Number: 1, Score: 25}},
+				Iterations:      []branchcontext.Iteration{{Number: 1, Score: 25}},
 			},
 			cfg:         &defaultCfg,
 			wantBlocked: false,
@@ -64,9 +64,9 @@ func TestCheckStep(t *testing.T) {
 		{
 			name: "spec/custom-target-met",
 			step: "spec",
-			ctx: &context.Context{
+			ctx: &branchcontext.Context{
 				RefinedAnalysis: "some content",
-				Iterations:      []context.Iteration{{Number: 1, Score: 20}},
+				Iterations:      []branchcontext.Iteration{{Number: 1, Score: 20}},
 			},
 			cfg:         &customCfg,
 			wantBlocked: false,
@@ -74,9 +74,9 @@ func TestCheckStep(t *testing.T) {
 		{
 			name: "spec/custom-target-not-met",
 			step: "spec",
-			ctx: &context.Context{
+			ctx: &branchcontext.Context{
 				RefinedAnalysis: "some content",
-				Iterations:      []context.Iteration{{Number: 1, Score: 19}},
+				Iterations:      []branchcontext.Iteration{{Number: 1, Score: 19}},
 			},
 			cfg:         &customCfg,
 			wantBlocked: true,
@@ -85,7 +85,7 @@ func TestCheckStep(t *testing.T) {
 		{
 			name:        "start/no-spec",
 			step:        "start",
-			ctx:         &context.Context{},
+			ctx:         &branchcontext.Context{},
 			cfg:         &defaultCfg,
 			wantBlocked: true,
 			wantMsg:     "spec.md",
@@ -93,21 +93,21 @@ func TestCheckStep(t *testing.T) {
 		{
 			name: "start/spec-present",
 			step: "start",
-			ctx:  &context.Context{Spec: "spec content"},
+			ctx:  &branchcontext.Context{Spec: "spec content"},
 			cfg:  &defaultCfg,
 			wantBlocked: false,
 		},
 		{
 			name:        "review-code/always-passes",
 			step:        "review-code",
-			ctx:         &context.Context{},
+			ctx:         &branchcontext.Context{},
 			cfg:         &defaultCfg,
 			wantBlocked: false,
 		},
 		{
 			name:        "review-security/always-passes",
 			step:        "review-security",
-			ctx:         &context.Context{},
+			ctx:         &branchcontext.Context{},
 			cfg:         &defaultCfg,
 			wantBlocked: false,
 		},

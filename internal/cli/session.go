@@ -2,7 +2,7 @@ package cli
 
 import (
 	"github.com/nqode/qode/internal/config"
-	gocontext "github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/prompt"
 )
@@ -12,7 +12,7 @@ type Session struct {
 	Root    string
 	Config  *config.Config
 	Branch  string
-	Context *gocontext.Context
+	Context *branchcontext.Context
 	Engine  *prompt.Engine
 }
 
@@ -29,7 +29,7 @@ func loadSession() (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	ctx, err := gocontext.Load(root, branch)
+	ctx, err := branchcontext.Load(root, branch)
 	if err != nil {
 		return nil, err
 	}
