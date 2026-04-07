@@ -47,7 +47,6 @@ func Load(root, branch string) (*Context, error) {
 
 	// Context sub-directory.
 	ctxSubDir := filepath.Join(dir, "context")
-	_ = os.MkdirAll(ctxSubDir, 0755)
 
 	ctx.Ticket = readFileOr(filepath.Join(ctxSubDir, "ticket.md"), "")
 
@@ -150,6 +149,12 @@ func (c *Context) CodeReviewScore() float64 {
 // SecurityReviewScore returns the total score from security-review.md, or 0 if absent or unparseable.
 func (c *Context) SecurityReviewScore() float64 {
 	return scoring.ExtractScoreFromFile(filepath.Join(c.ContextDir, "security-review.md"))
+}
+
+// EnsureContextDir creates the context sub-directory for a branch if it doesn't exist.
+func EnsureContextDir(root, branch string) error {
+	dir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch), "context")
+	return os.MkdirAll(dir, 0755)
 }
 
 func readFileOr(path, fallback string) string {

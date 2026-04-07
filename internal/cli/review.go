@@ -86,6 +86,10 @@ func runReview(kind string, toFile, force bool) error {
 
 	branchDir := ctx.ContextDir
 
+	if err := gocontext.EnsureContextDir(root, branch); err != nil {
+		return fmt.Errorf("creating context directory: %w", err)
+	}
+
 	diffPath := filepath.Join(branchDir, "diff.md")
 	if err := os.WriteFile(diffPath, []byte(diff), 0600); err != nil {
 		return fmt.Errorf("saving diff snapshot: %w", err)
