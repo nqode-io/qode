@@ -16,7 +16,7 @@ Run quality gates interactively in two sequential phases.
    - Output a structured summary of all failures across all layers:
      - Which tests failed and why
      - Proposed fix for each failure
-   - Ask the user how to proceed with exactly three options:
+   - Ask the user, using the AskUserQuestion tool, how to proceed with exactly three options:
      - **Accept** — apply the proposed fixes and re-run the failing tests
      - **Stop** — exit without making any changes
      - **Comment** — let the user add notes or corrections before retrying
