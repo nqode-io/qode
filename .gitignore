@@ -31,6 +31,7 @@ go.work.sum
 # .idea/
 # .vscode/
 .claude/settings.local.json
+.claude/worktrees/
 
 # OS generated files
 .DS_Store
@@ -40,4 +41,4 @@ go.work.sum
 .qode/branches/*/context/ticket.md
 .qode/branches/*/refined-analysis-*-score-*.md
 .qode/branches/*/diff.md
-.claude/worktrees/
+.qode/prompts/scaffold/
