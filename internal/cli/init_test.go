@@ -109,8 +109,7 @@ func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 	dir := t.TempDir()
 
 	var buf bytes.Buffer
-	var stdoutOutput string
-	stdoutOutput = captureStdout(t, func() {
+	stdoutOutput := captureStdout(t, func() {
 		if err := runInitExisting(&buf, dir); err != nil {
 			t.Errorf("runInitExisting: %v", err)
 		}
