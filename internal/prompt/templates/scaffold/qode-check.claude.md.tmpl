@@ -1,0 +1,50 @@
+# Quality Gates — {{.Project.Name}}
+
+Run quality gates interactively in two sequential phases.
+
+## Phase 1 — Unit tests
+
+1. Inspect the project structure to determine the test runner:
+   - go.mod present → run: go test ./...
+   - package.json with a test script → run: npm test (or yarn test if yarn.lock is present)
+   - pytest.ini / pyproject.toml with pytest config → run: pytest
+   - For other stacks, apply equivalent discovery
+   - If multiple layers are present, run tests for each layer
+2. Run all unit tests. Do NOT read qode.yaml — determine the command from the project structure only.
+3. **If any tests fail:**
+   - Stop. Do not proceed to Phase 2.
+   - Output a structured summary of all failures across all layers:
+     - Which tests failed and why
+     - Proposed fix for each failure
+   - Ask the user how to proceed with exactly three options:
+     - **Accept** — apply the proposed fixes and re-run the failing tests
+     - **Stop** — exit without making any changes
+     - **Comment** — let the user add notes or corrections before retrying
+   - On Accept: apply fixes, re-run Phase 1 (do not advance to Phase 2 until all tests pass)
+   - On Comment: incorporate the user's feedback before retrying; do not loop blindly
+4. **If no test files are found:** skip Phase 1, note the skip, and proceed to Phase 2.
+5. **If all tests pass:** proceed to Phase 2.
+
+## Phase 2 — Linter
+
+1. Inspect the project structure to determine the linter:
+   - go.mod present and (.golangci.yml exists or golangci-lint is in PATH) → run: golangci-lint run
+   - package.json with eslint in devDependencies or .eslintrc* file present → run: npx eslint .
+   - ruff.toml or pyproject.toml with ruff config → run: ruff check .
+   - For other stacks, apply equivalent discovery
+   - If multiple layers are present, run the linter for each layer
+2. Run the linter. Do NOT read qode.yaml — determine the command from the project structure only.
+3. **If linting issues are found:**
+   - Stop.
+   - Output a structured summary of all violations across all layers:
+     - Which rules were violated and where
+     - Proposed fix for each violation
+   - Ask the user how to proceed with exactly three options: **Accept / Stop / Comment**
+   - On Accept: apply fixes, re-run Phase 2 (do not advance until lint is clean)
+   - On Comment: incorporate the user's feedback before retrying; do not loop blindly
+4. **If no linter is found:** skip Phase 2, report success.
+5. **If lint is clean:** report that all quality gates passed and suggest running /qode-review-code.
+
+## Unknown stack
+
+If neither a test runner nor a linter can be determined for a given layer, report what was inspected and ask the user to specify the command. Do not guess.
