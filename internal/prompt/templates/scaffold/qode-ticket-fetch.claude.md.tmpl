@@ -1,10 +1,6 @@
-package scaffold
+# Fetch Ticket via MCP — {{.Project.Name}}
 
-// ticketFetchMCPBody is the shared body of the /qode-ticket-fetch slash command.
-// Only the IDE-specific header (Claude Code heading vs. Cursor frontmatter) differs
-// between IDEs — the body is identical and lives here so a single edit propagates
-// to all generated IDE command files.
-const ticketFetchMCPBody = `Fetch the ticket at the URL or ID provided in $ARGUMENTS using your available MCP tools.
+Fetch the ticket at the URL or ID provided in $ARGUMENTS using your available MCP tools.
 
 **Steps:**
 1. Use the MCP tool for the appropriate ticketing system (Jira, Linear, GitHub Issues,
@@ -24,4 +20,3 @@ const ticketFetchMCPBody = `Fetch the ticket at the URL or ID provided in $ARGUM
    - context/ticket-comments.md — all comments in chronological order (omit if no comments)
    - context/ticket-links.md — linked resources with summaries or fetched content (omit if no links)
 5. Report a one-line summary: "Fetched: <title> — <N> comments, <M> links."
-`

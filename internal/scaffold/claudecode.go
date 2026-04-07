@@ -4,7 +4,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/nqode/qode/internal/prompt"
 )
+
+var claudeCommands = []string{
+	"qode-plan-refine",
+	"qode-plan-spec",
+	"qode-review-code",
+	"qode-review-security",
+	"qode-check",
+	"qode-start",
+	"qode-ticket-fetch",
+	"qode-knowledge-add-context",
+	"qode-knowledge-add-branch",
+}
 
 // SetupClaudeCode generates Claude Code configuration files.
 func SetupClaudeCode(root string) error {
@@ -13,74 +27,23 @@ func SetupClaudeCode(root string) error {
 		return err
 	}
 
-	name := filepath.Base(root)
-	cmds := claudeSlashCommands(name)
-	for cmdName, content := range cmds {
-		if err := writeFile(filepath.Join(commandsDir, cmdName+".md"), content); err != nil {
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		return err
+	}
+
+	data := prompt.TemplateData{Project: prompt.TemplateProject{Name: filepath.Base(root)}}
+
+	for _, cmd := range claudeCommands {
+		content, err := engine.Render("scaffold/"+cmd+".claude", data)
+		if err != nil {
+			return fmt.Errorf("render %s: %w", cmd, err)
+		}
+		if err := os.WriteFile(filepath.Join(commandsDir, cmd+".md"), []byte(content), 0644); err != nil {
 			return err
 		}
 	}
 
-	fmt.Printf("  Claude Code: %d slash commands\n", len(cmds))
+	fmt.Printf("  Claude Code: %d slash commands\n", len(claudeCommands))
 	return nil
-}
-
-// qodeCheckBody is the shared prompt body for both IDE generators.
-// Only the header/frontmatter differs between Claude Code and Cursor.
-const qodeCheckBody = `Run quality gates interactively in two sequential phases.
-
-## Phase 1 — Unit tests
-
-1. Inspect the project structure to determine the test runner:
-   - go.mod present → run: go test ./...
-   - package.json with a test script → run: npm test (or yarn test if yarn.lock is present)
-   - pytest.ini / pyproject.toml with pytest config → run: pytest
-   - For other stacks, apply equivalent discovery
-   - If multiple layers are present, run tests for each layer
-2. Run all unit tests. Do NOT read qode.yaml — determine the command from the project structure only.
-3. **If any tests fail:**
-   - Stop. Do not proceed to Phase 2.
-   - Output a structured summary of all failures across all layers:
-     - Which tests failed and why
-     - Proposed fix for each failure
-   - Ask the user how to proceed with exactly three options:
-     - **Accept** — apply the proposed fixes and re-run the failing tests
-     - **Stop** — exit without making any changes
-     - **Comment** — let the user add notes or corrections before retrying
-   - On Accept: apply fixes, re-run Phase 1 (do not advance to Phase 2 until all tests pass)
-   - On Comment: incorporate the user's feedback before retrying; do not loop blindly
-4. **If no test files are found:** skip Phase 1, note the skip, and proceed to Phase 2.
-5. **If all tests pass:** proceed to Phase 2.
-
-## Phase 2 — Linter
-
-1. Inspect the project structure to determine the linter:
-   - go.mod present and (.golangci.yml exists or golangci-lint is in PATH) → run: golangci-lint run
-   - package.json with eslint in devDependencies or .eslintrc* file present → run: npx eslint .
-   - ruff.toml or pyproject.toml with ruff config → run: ruff check .
-   - For other stacks, apply equivalent discovery
-   - If multiple layers are present, run the linter for each layer
-2. Run the linter. Do NOT read qode.yaml — determine the command from the project structure only.
-3. **If linting issues are found:**
-   - Stop.
-   - Output a structured summary of all violations across all layers:
-     - Which rules were violated and where
-     - Proposed fix for each violation
-   - Ask the user how to proceed with exactly three options: **Accept / Stop / Comment**
-   - On Accept: apply fixes, re-run Phase 2 (do not advance until lint is clean)
-   - On Comment: incorporate the user's feedback before retrying; do not loop blindly
-4. **If no linter is found:** skip Phase 2, report success.
-5. **If lint is clean:** report that all quality gates passed and suggest running /qode-review-code.
-
-## Unknown stack
-
-If neither a test runner nor a linter can be determined for a given layer, report what was inspected and ask the user to specify the command. Do not guess.
-`
-
-func claudeSlashCommands(name string) map[string]string {
-	m := make(map[string]string, len(allCommands))
-	for _, cmd := range allCommands {
-		m[cmd.Name] = fmt.Sprintf("# %s — %s\n\n%s", cmd.Title, name, cmd.Body)
-	}
-	return m
 }

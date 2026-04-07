@@ -40,3 +40,4 @@ go.work.sum
 .qode/branches/*/context/ticket.md
 .qode/branches/*/refined-analysis-*-score-*.md
 .qode/branches/*/diff.md
+.claude/worktrees/

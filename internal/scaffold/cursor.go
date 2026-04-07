@@ -4,9 +4,23 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/nqode/qode/internal/prompt"
 )
 
 const cursorCommandsDir = ".cursor/commands"
+
+var cursorCommands = []string{
+	"qode-plan-refine",
+	"qode-plan-spec",
+	"qode-review-code",
+	"qode-review-security",
+	"qode-check",
+	"qode-start",
+	"qode-ticket-fetch",
+	"qode-knowledge-add-context",
+	"qode-knowledge-add-branch",
+}
 
 // SetupCursor generates Cursor IDE configuration files.
 func SetupCursor(root string) error {
@@ -14,31 +28,24 @@ func SetupCursor(root string) error {
 		return err
 	}
 
-	name := filepath.Base(root)
-	cmds := cursorSlashCommands(name)
-	for cmdName, content := range cmds {
-		p := filepath.Join(root, cursorCommandsDir, cmdName+".mdc")
-		if err := writeFile(p, content); err != nil {
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		return err
+	}
+
+	data := prompt.TemplateData{Project: prompt.TemplateProject{Name: filepath.Base(root)}}
+
+	for _, cmd := range cursorCommands {
+		content, err := engine.Render("scaffold/"+cmd+".cursor", data)
+		if err != nil {
+			return fmt.Errorf("render %s: %w", cmd, err)
+		}
+		p := filepath.Join(root, cursorCommandsDir, cmd+".mdc")
+		if err := os.WriteFile(p, []byte(content), 0644); err != nil {
 			return err
 		}
 	}
 
-	fmt.Printf("  Cursor: .cursor/commands/ (%d commands)\n", len(cmds))
+	fmt.Printf("  Cursor: .cursor/commands/ (%d commands)\n", len(cursorCommands))
 	return nil
-}
-
-func cursorSlashCommands(name string) map[string]string {
-	m := make(map[string]string, len(allCommands))
-	for _, cmd := range allCommands {
-		desc := fmt.Sprintf(cmd.Description, name)
-		m[cmd.Name] = fmt.Sprintf("---\ndescription: %s\n---\n\n%s", desc, cmd.Body)
-	}
-	return m
-}
-
-func writeFile(path, content string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
-	}
-	return os.WriteFile(path, []byte(content), 0644)
 }
