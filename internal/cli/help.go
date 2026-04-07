@@ -26,7 +26,7 @@ func newWorkflowCmd() *cobra.Command {
 }
 
 func runWorkflow(out io.Writer) error {
-	fmt.Fprint(out, workflowList)
+	_, _ = fmt.Fprint(out, workflowList)
 	return nil
 }
 
@@ -60,11 +60,11 @@ func runWorkflowStatus(out io.Writer) error {
 
 	lines, upNext := buildStatusLines(sess.Context, sess.Config, diff)
 	for _, line := range lines {
-		fmt.Fprintln(out, line)
+		_, _ = fmt.Fprintln(out, line)
 	}
 	if upNext != "" {
-		fmt.Fprintln(out)
-		fmt.Fprintln(out, "Up next:", upNext)
+		_, _ = fmt.Fprintln(out)
+		_, _ = fmt.Fprintln(out, "Up next:", upNext)
 	}
 	return nil
 }

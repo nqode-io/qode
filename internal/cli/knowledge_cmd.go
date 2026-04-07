@@ -50,12 +50,12 @@ func runKnowledgeList(out io.Writer) error {
 		return err
 	}
 	if len(files) == 0 {
-		fmt.Fprintln(out, "Knowledge base is empty.")
-		fmt.Fprintf(out, "Add files with: qode knowledge add <path>\n")
+		_, _ = fmt.Fprintln(out, "Knowledge base is empty.")
+		_, _ = fmt.Fprintf(out, "Add files with: qode knowledge add <path>\n")
 		return nil
 	}
 	for _, f := range files {
-		fmt.Fprintln(out, f)
+		_, _ = fmt.Fprintln(out, f)
 	}
 	return nil
 }
@@ -91,7 +91,7 @@ func runKnowledgeAdd(out io.Writer, src string) error {
 	if err := iokit.WriteFile(dest, data, 0644); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "Added to knowledge base: %s\n", dest)
+	_, _ = fmt.Fprintf(out, "Added to knowledge base: %s\n", dest)
 	return nil
 }
 
@@ -120,11 +120,11 @@ func runKnowledgeSearch(out io.Writer, query string) error {
 		return err
 	}
 	if len(results) == 0 {
-		fmt.Fprintf(out, "No results for %q\n", query)
+		_, _ = fmt.Fprintf(out, "No results for %q\n", query)
 		return nil
 	}
 	for _, r := range results {
-		fmt.Fprintf(out, "%s: %s\n", r.File, r.Snippet)
+		_, _ = fmt.Fprintf(out, "%s: %s\n", r.File, r.Snippet)
 	}
 	return nil
 }
@@ -153,7 +153,7 @@ func runKnowledgeAddBranch(out, errOut io.Writer, args []string, toFile bool) er
 	}
 
 	branches := parseBranchArgs(args)
-	fmt.Fprintf(errOut, "Extracting lessons from branches: %s\n", strings.Join(branches, ", "))
+	_, _ = fmt.Fprintf(errOut, "Extracting lessons from branches: %s\n", strings.Join(branches, ", "))
 
 	data, err := buildBranchLessonData(sess.Root, sess.Engine, branches, sess.Branch)
 	if err != nil {
@@ -171,7 +171,7 @@ func runKnowledgeAddBranch(out, errOut io.Writer, args []string, toFile bool) er
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
 		}
-		fmt.Fprintf(errOut, "Lesson extraction prompt saved to:\n  %s\n", promptPath)
+		_, _ = fmt.Fprintf(errOut, "Lesson extraction prompt saved to:\n  %s\n", promptPath)
 		return nil
 	}
 

@@ -55,7 +55,7 @@ func runInitExisting(out io.Writer, root string) error {
 	if err := iokit.WriteFile(outPath, data, 0644); err != nil {
 		return fmt.Errorf("writing %s: %w", outPath, err)
 	}
-	fmt.Fprintf(out, "Generated: %s\n", outPath)
+	_, _ = fmt.Fprintf(out, "Generated: %s\n", outPath)
 
 	// Create .qode directory structure.
 	for _, dir := range []string{
@@ -79,7 +79,7 @@ func runInitExisting(out io.Writer, root string) error {
 		if err := iokit.WriteFile(scoringPath, scoringData, 0644); err != nil {
 			return fmt.Errorf("writing %s: %w", scoringPath, err)
 		}
-		fmt.Fprintf(out, "Generated: %s\n", scoringPath)
+		_, _ = fmt.Fprintf(out, "Generated: %s\n", scoringPath)
 	}
 
 	// Copy embedded prompt templates.
@@ -92,11 +92,11 @@ func runInitExisting(out io.Writer, root string) error {
 		return fmt.Errorf("setting up IDE configs: %w", err)
 	}
 
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, "Next steps:")
-	fmt.Fprintln(out, "  1. Run 'qode branch create <name>' to start your first feature")
-	fmt.Fprintln(out, "  2. Fetch your ticket with /qode-ticket-fetch <url> (in IDE) or edit .qode/branches/<name>/context/ticket.md")
-	fmt.Fprintln(out, "  3. Use /qode-plan-refine in your IDE to begin requirements refinement")
+	_, _ = fmt.Fprintln(out)
+	_, _ = fmt.Fprintln(out, "Next steps:")
+	_, _ = fmt.Fprintln(out, "  1. Run 'qode branch create <name>' to start your first feature")
+	_, _ = fmt.Fprintln(out, "  2. Fetch your ticket with /qode-ticket-fetch <url> (in IDE) or edit .qode/branches/<name>/context/ticket.md")
+	_, _ = fmt.Fprintln(out, "  3. Use /qode-plan-refine in your IDE to begin requirements refinement")
 
 	return nil
 }

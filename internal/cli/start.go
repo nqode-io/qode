@@ -46,14 +46,14 @@ func runStart(out, errOut io.Writer, toFile, force bool) error {
 			if sess.Config.Scoring.Strict {
 				return fmt.Errorf("%s", result.Message)
 			}
-			fmt.Fprintf(out, "STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
+			_, _ = fmt.Fprintf(out, "STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
 			return nil
 		}
 	}
 
 	if !sess.Context.HasSpec() {
-		fmt.Fprintln(errOut, "No spec.md found.")
-		fmt.Fprintf(errOut, "Run /qode-plan-spec first and save the output to:\n  %s/spec.md\n", sess.Context.ContextDir)
+		_, _ = fmt.Fprintln(errOut, "No spec.md found.")
+		_, _ = fmt.Fprintf(errOut, "Run /qode-plan-spec first and save the output to:\n  %s/spec.md\n", sess.Context.ContextDir)
 		return fmt.Errorf("no spec")
 	}
 
@@ -81,7 +81,7 @@ func runStart(out, errOut io.Writer, toFile, force bool) error {
 		if err := writePromptToFile(outPath, p); err != nil {
 			return err
 		}
-		fmt.Fprintf(errOut, "Implementation prompt saved to:\n  %s\n", outPath)
+		_, _ = fmt.Fprintf(errOut, "Implementation prompt saved to:\n  %s\n", outPath)
 		return nil
 	}
 

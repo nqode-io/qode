@@ -89,8 +89,8 @@ func runPlanJudge(out, errOut io.Writer, toFile bool) error {
 	}
 
 	if !sess.Context.HasRefinedAnalysis() {
-		fmt.Fprintln(errOut, "No refined analysis found.")
-		fmt.Fprintf(errOut, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", sess.Context.ContextDir)
+		_, _ = fmt.Fprintln(errOut, "No refined analysis found.")
+		_, _ = fmt.Fprintf(errOut, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", sess.Context.ContextDir)
 		return fmt.Errorf("no refined analysis")
 	}
 
@@ -106,7 +106,7 @@ func runPlanJudge(out, errOut io.Writer, toFile bool) error {
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
 		}
-		fmt.Fprintf(errOut, "Judge prompt saved to:\n  %s\n", promptPath)
+		_, _ = fmt.Fprintf(errOut, "Judge prompt saved to:\n  %s\n", promptPath)
 		return nil
 	}
 
@@ -133,7 +133,7 @@ func runPlanRefine(out, errOut io.Writer, ticketURL string, toFile bool) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(errOut, "Iteration %d — worker prompt saved to:\n  %s\n", refOut.Iteration, workerPath)
+		_, _ = fmt.Fprintf(errOut, "Iteration %d — worker prompt saved to:\n  %s\n", refOut.Iteration, workerPath)
 		return nil
 	}
 
@@ -155,14 +155,14 @@ func runPlanSpec(out, errOut io.Writer, toFile, force bool) error {
 			if sess.Config.Scoring.Strict {
 				return fmt.Errorf("%s", result.Message)
 			}
-			fmt.Fprintf(out, "STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
+			_, _ = fmt.Fprintf(out, "STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
 			return nil
 		}
 	}
 
 	if !sess.Context.HasRefinedAnalysis() {
-		fmt.Fprintln(errOut, "No refined analysis found.")
-		fmt.Fprintf(errOut, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", sess.Context.ContextDir)
+		_, _ = fmt.Fprintln(errOut, "No refined analysis found.")
+		_, _ = fmt.Fprintf(errOut, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", sess.Context.ContextDir)
 		return fmt.Errorf("no refined analysis")
 	}
 
@@ -179,7 +179,7 @@ func runPlanSpec(out, errOut io.Writer, toFile, force bool) error {
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
 		}
-		fmt.Fprintf(errOut, "Spec prompt saved to:\n  %s\n", promptPath)
+		_, _ = fmt.Fprintf(errOut, "Spec prompt saved to:\n  %s\n", promptPath)
 		return nil
 	}
 

@@ -92,14 +92,14 @@ func runBranchCreate(out io.Writer, name, base string) error {
 		}
 	}
 
-	fmt.Fprintf(out, "Created branch: %s\n", name)
-	fmt.Fprintf(out, "Context folder: %s\n", contextDir)
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, "Next steps:")
-	fmt.Fprintf(out, "  1. Fetch ticket: /qode-ticket-fetch <url>  (in IDE)\n")
-	fmt.Fprintf(out, "     Or paste into: %s/ticket.md\n", contextDir)
-	fmt.Fprintf(out, "  2. Add mockups / designs to: %s/\n", contextDir)
-	fmt.Fprintf(out, "  3. Run: qode plan refine\n")
+	_, _ = fmt.Fprintf(out, "Created branch: %s\n", name)
+	_, _ = fmt.Fprintf(out, "Context folder: %s\n", contextDir)
+	_, _ = fmt.Fprintln(out)
+	_, _ = fmt.Fprintln(out, "Next steps:")
+	_, _ = fmt.Fprintf(out, "  1. Fetch ticket: /qode-ticket-fetch <url>  (in IDE)\n")
+	_, _ = fmt.Fprintf(out, "     Or paste into: %s/ticket.md\n", contextDir)
+	_, _ = fmt.Fprintf(out, "  2. Add mockups / designs to: %s/\n", contextDir)
+	_, _ = fmt.Fprintf(out, "  3. Run: qode plan refine\n")
 	return nil
 }
 
@@ -137,13 +137,13 @@ func runBranchRemove(out, errOut io.Writer, name string, keepCtx bool) error {
 		if err := os.RemoveAll(branchDir); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("removing context: %w", err)
 		}
-		fmt.Fprintf(out, "Removed context for branch: %s\n", name)
+		_, _ = fmt.Fprintf(out, "Removed context for branch: %s\n", name)
 	}
 
 	if err := git.DeleteBranch(root, name); err != nil {
-		fmt.Fprintf(errOut, "Warning: could not delete git branch: %v\n", err)
+		_, _ = fmt.Fprintf(errOut, "Warning: could not delete git branch: %v\n", err)
 	} else {
-		fmt.Fprintf(out, "Deleted git branch: %s\n", name)
+		_, _ = fmt.Fprintf(out, "Deleted git branch: %s\n", name)
 	}
 	return nil
 }

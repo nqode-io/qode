@@ -70,7 +70,7 @@ func runReview(out, errOut io.Writer, kind string, toFile, force bool) error {
 		if sess.Config.Scoring.Strict {
 			return fmt.Errorf("no changes detected: commit code first before running a review")
 		}
-		fmt.Fprintln(errOut, "No changes detected. Commit some code first.")
+		_, _ = fmt.Fprintln(errOut, "No changes detected. Commit some code first.")
 		return nil
 	}
 
@@ -103,7 +103,7 @@ func runReview(out, errOut io.Writer, kind string, toFile, force bool) error {
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
 		}
-		fmt.Fprintf(errOut, "%s review prompt saved to:\n  %s\n", capitalize(kind), promptPath)
+		_, _ = fmt.Fprintf(errOut, "%s review prompt saved to:\n  %s\n", capitalize(kind), promptPath)
 		return nil
 	}
 
