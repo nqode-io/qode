@@ -16,12 +16,16 @@ func newWorkflowCmd() *cobra.Command {
 		Use:   "workflow",
 		Short: "Show or inspect the qode workflow",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Print(workflowList)
-			return nil
+			return runWorkflow()
 		},
 	}
 	cmd.AddCommand(newWorkflowShowCmd(), newWorkflowStatusCmd())
 	return cmd
+}
+
+func runWorkflow() error {
+	fmt.Print(workflowList)
+	return nil
 }
 
 func newWorkflowShowCmd() *cobra.Command {
