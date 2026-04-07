@@ -143,15 +143,22 @@ func ParseIterationFromOutput(root, branch string, iteration int, analysisText s
 	}
 
 	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
+	if err := os.MkdirAll(branchDir, 0755); err != nil {
+		return result, fmt.Errorf("create branch directory %q: %w", branchDir, err)
+	}
 
 	// Save numbered iteration file.
 	iterFile := filepath.Join(branchDir, fmt.Sprintf("refined-analysis-%d-score-%d.md", iteration, result.TotalScore))
-	_ = os.WriteFile(iterFile, []byte(analysisText), 0644)
+	if err := os.WriteFile(iterFile, []byte(analysisText), 0644); err != nil {
+		return result, fmt.Errorf("write iteration file %q: %w", iterFile, err)
+	}
 
 	// Always update the canonical "latest" file.
 	latestFile := filepath.Join(branchDir, "refined-analysis.md")
 	header := buildAnalysisHeader(iteration, result)
-	_ = os.WriteFile(latestFile, []byte(header+analysisText), 0644)
+	if err := os.WriteFile(latestFile, []byte(header+analysisText), 0644); err != nil {
+		return result, fmt.Errorf("write canonical analysis file %q: %w", latestFile, err)
+	}
 
 	return result, nil
 }

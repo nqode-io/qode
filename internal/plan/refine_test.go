@@ -230,6 +230,14 @@ func TestParseIterationFromOutput_TargetScoreOverride(t *testing.T) {
 	if result.TotalScore != 18 {
 		t.Errorf("expected TotalScore 18, got %d", result.TotalScore)
 	}
+
+	iterFile := filepath.Join(branchDir, "refined-analysis-1-score-18.md")
+	if _, err := os.Stat(iterFile); err != nil {
+		t.Errorf("expected iteration file %s to exist: %v", iterFile, err)
+	}
+	if _, err := os.Stat(filepath.Join(branchDir, "refined-analysis.md")); err != nil {
+		t.Errorf("expected canonical file refined-analysis.md to exist: %v", err)
+	}
 }
 
 func TestParseIterationFromOutput_TargetScoreDefaultsToRubricTotal(t *testing.T) {
@@ -248,6 +256,14 @@ func TestParseIterationFromOutput_TargetScoreDefaultsToRubricTotal(t *testing.T)
 	}
 	if result.TargetScore != 25 {
 		t.Errorf("expected TargetScore 25 (rubric total), got %d", result.TargetScore)
+	}
+
+	iterFile := filepath.Join(branchDir, "refined-analysis-1-score-22.md")
+	if _, err := os.Stat(iterFile); err != nil {
+		t.Errorf("expected iteration file %s to exist: %v", iterFile, err)
+	}
+	if _, err := os.Stat(filepath.Join(branchDir, "refined-analysis.md")); err != nil {
+		t.Errorf("expected canonical file refined-analysis.md to exist: %v", err)
 	}
 }
 
