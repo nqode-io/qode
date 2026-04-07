@@ -39,7 +39,7 @@ Run quality gates interactively in two sequential phases.
    - Output a structured summary of all violations across all layers:
      - Which rules were violated and where
      - Proposed fix for each violation
-   - Ask the user how to proceed with exactly three options: **Accept / Stop / Comment**
+   - Ask the user, using the AskUserQuestion tool, how to proceed with exactly three options: **Accept / Stop / Comment**
    - On Accept: apply fixes, re-run Phase 2 (do not advance until lint is clean)
    - On Comment: incorporate the user's feedback before retrying; do not loop blindly
 4. **If no linter is found:** skip Phase 2, report success.
