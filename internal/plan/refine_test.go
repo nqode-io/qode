@@ -6,93 +6,20 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/config"
-	"github.com/nqode/qode/internal/context"
 	"github.com/nqode/qode/internal/prompt"
-	"github.com/nqode/qode/internal/scoring"
 )
 
-func setupRefineDir(t *testing.T) (root, branchDir string) {
-	t.Helper()
-	root = t.TempDir()
-	branchDir = filepath.Join(root, ".qode", "branches", "test-branch")
-	return root, branchDir
-}
-
-func TestSaveIterationResult_WritesCorrectScore(t *testing.T) {
-	root, branchDir := setupRefineDir(t)
-	if err := os.MkdirAll(branchDir, 0755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-
-	result := scoring.Result{TotalScore: 22, MaxScore: 25}
-	if err := SaveIterationResult(root, "test-branch", 1, "analysis content", result); err != nil {
-		t.Fatalf("SaveIterationResult: %v", err)
-	}
-
-	iterFile := filepath.Join(branchDir, "refined-analysis-1-score-22.md")
-	if _, err := os.Stat(iterFile); err != nil {
-		t.Errorf("expected %s to exist: %v", iterFile, err)
-	}
-
-	data, err := os.ReadFile(filepath.Join(branchDir, "refined-analysis.md"))
-	if err != nil {
-		t.Fatalf("ReadFile refined-analysis.md: %v", err)
-	}
-	if !strings.Contains(string(data), "score=22/25") {
-		t.Errorf("refined-analysis.md missing score=22/25, got: %s", string(data))
-	}
-}
-
-func TestSaveIterationResult_ZeroScore(t *testing.T) {
-	root, branchDir := setupRefineDir(t)
-	if err := os.MkdirAll(branchDir, 0755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-
-	result := scoring.Result{TotalScore: 0, MaxScore: 25}
-	if err := SaveIterationResult(root, "test-branch", 1, "analysis content", result); err != nil {
-		t.Fatalf("SaveIterationResult: %v", err)
-	}
-
-	iterFile := filepath.Join(branchDir, "refined-analysis-1-score-0.md")
-	if _, err := os.Stat(iterFile); err != nil {
-		t.Errorf("expected %s to exist: %v", iterFile, err)
-	}
-
-	data, err := os.ReadFile(filepath.Join(branchDir, "refined-analysis.md"))
-	if err != nil {
-		t.Fatalf("ReadFile refined-analysis.md: %v", err)
-	}
-	if !strings.Contains(string(data), "score=0/25") {
-		t.Errorf("refined-analysis.md missing score=0/25, got: %s", string(data))
-	}
-}
-
-func TestSaveIterationResult_CreatesDir(t *testing.T) {
-	root, _ := setupRefineDir(t)
-	// branchDir does NOT exist yet
-
-	result := scoring.Result{TotalScore: 18, MaxScore: 25}
-	if err := SaveIterationResult(root, "test-branch", 2, "content", result); err != nil {
-		t.Fatalf("SaveIterationResult should create dir: %v", err)
-	}
-
-	branchDir := filepath.Join(root, ".qode", "branches", "test-branch")
-	iterFile := filepath.Join(branchDir, "refined-analysis-2-score-18.md")
-	if _, err := os.Stat(iterFile); err != nil {
-		t.Errorf("expected %s to exist: %v", iterFile, err)
-	}
-}
-
 func TestBuildSpecPromptWithOutput_OmitsAnalysis(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:          "test-branch",
 		ContextDir:      filepath.Join(root, ".qode", "branches", "test-branch"),
 		RefinedAnalysis: "full refined analysis sentinel text",
@@ -112,13 +39,14 @@ func TestBuildSpecPromptWithOutput_OmitsAnalysis(t *testing.T) {
 }
 
 func TestBuildStartPrompt_OmitsSpec(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:     "test-branch",
 		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
 		Spec:       "spec sentinel content here",
@@ -138,6 +66,7 @@ func TestBuildStartPrompt_OmitsSpec(t *testing.T) {
 }
 
 func TestBuildJudgePrompt_ReferencesRefinedAnalysis(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
@@ -145,7 +74,7 @@ func TestBuildJudgePrompt_ReferencesRefinedAnalysis(t *testing.T) {
 	}
 
 	branchDir := filepath.Join(root, ".qode", "branches", "test-branch")
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:     "test-branch",
 		ContextDir: branchDir,
 	}
@@ -163,6 +92,7 @@ func TestBuildJudgePrompt_ReferencesRefinedAnalysis(t *testing.T) {
 }
 
 func TestBuildJudgePrompt_CustomRubric(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
@@ -183,7 +113,7 @@ func TestBuildJudgePrompt_CustomRubric(t *testing.T) {
 	}
 
 	branchDir := filepath.Join(root, ".qode", "branches", "test-branch")
-	ctx := &context.Context{Branch: "test-branch", ContextDir: branchDir}
+	ctx := &branchcontext.Context{Branch: "test-branch", ContextDir: branchDir}
 
 	got, err := BuildJudgePrompt(engine, cfg, ctx)
 	if err != nil {
@@ -207,58 +137,15 @@ func TestBuildJudgePrompt_CustomRubric(t *testing.T) {
 	}
 }
 
-func TestParseIterationFromOutput_TargetScoreOverride(t *testing.T) {
-	root, branchDir := setupRefineDir(t)
-	if err := os.MkdirAll(branchDir, 0755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-
-	analysisText := "<!-- qode:iteration=1 -->\n\n**Total Score:** 18/25\n\nsome analysis"
-	cfg := &config.Config{
-		Scoring: config.ScoringConfig{
-			TargetScore: 20,
-		},
-	}
-
-	result, err := ParseIterationFromOutput(root, "test-branch", 1, analysisText, cfg)
-	if err != nil {
-		t.Fatalf("ParseIterationFromOutput: %v", err)
-	}
-	if result.TargetScore != 20 {
-		t.Errorf("expected TargetScore 20 from cfg override, got %d", result.TargetScore)
-	}
-	if result.TotalScore != 18 {
-		t.Errorf("expected TotalScore 18, got %d", result.TotalScore)
-	}
-}
-
-func TestParseIterationFromOutput_TargetScoreDefaultsToRubricTotal(t *testing.T) {
-	root, branchDir := setupRefineDir(t)
-	if err := os.MkdirAll(branchDir, 0755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-
-	analysisText := "<!-- qode:iteration=1 -->\n\n**Total Score:** 22/25\n\nsome analysis"
-	// TargetScore == 0 → should default to rubric.Total() == 25
-	cfg := &config.Config{}
-
-	result, err := ParseIterationFromOutput(root, "test-branch", 1, analysisText, cfg)
-	if err != nil {
-		t.Fatalf("ParseIterationFromOutput: %v", err)
-	}
-	if result.TargetScore != 25 {
-		t.Errorf("expected TargetScore 25 (rubric total), got %d", result.TargetScore)
-	}
-}
-
 func TestBuildRefinePromptWithOutput_OmitsAnalysisAndTicket(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:          "test-branch",
 		ContextDir:      filepath.Join(root, ".qode", "branches", "test-branch"),
 		RefinedAnalysis: "previous iteration analysis sentinel",
@@ -278,7 +165,100 @@ func TestBuildRefinePromptWithOutput_OmitsAnalysisAndTicket(t *testing.T) {
 	}
 }
 
+func TestBuildStartPrompt_WithKB(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	ctx := &branchcontext.Context{
+		Branch:     "test-branch",
+		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	}
+
+	kb := "- lessons/error-handling.md\n- lessons/naming.md"
+	got, err := BuildStartPrompt(engine, &config.Config{}, ctx, kb)
+	if err != nil {
+		t.Fatalf("BuildStartPrompt: %v", err)
+	}
+	if !strings.Contains(got, "error-handling.md") {
+		t.Error("prompt must contain KB file references when provided")
+	}
+}
+
+func TestBuildRefinePromptWithOutput_WithOutputPath(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	ctx := &branchcontext.Context{
+		Branch:     "test-branch",
+		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	}
+
+	out, err := BuildRefinePromptWithOutput(engine, &config.Config{}, ctx, "", 1, "/tmp/output.md")
+	if err != nil {
+		t.Fatalf("BuildRefinePromptWithOutput: %v", err)
+	}
+	if !strings.Contains(out.WorkerPrompt, "/tmp/output.md") {
+		t.Error("prompt must contain output path when specified")
+	}
+}
+
+func TestBuildRefinePromptWithOutput_WithExtra(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	ctx := &branchcontext.Context{
+		Branch:     "test-branch",
+		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+		Extra:      []string{"review feedback sentinel"},
+	}
+
+	out, err := BuildRefinePromptWithOutput(engine, &config.Config{}, ctx, "", 1, "")
+	if err != nil {
+		t.Fatalf("BuildRefinePromptWithOutput: %v", err)
+	}
+	if !strings.Contains(out.WorkerPrompt, "review feedback sentinel") {
+		t.Error("prompt must contain extra context when provided")
+	}
+}
+
+func TestBuildRefinePromptWithOutput_AutoIteration(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	ctx := &branchcontext.Context{
+		Branch:     "test-branch",
+		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+		Iterations: []branchcontext.Iteration{{Number: 2, Score: 15}},
+	}
+
+	// iteration=0 should trigger auto-increment via ctx.NextIteration().
+	out, err := BuildRefinePromptWithOutput(engine, &config.Config{}, ctx, "", 0, "")
+	if err != nil {
+		t.Fatalf("BuildRefinePromptWithOutput: %v", err)
+	}
+	if out.Iteration != 3 {
+		t.Errorf("expected auto-iteration 3, got %d", out.Iteration)
+	}
+}
+
 func TestBuildRefinePromptWithOutput_ContainsProjectName(t *testing.T) {
+	t.Parallel()
 	base := t.TempDir()
 	root := filepath.Join(base, "myproject")
 	if err := os.MkdirAll(root, 0755); err != nil {
@@ -290,7 +270,7 @@ func TestBuildRefinePromptWithOutput_ContainsProjectName(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &context.Context{
+	ctx := &branchcontext.Context{
 		Branch:     "test-branch",
 		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
 	}

@@ -2,14 +2,17 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/nqode/qode/internal/config"
-	gocontext "github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/branchcontext"
+	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/knowledge"
+	"github.com/nqode/qode/internal/log"
 	"github.com/nqode/qode/internal/prompt"
 	"github.com/spf13/cobra"
 )
@@ -28,29 +31,33 @@ func newKnowledgeListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List knowledge base files",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := resolveRoot()
-			if err != nil {
-				return err
-			}
-			cfg, err := config.Load(root)
-			if err != nil {
-				return err
-			}
-			files, err := knowledge.List(root, cfg)
-			if err != nil {
-				return err
-			}
-			if len(files) == 0 {
-				fmt.Println("Knowledge base is empty.")
-				fmt.Printf("Add files with: qode knowledge add <path>\n")
-				return nil
-			}
-			for _, f := range files {
-				fmt.Println(f)
-			}
-			return nil
+			return runKnowledgeList(cmd.OutOrStdout())
 		},
 	}
+}
+
+func runKnowledgeList(out io.Writer) error {
+	root, err := resolveRoot()
+	if err != nil {
+		return err
+	}
+	cfg, err := config.Load(root)
+	if err != nil {
+		return err
+	}
+	files, err := knowledge.List(root, cfg)
+	if err != nil {
+		return err
+	}
+	if len(files) == 0 {
+		_, _ = fmt.Fprintln(out, "Knowledge base is empty.")
+		_, _ = fmt.Fprintf(out, "Add files with: qode knowledge add <path>\n")
+		return nil
+	}
+	for _, f := range files {
+		_, _ = fmt.Fprintln(out, f)
+	}
+	return nil
 }
 
 func newKnowledgeAddCmd() *cobra.Command {
@@ -59,30 +66,33 @@ func newKnowledgeAddCmd() *cobra.Command {
 		Short: "Add a file to the knowledge base",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := resolveRoot()
-			if err != nil {
-				return err
-			}
-			src := args[0]
-
-			kbDir := filepath.Join(root, config.QodeDir, "knowledge")
-			if err := os.MkdirAll(kbDir, 0755); err != nil {
-				return err
-			}
-
-			data, err := os.ReadFile(src)
-			if err != nil {
-				return fmt.Errorf("reading %s: %w", src, err)
-			}
-
-			dest := filepath.Join(kbDir, filepath.Base(src))
-			if err := os.WriteFile(dest, data, 0644); err != nil {
-				return err
-			}
-			fmt.Printf("Added to knowledge base: %s\n", dest)
-			return nil
+			return runKnowledgeAdd(cmd.OutOrStdout(), args[0])
 		},
 	}
+}
+
+func runKnowledgeAdd(out io.Writer, src string) error {
+	root, err := resolveRoot()
+	if err != nil {
+		return err
+	}
+
+	kbDir := filepath.Join(root, config.QodeDir, "knowledge")
+	if err := iokit.EnsureDir(kbDir); err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", src, err)
+	}
+
+	dest := filepath.Join(kbDir, filepath.Base(src))
+	if err := iokit.WriteFile(dest, data, 0644); err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(out, "Added to knowledge base: %s\n", dest)
+	return nil
 }
 
 func newKnowledgeSearchCmd() *cobra.Command {
@@ -91,28 +101,32 @@ func newKnowledgeSearchCmd() *cobra.Command {
 		Short: "Search the knowledge base",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			root, err := resolveRoot()
-			if err != nil {
-				return err
-			}
-			cfg, err := config.Load(root)
-			if err != nil {
-				return err
-			}
-			results, err := knowledge.Search(root, cfg, args[0])
-			if err != nil {
-				return err
-			}
-			if len(results) == 0 {
-				fmt.Printf("No results for %q\n", args[0])
-				return nil
-			}
-			for _, r := range results {
-				fmt.Printf("%s: %s\n", r.File, r.Snippet)
-			}
-			return nil
+			return runKnowledgeSearch(cmd.OutOrStdout(), args[0])
 		},
 	}
+}
+
+func runKnowledgeSearch(out io.Writer, query string) error {
+	root, err := resolveRoot()
+	if err != nil {
+		return err
+	}
+	cfg, err := config.Load(root)
+	if err != nil {
+		return err
+	}
+	results, err := knowledge.Search(root, cfg, query)
+	if err != nil {
+		return err
+	}
+	if len(results) == 0 {
+		_, _ = fmt.Fprintf(out, "No results for %q\n", query)
+		return nil
+	}
+	for _, r := range results {
+		_, _ = fmt.Fprintf(out, "%s: %s\n", r.File, r.Snippet)
+	}
+	return nil
 }
 
 const maxDiffLines = 500
@@ -125,62 +139,54 @@ func newKnowledgeAddBranchCmd() *cobra.Command {
 		Long:  "Reads branch artifacts (ticket, spec, reviews, diff) and writes a lesson extraction prompt to stdout.",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKnowledgeAddBranch(args, toFile)
+			return runKnowledgeAddBranch(cmd.OutOrStdout(), cmd.ErrOrStderr(), args, toFile)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
 	return cmd
 }
 
-func runKnowledgeAddBranch(args []string, toFile bool) error {
-	root, err := resolveRoot()
-	if err != nil {
-		return err
-	}
-	branch, err := git.CurrentBranch(root)
-	if err != nil {
-		return err
-	}
-	engine, err := prompt.NewEngine(root)
+func runKnowledgeAddBranch(out, errOut io.Writer, args []string, toFile bool) error {
+	sess, err := loadSession()
 	if err != nil {
 		return err
 	}
 
 	branches := parseBranchArgs(args)
-	fmt.Fprintf(os.Stderr, "Extracting lessons from branches: %s\n", strings.Join(branches, ", "))
+	_, _ = fmt.Fprintf(errOut, "Extracting lessons from branches: %s\n", strings.Join(branches, ", "))
 
-	data, err := buildBranchLessonData(root, engine, branches)
+	data, err := buildBranchLessonData(sess.Root, sess.Engine, branches)
 	if err != nil {
 		return err
 	}
 
-	p, err := engine.Render("knowledge/add-branch", data)
+	p, err := sess.Engine.Render("knowledge/add-branch", data)
 	if err != nil {
 		return err
 	}
 
 	if toFile {
-		branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
+		branchDir := filepath.Join(sess.Root, config.QodeDir, "branches", git.SanitizeBranchName(sess.Branch))
 		promptPath := filepath.Join(branchDir, ".knowledge-add-branch-prompt.md")
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "Lesson extraction prompt saved to:\n  %s\n", promptPath)
+		_, _ = fmt.Fprintf(errOut, "Lesson extraction prompt saved to:\n  %s\n", promptPath)
 		return nil
 	}
 
-	_, err = fmt.Print(p)
+	_, err = fmt.Fprint(out, p)
 	return err
 }
 
-func buildBranchLessonData(root string, engine *prompt.Engine, branches []string) (prompt.TemplateData, error) {
+func buildBranchLessonData(root string, engine prompt.Renderer, branches []string) (prompt.TemplateData, error) {
 	var allTicket, allAnalysis, allSpec, allExtra strings.Builder
 	var diff string
 
 	for _, b := range branches {
-		ctx, err := gocontext.Load(root, b)
+		ctx, err := branchcontext.Load(root, b)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: branch context %q: %v\n", b, err)
+			log.Warn("could not load branch context", "branch", b, "error", err)
 			continue
 		}
 		if ctx.Ticket != "" {
@@ -218,17 +224,15 @@ func buildBranchLessonData(root string, engine *prompt.Engine, branches []string
 
 	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branches[0]))
 
-	return prompt.TemplateData{
-		Project:   prompt.TemplateProject{Name: engine.ProjectName()},
-		Branch:    branches[0],
-		Ticket:    allTicket.String(),
-		Analysis:  allAnalysis.String(),
-		Spec:      allSpec.String(),
-		Diff:      diff,
-		Extra:     allExtra.String(),
-		Lessons:   lessonsStr,
-		BranchDir: branchDir,
-	}, nil
+	return prompt.NewTemplateData(engine.ProjectName(), branches[0]).
+		WithTicket(allTicket.String()).
+		WithAnalysis(allAnalysis.String()).
+		WithSpec(allSpec.String()).
+		WithDiff(diff).
+		WithExtra(allExtra.String()).
+		WithLessons(lessonsStr).
+		WithBranchDir(branchDir).
+		Build(), nil
 }
 
 func parseBranchArgs(args []string) []string {

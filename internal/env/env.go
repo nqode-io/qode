@@ -1,3 +1,4 @@
+// Package env loads environment variables from .env files in the project tree.
 package env
 
 import (

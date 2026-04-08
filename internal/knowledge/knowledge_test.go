@@ -36,6 +36,7 @@ func minimalConfig() *config.Config {
 // --- listDir ---
 
 func TestListDir_Recursive(t *testing.T) {
+	t.Parallel()
 	root := setupKBDir(t)
 	kbDir := filepath.Join(root, ".qode", "knowledge")
 
@@ -43,16 +44,18 @@ func TestListDir_Recursive(t *testing.T) {
 	writeTempFile(t, filepath.Join(kbDir, "lessons", "lesson1.md"), "lesson 1")
 	writeTempFile(t, filepath.Join(kbDir, "lessons", "lesson2.md"), "lesson 2")
 
+	const wantFiles = 3 // top-level.md, lessons/lesson1.md, lessons/lesson2.md
 	files, err := listDir(kbDir)
 	if err != nil {
 		t.Fatalf("listDir: %v", err)
 	}
-	if len(files) != 3 {
-		t.Errorf("listDir: got %d files, want 3", len(files))
+	if len(files) != wantFiles {
+		t.Errorf("listDir: got %d files, want %d", len(files), wantFiles)
 	}
 }
 
 func TestListDir_SkipsHiddenDirs(t *testing.T) {
+	t.Parallel()
 	root := setupKBDir(t)
 	kbDir := filepath.Join(root, ".qode", "knowledge")
 
@@ -69,6 +72,7 @@ func TestListDir_SkipsHiddenDirs(t *testing.T) {
 }
 
 func TestListDir_EmptyDir(t *testing.T) {
+	t.Parallel()
 	root := setupKBDir(t)
 	kbDir := filepath.Join(root, ".qode", "knowledge")
 
@@ -84,6 +88,7 @@ func TestListDir_EmptyDir(t *testing.T) {
 // --- Load ---
 
 func TestLoad_LessonFilesNoDoubleHeader(t *testing.T) {
+	t.Parallel()
 	root := setupKBDir(t)
 	lessonsDir := filepath.Join(root, ".qode", "knowledge", "lessons")
 	writeTempFile(t, filepath.Join(lessonsDir, "my-lesson.md"), "### My Lesson\nSome content here.")
@@ -103,6 +108,7 @@ func TestLoad_LessonFilesNoDoubleHeader(t *testing.T) {
 }
 
 func TestLoad_RegularFilesKeepHeader(t *testing.T) {
+	t.Parallel()
 	root := setupKBDir(t)
 	kbDir := filepath.Join(root, ".qode", "knowledge")
 	writeTempFile(t, filepath.Join(kbDir, "guide.md"), "Some guide content.")
@@ -117,6 +123,7 @@ func TestLoad_RegularFilesKeepHeader(t *testing.T) {
 }
 
 func TestLoad_MixedFiles(t *testing.T) {
+	t.Parallel()
 	root := setupKBDir(t)
 	kbDir := filepath.Join(root, ".qode", "knowledge")
 	writeTempFile(t, filepath.Join(kbDir, "regular.md"), "Regular content.")
@@ -140,6 +147,7 @@ func TestLoad_MixedFiles(t *testing.T) {
 // --- ToKebabCase ---
 
 func TestToKebabCase_Spaces(t *testing.T) {
+	t.Parallel()
 	got := ToKebabCase("Hello World")
 	if got != "hello-world" {
 		t.Errorf("ToKebabCase(%q) = %q, want %q", "Hello World", got, "hello-world")
@@ -147,6 +155,7 @@ func TestToKebabCase_Spaces(t *testing.T) {
 }
 
 func TestToKebabCase_SpecialChars(t *testing.T) {
+	t.Parallel()
 	got := ToKebabCase("Don't use this!")
 	if got != "don-t-use-this" {
 		t.Errorf("ToKebabCase(%q) = %q, want %q", "Don't use this!", got, "don-t-use-this")
@@ -154,6 +163,7 @@ func TestToKebabCase_SpecialChars(t *testing.T) {
 }
 
 func TestToKebabCase_ConsecutiveHyphens(t *testing.T) {
+	t.Parallel()
 	got := ToKebabCase("foo---bar")
 	if got != "foo-bar" {
 		t.Errorf("ToKebabCase(%q) = %q, want %q", "foo---bar", got, "foo-bar")
@@ -161,6 +171,7 @@ func TestToKebabCase_ConsecutiveHyphens(t *testing.T) {
 }
 
 func TestToKebabCase_NonASCII(t *testing.T) {
+	t.Parallel()
 	got := ToKebabCase("über cool")
 	// Non-ASCII bytes get replaced with hyphens, collapsed
 	if !strings.HasSuffix(got, "ber-cool") {
@@ -171,6 +182,7 @@ func TestToKebabCase_NonASCII(t *testing.T) {
 // --- SaveLesson ---
 
 func TestSaveLesson_WritesCorrectFile(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	content := "### My Lesson\nSome body."
 	if err := SaveLesson(root, "My Lesson", content); err != nil {
@@ -188,6 +200,7 @@ func TestSaveLesson_WritesCorrectFile(t *testing.T) {
 }
 
 func TestSaveLesson_CreatesDir(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	// lessons/ dir does not exist yet
 	if err := SaveLesson(root, "New Lesson", "content"); err != nil {
@@ -201,6 +214,7 @@ func TestSaveLesson_CreatesDir(t *testing.T) {
 }
 
 func TestSaveLesson_HandlesCollision(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	if err := SaveLesson(root, "Same Title", "first"); err != nil {
 		t.Fatalf("SaveLesson first: %v", err)
@@ -230,6 +244,7 @@ func TestSaveLesson_HandlesCollision(t *testing.T) {
 // --- ListLessons ---
 
 func TestListLessons_ParsesTitleAndSummary(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	content := "### Validate input early\nAlways validate user input before passing it to the database layer.\n\n**Example 1:** Bad\n```go\ndb.Query(input)\n```"
 	if err := SaveLesson(root, "Validate input early", content); err != nil {
@@ -252,6 +267,7 @@ func TestListLessons_ParsesTitleAndSummary(t *testing.T) {
 }
 
 func TestListLessons_EmptyDir(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	lessons, err := ListLessons(root)
 	if err != nil {
@@ -265,6 +281,7 @@ func TestListLessons_EmptyDir(t *testing.T) {
 // --- parseLessonHeader ---
 
 func TestParseLessonHeader_NoHeading(t *testing.T) {
+	t.Parallel()
 	title, summary := parseLessonHeader("Just some text without a heading.")
 	if title != "" {
 		t.Errorf("title = %q, want empty", title)
@@ -275,6 +292,7 @@ func TestParseLessonHeader_NoHeading(t *testing.T) {
 }
 
 func TestParseLessonHeader_EmptyContent(t *testing.T) {
+	t.Parallel()
 	title, summary := parseLessonHeader("")
 	if title != "" {
 		t.Errorf("title = %q, want empty", title)
@@ -287,6 +305,7 @@ func TestParseLessonHeader_EmptyContent(t *testing.T) {
 // --- isLessonFile ---
 
 func TestIsLessonFile(t *testing.T) {
+	t.Parallel()
 	if !isLessonFile("/root/.qode/knowledge/lessons/my-lesson.md") {
 		t.Error("expected lesson file to be detected")
 	}
@@ -298,6 +317,7 @@ func TestIsLessonFile(t *testing.T) {
 // --- Integration: List includes lessons ---
 
 func TestKnowledgeList_IncludesLessons(t *testing.T) {
+	t.Parallel()
 	root := setupKBDir(t)
 	lessonsDir := filepath.Join(root, ".qode", "knowledge", "lessons")
 	writeTempFile(t, filepath.Join(lessonsDir, "test-lesson.md"), "### Test\nBody.")
@@ -322,6 +342,7 @@ func TestKnowledgeList_IncludesLessons(t *testing.T) {
 // --- Integration: Search finds in lessons ---
 
 func TestKnowledgeSearch_FindsInLessons(t *testing.T) {
+	t.Parallel()
 	root := setupKBDir(t)
 	lessonsDir := filepath.Join(root, ".qode", "knowledge", "lessons")
 	writeTempFile(t, filepath.Join(lessonsDir, "goroutine-leak.md"), "### Avoid goroutine leaks\nUse errgroup for lifecycle management.")
@@ -332,5 +353,33 @@ func TestKnowledgeSearch_FindsInLessons(t *testing.T) {
 	}
 	if len(results) == 0 {
 		t.Error("Search: expected to find goroutine in lesson file")
+	}
+}
+
+func TestLoad_UnreadableFile(t *testing.T) {
+	t.Parallel()
+	if os.Getuid() == 0 {
+		t.Skip("running as root — cannot test permission denied")
+	}
+	root := setupKBDir(t)
+	kbDir := filepath.Join(root, ".qode", "knowledge")
+	writeTempFile(t, filepath.Join(kbDir, "readable.md"), "# Readable\nContent")
+	unreadable := filepath.Join(kbDir, "unreadable.md")
+	writeTempFile(t, unreadable, "# Unreadable\nSecret")
+	if err := os.Chmod(unreadable, 0000); err != nil {
+		t.Fatalf("Chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(unreadable, 0644) })
+
+	content, err := Load(root, minimalConfig())
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	// The readable file should appear in the output; the unreadable one should be skipped.
+	if !strings.Contains(content, "Readable") {
+		t.Error("expected readable file content in output")
+	}
+	if strings.Contains(content, "Unreadable") {
+		t.Error("unreadable file content should have been skipped")
 	}
 }

@@ -16,7 +16,21 @@ jobs:
 
       - run: go build ./...
 
-      - run: go test ./...
+      - name: Run tests with coverage and race detection
+        run: |
+          go test -race -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out | tail -1
+
+      - name: Check coverage threshold
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | tail -1 | awk '{print $NF}' | tr -d '%')
+          echo "Total coverage: ${COVERAGE}%"
+          if (( $(echo "$COVERAGE < 70.0" | bc -l) )); then
+            echo "::error::Coverage ${COVERAGE}% is below 70% threshold"
+            exit 1
+          fi
+
+      - run: go test -race -tags integration ./internal/cli/...
 
       - uses: golangci/golangci-lint-action@v6
         with:

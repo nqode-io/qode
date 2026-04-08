@@ -1,3 +1,4 @@
+// Package knowledge manages project lessons-learned markdown files.
 package knowledge
 
 import (
@@ -8,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/nqode/qode/internal/config"
+	"github.com/nqode/qode/internal/iokit"
 )
 
 // SearchResult is a snippet match from the knowledge base.
@@ -155,7 +157,7 @@ func ListLessons(root string) ([]LessonSummary, error) {
 // If a file with the same name exists, it appends a numeric suffix.
 func SaveLesson(root, title, content string) error {
 	dir := LessonsDir(root)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := iokit.EnsureDir(dir); err != nil {
 		return err
 	}
 	base := ToKebabCase(title) + ".md"
@@ -163,7 +165,7 @@ func SaveLesson(root, title, content string) error {
 	for i := 2; fileExists(dest); i++ {
 		dest = filepath.Join(dir, fmt.Sprintf("%s-%d.md", ToKebabCase(title), i))
 	}
-	return os.WriteFile(dest, []byte(content), 0644)
+	return iokit.WriteFile(dest, []byte(content), 0644)
 }
 
 // ToKebabCase converts a string to a kebab-case filename component.

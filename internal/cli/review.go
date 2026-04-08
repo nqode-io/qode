@@ -1,15 +1,15 @@
 package cli
 
 import (
+	"context"
 	"fmt"
-	"os"
+	"io"
 	"path/filepath"
 	"strings"
 
-	"github.com/nqode/qode/internal/config"
-	gocontext "github.com/nqode/qode/internal/context"
+	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/git"
-	"github.com/nqode/qode/internal/prompt"
+	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/review"
 	"github.com/spf13/cobra"
 )
@@ -30,7 +30,7 @@ func newReviewCodeCmd() *cobra.Command {
 		Use:   "code",
 		Short: "Generate a code review prompt for the current changes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runReview("code", toFile, force)
+			return runReview(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), "code", toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
@@ -45,7 +45,7 @@ func newReviewSecurityCmd() *cobra.Command {
 		Use:   "security",
 		Short: "Generate a security review prompt for the current changes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runReview("security", toFile, force)
+			return runReview(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), "security", toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
@@ -53,47 +53,39 @@ func newReviewSecurityCmd() *cobra.Command {
 	return cmd
 }
 
-func runReview(kind string, toFile, force bool) error {
-	root, err := resolveRoot()
+func runReview(ctx context.Context, out, errOut io.Writer, kind string, toFile, force bool) error {
+	sess, err := loadSessionCtx(ctx)
 	if err != nil {
 		return err
 	}
-	cfg, err := config.Load(root)
-	if err != nil {
-		return err
-	}
-	branch, err := git.CurrentBranch(root)
-	if err != nil {
-		return err
+	if flagStrict {
+		sess.Config.Scoring.Strict = true
 	}
 
-	diff, err := git.DiffFromBase(root, "")
+	diff, err := git.DiffFromBaseCtx(ctx, sess.Root, "")
 	if err != nil {
 		return fmt.Errorf("getting diff: %w", err)
 	}
 	if diff == "" && !force {
-		if cfg.Scoring.Strict {
-			return fmt.Errorf("no changes detected: commit code first before running a review")
+		if sess.Config.Scoring.Strict {
+			return ErrNoChanges
 		}
-		fmt.Fprintln(os.Stderr, "No changes detected. Commit some code first.")
+		_, _ = fmt.Fprintln(errOut, "No changes detected. Commit some code first.")
 		return nil
 	}
 
-	ctx, err := gocontext.Load(root, branch)
-	if err != nil {
-		return err
-	}
+	branchDir := sess.Context.ContextDir
 
-	branchDir := ctx.ContextDir
+	// Ensure context/ exists so the user can populate ticket.md etc.
+	// Load() no longer creates this directory as a side effect, so review is
+	// the natural first command that needs it when 'branch create' was skipped.
+	if err := branchcontext.EnsureContextDir(sess.Root, sess.Branch); err != nil {
+		return fmt.Errorf("creating context directory: %w", err)
+	}
 
 	diffPath := filepath.Join(branchDir, "diff.md")
-	if err := os.WriteFile(diffPath, []byte(diff), 0600); err != nil {
+	if err := iokit.WriteFile(diffPath, []byte(diff), 0600); err != nil {
 		return fmt.Errorf("saving diff snapshot: %w", err)
-	}
-
-	engine, err := prompt.NewEngine(root)
-	if err != nil {
-		return err
 	}
 
 	outputPath := filepath.Join(branchDir, fmt.Sprintf("%s-review.md", kind))
@@ -102,9 +94,11 @@ func runReview(kind string, toFile, force bool) error {
 	var p string
 	switch kind {
 	case "code":
-		p, err = review.BuildCodePrompt(engine, cfg, ctx, outputPath)
+		p, err = review.BuildCodePrompt(sess.Engine, sess.Config, sess.Context, outputPath)
 	case "security":
-		p, err = review.BuildSecurityPrompt(engine, cfg, ctx, outputPath)
+		p, err = review.BuildSecurityPrompt(sess.Engine, sess.Config, sess.Context, outputPath)
+	default:
+		return fmt.Errorf("unknown review kind %q", kind)
 	}
 	if err != nil {
 		return err
@@ -114,11 +108,11 @@ func runReview(kind string, toFile, force bool) error {
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "%s review prompt saved to:\n  %s\n", capitalize(kind), promptPath)
+		_, _ = fmt.Fprintf(errOut, "%s review prompt saved to:\n  %s\n", capitalize(kind), promptPath)
 		return nil
 	}
 
-	_, err = fmt.Print(p)
+	_, err = fmt.Fprint(out, p)
 	return err
 }
 

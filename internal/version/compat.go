@@ -1,3 +1,4 @@
+// Package version provides semver parsing and binary/config compatibility checks.
 package version
 
 import (

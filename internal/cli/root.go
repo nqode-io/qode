@@ -1,18 +1,16 @@
+// Package cli defines the Cobra command tree and orchestrates the qode workflow.
 package cli
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/version"
 	"github.com/spf13/cobra"
 )
 
 var (
-	rootCmd  *cobra.Command
-	flagRoot string
+	rootCmd    *cobra.Command
+	flagRoot   string
+	flagStrict bool
 )
 
 // SetVersion sets the version string displayed by --version.
@@ -58,6 +56,7 @@ See 'qode workflow' for the full diagram.`,
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	rootCmd.PersistentFlags().StringVar(&flagRoot, "root", "", "project root directory (default: auto-detected)")
+	rootCmd.PersistentFlags().BoolVar(&flagStrict, "strict", false, "enforce strict mode: gate violations cause non-zero exit")
 
 	rootCmd.AddCommand(
 		newInitCmd(),
@@ -83,49 +82,14 @@ func checkVersion(cmd *cobra.Command, _ []string) error {
 	}
 	root, err := resolveRoot()
 	if err != nil {
-		return fmt.Errorf("project not initialised: run 'qode init'")
+		return ErrNotInitialised
 	}
 	cfg, err := config.Load(root)
 	if err != nil {
-		return fmt.Errorf("project not initialised: run 'qode init'")
+		return ErrNotInitialised
 	}
 	if cfg.QodeVersion == "" {
-		return fmt.Errorf("project not initialised: run 'qode init'")
+		return ErrNotInitialised
 	}
 	return version.CheckCompatibility(rootCmd.Version, cfg.QodeVersion)
-}
-
-// resolveRoot returns the effective project root, preferring the --root flag,
-// then the current working directory.
-func resolveRoot() (string, error) {
-	if flagRoot != "" {
-		return flagRoot, nil
-	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("cannot determine working directory: %w", err)
-	}
-	return wd, nil
-}
-
-// writePromptToFile atomically writes content to path, creating parent dirs as needed.
-// On template render error the caller should return before calling this.
-func writePromptToFile(path, content string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-		return err
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".qode-prompt-*")
-	if err != nil {
-		return err
-	}
-	tmpName := tmp.Name()
-	defer func() { _ = os.Remove(tmpName) }()
-	if _, err := tmp.WriteString(content); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmpName, path)
 }

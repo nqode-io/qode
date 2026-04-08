@@ -1,3 +1,4 @@
+// Package prompt renders Go templates with local-override-first resolution against embedded fallbacks.
 package prompt
 
 import (
@@ -57,6 +58,7 @@ func (e *Engine) ProjectName() string {
 
 // TemplateData is passed into every template.
 type TemplateData struct {
+	IDE          string          // target IDE ("claude" or "cursor"); used by scaffold templates
 	Project      TemplateProject
 	Branch       string
 	Ticket       string  // inline content; set only for knowledge/add-branch

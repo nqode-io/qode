@@ -1,18 +1,22 @@
+//go:build !integration
+
 package cli
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/nqode/qode/internal/prompt"
 	"gopkg.in/yaml.v3"
 )
 
 func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -37,7 +41,7 @@ func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 func TestRunInitExisting_CreatesDirs(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -52,7 +56,7 @@ func TestRunInitExisting_CreatesDirs(t *testing.T) {
 func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -69,15 +73,23 @@ func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("walking .qode/prompts/: %v", err)
 	}
-	if total == 0 {
-		t.Error("expected at least one .md.tmpl file under .qode/prompts/")
+	embedded, _ := prompt.EmbeddedTemplates()
+	// Only non-scaffold templates are copied to .qode/prompts/.
+	wantTemplates := 0
+	for name := range embedded {
+		if !strings.HasPrefix(name, "scaffold/") {
+			wantTemplates++
+		}
+	}
+	if total != wantTemplates {
+		t.Errorf("expected %d .md.tmpl files under .qode/prompts/, got %d", wantTemplates, total)
 	}
 }
 
 func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -95,10 +107,15 @@ func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
 func TestRunInitExisting_NoCursorRules(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
+	// Positive: .qode/prompts/ must exist.
+	if _, err := os.Stat(filepath.Join(dir, ".qode", "prompts")); err != nil {
+		t.Errorf("expected .qode/prompts/ to exist: %v", err)
+	}
+	// Negative: legacy .cursorrules/ must not be created.
 	if _, err := os.Stat(filepath.Join(dir, ".cursorrules")); !os.IsNotExist(err) {
 		t.Error("runInitExisting must not create .cursorrules/ directory")
 	}
@@ -107,23 +124,32 @@ func TestRunInitExisting_NoCursorRules(t *testing.T) {
 func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 	dir := t.TempDir()
 
-	output := captureStdout(t, func() {
-		if err := runInitExisting(dir); err != nil {
-			t.Errorf("runInitExisting: %v", err)
-		}
-	})
+	var buf bytes.Buffer
+	if err := runInitExisting(&buf, dir); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
 
+	// The writer must not contain legacy detection phrases.
+	out := buf.String()
 	for _, forbidden := range []string{"Detected", "Scanning", "qode ide setup"} {
-		if strings.Contains(output, forbidden) {
-			t.Errorf("output must not contain %q, got: %s", forbidden, output)
+		if strings.Contains(out, forbidden) {
+			t.Errorf("output must not contain %q, got: %s", forbidden, out)
 		}
+	}
+
+	// Sanity-check that the writer received expected content.
+	if !strings.Contains(out, "Generated:") {
+		t.Errorf("expected 'Generated:' in output, got: %s", out)
+	}
+	if !strings.Contains(out, "Next steps:") {
+		t.Errorf("expected 'Next steps:' in output, got: %s", out)
 	}
 }
 
 func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -136,7 +162,7 @@ func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
 func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("first runInitExisting: %v", err)
 	}
 
@@ -148,7 +174,7 @@ func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 	}
 
 	// Second run must succeed and must not overwrite .qode/scoring.yaml.
-	if err := runInitExisting(dir); err != nil {
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
 		t.Fatalf("second runInitExisting: %v", err)
 	}
 

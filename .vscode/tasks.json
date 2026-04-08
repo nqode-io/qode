@@ -1,11 +1,4 @@
 {
-  "inputs": [
-    {
-      "description": "Ticket URL (GitHub issue, Jira, Linear, Azure DevOps)",
-      "id": "ticketUrl",
-      "type": "promptString"
-    }
-  ],
   "tasks": [
     {
       "command": "go test ./...",

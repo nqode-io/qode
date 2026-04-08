@@ -2,10 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/nqode/qode/internal/config"
+	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/prompt"
 	"github.com/nqode/qode/internal/scaffold"
 	"github.com/spf13/cobra"
@@ -26,7 +28,7 @@ for Cursor and Claude Code.`,
 			if err != nil {
 				return err
 			}
-			return runInitExisting(root)
+			return runInitExisting(cmd.OutOrStdout(), root)
 		},
 	}
 	return cmd
@@ -35,7 +37,7 @@ for Cursor and Claude Code.`,
 // runInitExisting writes qode.yaml with defaults, creates .qode/ dirs, copies
 // prompt templates, and generates IDE configs. .qode/scoring.yaml is only
 // written on first run so user-customised rubrics are never overwritten.
-func runInitExisting(root string) error {
+func runInitExisting(out io.Writer, root string) error {
 	cfg := config.DefaultConfig()
 	cfg.QodeVersion = rootCmd.Version
 	if cfg.QodeVersion == "" {
@@ -50,10 +52,10 @@ func runInitExisting(root string) error {
 		return fmt.Errorf("marshaling config: %w", err)
 	}
 	outPath := filepath.Join(root, config.ConfigFileName)
-	if err := os.WriteFile(outPath, data, 0644); err != nil {
+	if err := iokit.WriteFile(outPath, data, 0644); err != nil {
 		return fmt.Errorf("writing %s: %w", outPath, err)
 	}
-	fmt.Printf("Generated: %s\n", outPath)
+	_, _ = fmt.Fprintf(out, "Generated: %s\n", outPath)
 
 	// Create .qode directory structure.
 	for _, dir := range []string{
@@ -61,7 +63,7 @@ func runInitExisting(root string) error {
 		filepath.Join(root, config.QodeDir, "knowledge"),
 		filepath.Join(root, config.QodeDir, "prompts"),
 	} {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := iokit.EnsureDir(dir); err != nil {
 			return err
 		}
 	}
@@ -74,10 +76,10 @@ func runInitExisting(root string) error {
 		if err != nil {
 			return fmt.Errorf("marshaling scoring config: %w", err)
 		}
-		if err := os.WriteFile(scoringPath, scoringData, 0644); err != nil {
+		if err := iokit.WriteFile(scoringPath, scoringData, 0644); err != nil {
 			return fmt.Errorf("writing %s: %w", scoringPath, err)
 		}
-		fmt.Printf("Generated: %s\n", scoringPath)
+		_, _ = fmt.Fprintf(out, "Generated: %s\n", scoringPath)
 	}
 
 	// Copy embedded prompt templates.
@@ -86,15 +88,23 @@ func runInitExisting(root string) error {
 	}
 
 	// Generate IDE configs and slash commands using the loaded (or default) config.
-	if err := scaffold.Setup(root, &cfg); err != nil {
+	if err := scaffold.Setup(out, root, &cfg); err != nil {
 		return fmt.Errorf("setting up IDE configs: %w", err)
 	}
 
-	fmt.Println()
-	fmt.Println("Next steps:")
-	fmt.Println("  1. Run 'qode branch create <name>' to start your first feature")
-	fmt.Println("  2. Fetch your ticket with /qode-ticket-fetch <url> (in IDE) or edit .qode/branches/<name>/context/ticket.md")
-	fmt.Println("  3. Use /qode-plan-refine in your IDE to begin requirements refinement")
+	// Remove scaffold prompt overrides: these templates are one-time scaffolding
+	// tools used only during init. Deleting them ensures future qode versions
+	// can update the generated commands without local overrides blocking the update.
+	scaffoldPromptsDir := filepath.Join(root, config.QodeDir, "prompts", "scaffold")
+	if err := os.RemoveAll(scaffoldPromptsDir); err != nil {
+		return fmt.Errorf("removing scaffold prompts: %w", err)
+	}
+
+	_, _ = fmt.Fprintln(out)
+	_, _ = fmt.Fprintln(out, "Next steps:")
+	_, _ = fmt.Fprintln(out, "  1. Run 'qode branch create <name>' to start your first feature")
+	_, _ = fmt.Fprintln(out, "  2. Fetch your ticket with /qode-ticket-fetch <url> (in IDE) or edit .qode/branches/<name>/context/ticket.md")
+	_, _ = fmt.Fprintln(out, "  3. Use /qode-plan-refine in your IDE to begin requirements refinement")
 
 	return nil
 }
@@ -109,10 +119,7 @@ func copyEmbeddedTemplates(root string) error {
 	}
 	for name, content := range templates {
 		dst := filepath.Join(root, config.QodeDir, "prompts", name+".md.tmpl")
-		if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
-			return err
-		}
-		if err := os.WriteFile(dst, content, 0644); err != nil {
+		if err := iokit.WriteFile(dst, content, 0644); err != nil {
 			return fmt.Errorf("writing template %s: %w", dst, err)
 		}
 	}

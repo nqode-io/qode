@@ -1,78 +1,77 @@
-# qode — Project Context
+# qode
 
-qode is an AI-assisted developer workflow CLI written in Go. It standardises how developers use AI coding assistants across projects with varied tech stacks.
-
-## Tech Stack
-
-- **default** (go): `.`
-
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Go CLI that generates structured AI prompts for a standardized developer workflow. It does **not** run AI — it assembles context and renders prompt templates for AI IDEs (Cursor, Claude Code, etc.).
 
 ## Commands
 
 ```bash
-# Build
-go build ./...
-
-# Run all tests
-go test ./...
-
-# Run a single test
-go test ./internal/<package>/... -run TestFunctionName
-
-# Lint
-golangci-lint run
-
-# Install binary locally
-go install ./cmd/qode/
+go build ./...                                          # Build
+go test ./...                                           # Unit tests (<2s)
+go test -race ./...                                     # Unit tests + race detection
+go test -tags integration ./...                         # Integration tests (separate)
+go test ./internal/<pkg>/... -run TestName              # Single test
+go test -update ./...                                   # Regenerate golden files
+golangci-lint run                                       # Lint
+go install ./cmd/qode/                                  # Install locally
 ```
+
+CI enforces **minimum 70% coverage** with race detection.
 
 ## Architecture
 
-**qode** is a Go CLI (`cmd/qode/main.go` → `internal/cli`) that generates structured AI prompts for a standardized feature development workflow. It does not run AI itself — it assembles context and renders prompt templates that developers paste into their AI IDE (Cursor, Claude Code, etc.).
+Config (`config`) → Branch context (`branchcontext`) → Prompt engine (`prompt`) → Domain builders (`plan`, `review`) → CLI commands (`cli`) → Output
 
-### Core data flow
+### Dependency layering — MUST preserve
 
-1. **Config** (`internal/config`) — loads `qode.yaml` from the project root. `Config.Layers()` normalizes both shorthand (`stack:`) and multi-layer (`layers:[]`) forms into `[]LayerConfig`.
+```text
+Leaf (zero internal deps): git, env, iokit, log, version
+Mid-level:                 config → iokit; scoring → config; knowledge → config, iokit
+Domain:                    branchcontext, prompt, workflow, plan, review, scaffold
+Top-level (fan-out):       cli → ALL packages
+```
 
-2. **Branch context** (`internal/context`) — each feature branch gets a folder at `.qode/branches/<branch>/`. Files here (ticket.md, refined-analysis.md, spec.md, code-review.md, security-review.md) are the stateful inputs that get injected into prompts.
+**Only `cli` fans out. Never introduce circular deps or upward imports.** Every new package must declare its layer.
 
-3. **Prompt engine** (`internal/prompt/engine.go`) — `Engine.Render(name, data)` resolves templates with a local-override-first strategy: checks `.qode/prompts/<name>.md.tmpl` before falling back to embedded templates (`//go:embed templates`). `TemplateData` is the single struct passed to every template.
+### Design decisions
 
-4. **CLI commands** (`internal/cli`) — each command loads config, resolves branch context, populates `TemplateData`, and calls the engine. Rendered prompts are either printed to stdout or written to `.qode/branches/<branch>/.refine-prompt.md` via `writePromptToFile` (atomic rename).
-
-### Two-pass scoring
-
-Reviews use a worker/judge split to eliminate AI self-scoring bias:
-
-- **Worker pass** (`/qode-review-code`, `/qode-review-security`): produces analysis without a score
-- **Judge pass** (separate template): scores the analysis against a rubric independently
-
-Scores are parsed from saved markdown files in the branch context folder.
-
-### Key directories
-
-- `internal/prompt/templates/` — embedded Go templates (`.md.tmpl`) organized by workflow step: `refine/`, `spec/`, `start/`, `review/`, `scoring/`, `knowledge/`
+- **One interface**: `prompt.Renderer` — define interfaces only at consumption boundaries, not preemptively
+- **Atomic writes**: use `iokit.AtomicWrite` for any file consumed by subsequent workflow steps
+- **Template override**: local `.qode/prompts/` → `go:embed` fallback for user-extensible assets
+- **Fluent builder**: `TemplateDataBuilder` with `.WithXxx().Build()` for template data construction
+- **Context threading**: every function performing I/O or calling a subprocess must accept `context.Context` as first parameter. New code uses context-accepting signatures directly; callers without a context pass `context.Background()`
+- **Minimal deps**: only cobra, yaml.v3, godotenv — prefer stdlib; reject convenience-only deps
+- **Two-pass scoring**: worker produces analysis (no score), judge scores independently against configurable rubric
+- **Sentinel errors**: export sentinel errors (`ErrConfigNotFound`, etc.) for programmatic distinction; match with `errors.Is()`
 
 ## Code standards
 
-- Read existing code before writing new code
 - Functions ≤ 50 lines, single responsibility
 - Named constants — no magic numbers
-- Explicit error handling — never swallow errors
+- Wrap errors with `%w` — never swallow errors
 - No TODO comments in committed code
+- Push domain logic into dedicated packages, not `cli/`
 - Follow existing patterns; do not introduce new ones
 
-## Quality Standards
+## Test standards
+
+Default shape: **table-driven** with `t.Run(tc.name, ...)` and `t.Parallel()` on parent and subtests, unless test mutates global state.
+
+- `t.Helper()` on every helper, `t.Cleanup` for teardown, `t.TempDir()` for filesystem tests
+- Never mock what you own — test real implementations; mock only at system boundaries (network, external processes)
+- Golden files for template/structured output — always support `-update` flag
+- Error paths must assert error type (`errors.Is`) or message content, not just `err != nil`
+- Integration tests behind `//go:build integration` — create fresh command instances, never reset globals
+- Sentinel assertions for prompt content — inject unique strings, assert presence/absence
+- One assertion theme per test function — if a name needs "and", split into two tests
+
+## Quality standards
 
 - Minimum refined analysis score: 25/25
 - Minimum code review score: 10.0/12
 - Minimum security review score: 10.0/12
 
-## Additional instructions
+## Gotchas
 
-- If asked by the the user to add something to `notes` or `notes.md` file, always append it to the `.qode/branches/$(git branch --show-current | sed 's|/|--|g')/context/notes.md` file
-- Never change `CLAUDE.md` file
-- If running `/qode-ticket-fetch` do what is described in the command, do not automatically call the MCP server.
+- IMPORTANT: Never change `CLAUDE.md` file
+- If asked to add something to `notes` or `notes.md`, always append to `.qode/branches/$(git branch --show-current | sed 's|/|--|g')/context/notes.md`
+- `.qode/`, `.claude/`, `.cursor/`, `.cursorrules/` directories and `qode.yaml` are configuration — only read when testing changes to these files, never modify directly (use `qode init` instead)

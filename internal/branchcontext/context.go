@@ -1,4 +1,5 @@
-package context
+// Package branchcontext reads and manages per-branch state files under .qode/branches/<branch>/.
+package branchcontext
 
 import (
 	"fmt"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/git"
+	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/scoring"
 )
 
@@ -38,6 +40,10 @@ type Context struct {
 }
 
 // Load reads the context folder for a branch.
+// Note: Load does not create any directories as a side effect. Callers that
+// need the context/ subdirectory to exist (e.g. for writing user files) must
+// call EnsureContextDir explicitly. The canonical path is via 'branch create',
+// which creates the directory and stub files up front.
 func Load(root, branch string) (*Context, error) {
 	dir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
 	ctx := &Context{
@@ -47,9 +53,8 @@ func Load(root, branch string) (*Context, error) {
 
 	// Context sub-directory.
 	ctxSubDir := filepath.Join(dir, "context")
-	_ = os.MkdirAll(ctxSubDir, 0755)
 
-	ctx.Ticket = readFileOr(filepath.Join(ctxSubDir, "ticket.md"), "")
+	ctx.Ticket = iokit.ReadFileOrString(filepath.Join(ctxSubDir, "ticket.md"), "")
 
 	// Scan for extra context files.
 	entries, _ := os.ReadDir(ctxSubDir)
@@ -68,7 +73,7 @@ func Load(root, branch string) (*Context, error) {
 		case ".png", ".jpg", ".jpeg", ".gif", ".webp":
 			ctx.Mockups = append(ctx.Mockups, full)
 		default:
-			content := readFileOr(full, "")
+			content := iokit.ReadFileOrString(full, "")
 			if content != "" {
 				ctx.Extra = append(ctx.Extra, "### "+name+"\n\n"+content)
 			}
@@ -103,10 +108,10 @@ func Load(root, branch string) (*Context, error) {
 
 	// Latest refined analysis.
 	latestAnalysis := filepath.Join(dir, "refined-analysis.md")
-	ctx.RefinedAnalysis = readFileOr(latestAnalysis, "")
+	ctx.RefinedAnalysis = iokit.ReadFileOrString(latestAnalysis, "")
 
 	// Spec.
-	ctx.Spec = readFileOr(filepath.Join(dir, "spec.md"), "")
+	ctx.Spec = iokit.ReadFileOrString(filepath.Join(dir, "spec.md"), "")
 
 	return ctx, nil
 }
@@ -152,12 +157,10 @@ func (c *Context) SecurityReviewScore() float64 {
 	return scoring.ExtractScoreFromFile(filepath.Join(c.ContextDir, "security-review.md"))
 }
 
-func readFileOr(path, fallback string) string {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return fallback
-	}
-	return string(data)
+// EnsureContextDir creates the context sub-directory for a branch if it doesn't exist.
+func EnsureContextDir(root, branch string) error {
+	dir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch), "context")
+	return iokit.EnsureDir(dir)
 }
 
 func parseIterationFromAnalysis(branchDir string) (int, int, bool) {

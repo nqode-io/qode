@@ -1,282 +1,421 @@
 package scaffold
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/nqode/qode/internal/config"
 )
 
-// --- claudeSlashCommands ---
+// helpers
 
-func TestClaudeSlashCommands_ContainsTicketFetch(t *testing.T) {
-	cmds := claudeSlashCommands("testproject")
-	content, ok := cmds["qode-ticket-fetch"]
-	if !ok {
-		t.Fatal("claudeSlashCommands: missing key qode-ticket-fetch")
+func setupProject(t *testing.T, name string) string {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), name)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
 	}
-	for _, want := range []string{"$ARGUMENTS", "context/ticket.md", "MCP", "Figma"} {
-		if !strings.Contains(content, want) {
-			t.Errorf("qode-ticket-fetch missing %q", want)
-		}
-	}
-	if strings.Contains(content, "qode ticket fetch") {
-		t.Error("qode-ticket-fetch must not reference CLI command")
-	}
+	return dir
 }
 
-func TestClaudeSlashCommands_HasNineEntries(t *testing.T) {
-	cmds := claudeSlashCommands("testproject")
-	if len(cmds) != 9 {
-		t.Errorf("claudeSlashCommands: len = %d, want 9", len(cmds))
+func readClaudeCommand(t *testing.T, root, name string) string {
+	t.Helper()
+	path := filepath.Join(root, ".claude", "commands", name+".md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s.md: %v", name, err)
 	}
+	return string(data)
 }
 
-func TestClaudeSlashCommands_IncludesKnowledge(t *testing.T) {
-	cmds := claudeSlashCommands("testproject")
-	for _, key := range []string{"qode-knowledge-add-context", "qode-knowledge-add-branch"} {
-		content, ok := cmds[key]
-		if !ok {
-			t.Errorf("claudeSlashCommands: missing key %s", key)
-			continue
-		}
-		if content == "" {
-			t.Errorf("claudeSlashCommands: %s has empty content", key)
-		}
+func readCursorCommand(t *testing.T, root, name string) string {
+	t.Helper()
+	path := filepath.Join(root, ".cursor", "commands", name+".mdc")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s.mdc: %v", name, err)
 	}
+	return string(data)
 }
 
-func TestClaudeSlashCommands_IncludesQodeCheck(t *testing.T) {
-	cmds := claudeSlashCommands("testproject")
-	content, ok := cmds["qode-check"]
-	if !ok {
-		t.Fatal("claudeSlashCommands: missing key qode-check")
-	}
-	if content == "" {
-		t.Error("claudeSlashCommands: qode-check has empty content")
-	}
-	// The prompt must not instruct the AI to use config fields from qode.yaml.
-	for _, prohibited := range []string{"test.unit", "test.lint"} {
-		if strings.Contains(content, prohibited) {
-			t.Errorf("claudeSlashCommands: qode-check must not reference qode.yaml field %q", prohibited)
-		}
-	}
-	for _, heading := range []string{"Phase 1", "Phase 2"} {
-		if !strings.Contains(content, heading) {
-			t.Errorf("claudeSlashCommands: qode-check missing heading %q", heading)
-		}
-	}
-}
-
-func TestClaudeSlashCommands_NoPromptOnly(t *testing.T) {
-	cmds := claudeSlashCommands("testproject")
-	for name, content := range cmds {
-		if strings.Contains(content, "--prompt-only") {
-			t.Errorf("claudeSlashCommands: %s contains --prompt-only", name)
-		}
-	}
-}
-
-// --- slashCommands (Cursor) ---
-
-func TestCursorSlashCommands_ContainsTicketFetch(t *testing.T) {
-	cmds := slashCommands("testproject")
-	content, ok := cmds["qode-ticket-fetch"]
-	if !ok {
-		t.Fatal("slashCommands: missing key qode-ticket-fetch")
-	}
-	for _, want := range []string{"$ARGUMENTS", "context/ticket.md", "description:", "testproject", "Figma"} {
-		if !strings.Contains(content, want) {
-			t.Errorf("qode-ticket-fetch missing %q", want)
-		}
-	}
-	if strings.Contains(content, "qode ticket fetch") {
-		t.Error("qode-ticket-fetch must not reference CLI command")
-	}
-}
-
-func TestCursorSlashCommands_HasNineEntries(t *testing.T) {
-	cmds := slashCommands("testproject")
-	if len(cmds) != 9 {
-		t.Errorf("slashCommands: len = %d, want 9", len(cmds))
-	}
-}
-
-func TestCursorSlashCommands_IncludesKnowledge(t *testing.T) {
-	cmds := slashCommands("testproject")
-	for _, key := range []string{"qode-knowledge-add-context", "qode-knowledge-add-branch"} {
-		content, ok := cmds[key]
-		if !ok {
-			t.Errorf("slashCommands: missing key %s", key)
-			continue
-		}
-		if !strings.Contains(content, "description:") {
-			t.Errorf("slashCommands: %s missing YAML frontmatter", key)
-		}
-	}
-}
-
-func TestCursorSlashCommands_IncludesQodeCheck(t *testing.T) {
-	cmds := slashCommands("testproject")
-	content, ok := cmds["qode-check"]
-	if !ok {
-		t.Fatal("slashCommands: missing key qode-check")
-	}
-	if !strings.Contains(content, "description:") {
-		t.Error("slashCommands: qode-check missing YAML frontmatter")
-	}
-	// The prompt must not instruct the AI to use config fields from qode.yaml.
-	for _, prohibited := range []string{"test.unit", "test.lint"} {
-		if strings.Contains(content, prohibited) {
-			t.Errorf("slashCommands: qode-check must not reference qode.yaml field %q", prohibited)
-		}
-	}
-	for _, heading := range []string{"Phase 1", "Phase 2"} {
-		if !strings.Contains(content, heading) {
-			t.Errorf("slashCommands: qode-check missing heading %q", heading)
-		}
-	}
-}
-
-func TestCursorSlashCommands_NoPromptOnly(t *testing.T) {
-	cmds := slashCommands("testproject")
-	for name, content := range cmds {
-		if strings.Contains(content, "--prompt-only") {
-			t.Errorf("slashCommands: %s contains --prompt-only", name)
-		}
-	}
-}
-
-// --- SetupClaudeCode integration ---
+// --- SetupClaudeCode ---
 
 func TestSetupClaudeCode_WritesTicketFetchCommand(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
-	if err := SetupClaudeCode(dir); err != nil {
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
-	path := filepath.Join(dir, ".claude", "commands", "qode-ticket-fetch.md")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("reading qode-ticket-fetch.md: %v", err)
-	}
-	content := string(data)
-	for _, want := range []string{"$ARGUMENTS", "context/ticket.md", "MCP"} {
+	content := readClaudeCommand(t, dir, "qode-ticket-fetch")
+	for _, want := range []string{"$ARGUMENTS", "context/ticket.md", "MCP", "Figma"} {
 		if !strings.Contains(content, want) {
 			t.Errorf("qode-ticket-fetch.md missing %q", want)
 		}
 	}
+	if strings.Contains(content, "qode ticket fetch") {
+		t.Error("qode-ticket-fetch.md must not reference CLI command")
+	}
+}
+
+func TestSetupClaudeCode_WritesAllCommands(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
+		t.Fatalf("SetupClaudeCode: %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(dir, ".claude", "commands"))
+	if err != nil {
+		t.Fatalf("reading commands dir: %v", err)
+	}
+	if len(entries) != len(claudeCommands) {
+		t.Errorf("SetupClaudeCode: wrote %d commands, want %d", len(entries), len(claudeCommands))
+	}
 }
 
 func TestSetupClaudeCode_WritesKnowledgeCommands(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
-	if err := SetupClaudeCode(dir); err != nil {
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
 	for _, name := range []string{"qode-knowledge-add-context", "qode-knowledge-add-branch"} {
-		path := filepath.Join(dir, ".claude", "commands", name+".md")
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Errorf("reading %s.md: %v", name, err)
-			continue
-		}
-		if len(data) == 0 {
+		content := readClaudeCommand(t, dir, name)
+		if len(content) == 0 {
 			t.Errorf("%s.md is empty", name)
 		}
 	}
 }
 
-func TestSetupClaudeCode_CommandsContainRootName(t *testing.T) {
+func TestSetupClaudeCode_IncludesQodeCheck(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
-	// Rename the temp dir would be complex; use a subdirectory with a known name.
-	projectDir := filepath.Join(dir, "myproject")
-	if err := os.MkdirAll(projectDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := SetupClaudeCode(projectDir); err != nil {
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
-	path := filepath.Join(projectDir, ".claude", "commands", "qode-plan-refine.md")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("reading qode-plan-refine.md: %v", err)
+	content := readClaudeCommand(t, dir, "qode-check")
+	if content == "" {
+		t.Fatal("qode-check.md is empty")
 	}
-	if !strings.Contains(string(data), "myproject") {
-		t.Errorf("qode-plan-refine.md missing root dir name %q, got:\n%s", "myproject", string(data))
+	for _, prohibited := range []string{"test.unit", "test.lint"} {
+		if strings.Contains(content, prohibited) {
+			t.Errorf("qode-check.md must not reference qode.yaml field %q", prohibited)
+		}
+	}
+	for _, heading := range []string{"Phase 1", "Phase 2"} {
+		if !strings.Contains(content, heading) {
+			t.Errorf("qode-check.md missing heading %q", heading)
+		}
 	}
 }
 
-// --- SetupCursor integration ---
+func TestSetupClaudeCode_CommandContent(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
+		t.Fatalf("SetupClaudeCode: %v", err)
+	}
+
+	for _, name := range claudeCommands {
+		content := readClaudeCommand(t, dir, name)
+		if strings.Contains(content, "--prompt-only") {
+			t.Errorf("%s.md contains --prompt-only", name)
+		}
+		// Each command must render a non-trivial prompt body.
+		if len(content) < 50 {
+			t.Errorf("%s.md too short (%d bytes), expected rendered command content", name, len(content))
+		}
+	}
+}
+
+func TestSetupClaudeCode_CommandsContainRootName(t *testing.T) {
+	t.Parallel()
+	projectDir := setupProject(t, "myproject")
+	if err := SetupClaudeCode(io.Discard, projectDir); err != nil {
+		t.Fatalf("SetupClaudeCode: %v", err)
+	}
+
+	content := readClaudeCommand(t, projectDir, "qode-plan-refine")
+	if !strings.Contains(content, "myproject") {
+		t.Errorf("qode-plan-refine.md missing root dir name %q, got:\n%s", "myproject", content)
+	}
+}
+
+// --- SetupCursor ---
 
 func TestSetupCursor_WritesTicketFetchCommand(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
-	if err := SetupCursor(dir); err != nil {
+	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
-	path := filepath.Join(dir, ".cursor", "commands", "qode-ticket-fetch.mdc")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("reading qode-ticket-fetch.mdc: %v", err)
-	}
-	content := string(data)
-	for _, want := range []string{"$ARGUMENTS", "context/ticket.md", "description:", "MCP"} {
+	content := readCursorCommand(t, dir, "qode-ticket-fetch")
+	for _, want := range []string{"$ARGUMENTS", "context/ticket.md", "description:", "MCP", "Figma"} {
 		if !strings.Contains(content, want) {
 			t.Errorf("qode-ticket-fetch.mdc missing %q", want)
 		}
 	}
+	if strings.Contains(content, "qode ticket fetch") {
+		t.Error("qode-ticket-fetch.mdc must not reference CLI command")
+	}
+}
+
+func TestSetupCursor_WritesAllCommands(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupCursor(io.Discard, dir); err != nil {
+		t.Fatalf("SetupCursor: %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(dir, ".cursor", "commands"))
+	if err != nil {
+		t.Fatalf("reading cursor commands dir: %v", err)
+	}
+	if len(entries) != len(cursorCommands) {
+		t.Errorf("SetupCursor: wrote %d commands, want %d", len(entries), len(cursorCommands))
+	}
 }
 
 func TestSetupCursor_WritesKnowledgeCommands(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
-	if err := SetupCursor(dir); err != nil {
+	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
 	for _, name := range []string{"qode-knowledge-add-context", "qode-knowledge-add-branch"} {
-		path := filepath.Join(dir, ".cursor", "commands", name+".mdc")
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Errorf("reading %s.mdc: %v", name, err)
-			continue
+		content := readCursorCommand(t, dir, name)
+		if !strings.Contains(content, "description:") {
+			t.Errorf("%s.mdc missing YAML frontmatter", name)
 		}
-		if len(data) == 0 {
-			t.Errorf("%s.mdc is empty", name)
+	}
+}
+
+func TestSetupCursor_IncludesQodeCheck(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupCursor(io.Discard, dir); err != nil {
+		t.Fatalf("SetupCursor: %v", err)
+	}
+
+	content := readCursorCommand(t, dir, "qode-check")
+	if !strings.Contains(content, "description:") {
+		t.Error("qode-check.mdc missing YAML frontmatter")
+	}
+	for _, prohibited := range []string{"test.unit", "test.lint"} {
+		if strings.Contains(content, prohibited) {
+			t.Errorf("qode-check.mdc must not reference qode.yaml field %q", prohibited)
+		}
+	}
+	for _, heading := range []string{"Phase 1", "Phase 2"} {
+		if !strings.Contains(content, heading) {
+			t.Errorf("qode-check.mdc missing heading %q", heading)
+		}
+	}
+}
+
+func TestSetupCursor_CommandContent(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupCursor(io.Discard, dir); err != nil {
+		t.Fatalf("SetupCursor: %v", err)
+	}
+
+	for _, name := range cursorCommands {
+		content := readCursorCommand(t, dir, name)
+		if strings.Contains(content, "--prompt-only") {
+			t.Errorf("%s.mdc contains --prompt-only", name)
+		}
+		if len(content) < 50 {
+			t.Errorf("%s.mdc too short (%d bytes), expected rendered command content", name, len(content))
 		}
 	}
 }
 
 func TestSetupCursor_NoCursorRulesDir(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
-	if err := SetupCursor(dir); err != nil {
+	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
+	// Positive: .cursor/commands/ must exist.
+	if _, err := os.Stat(filepath.Join(dir, ".cursor", "commands")); err != nil {
+		t.Errorf("expected .cursor/commands/ to exist: %v", err)
+	}
+	// Negative: legacy .cursorrules/ must not be created.
 	if _, err := os.Stat(filepath.Join(dir, ".cursorrules")); !os.IsNotExist(err) {
 		t.Error("SetupCursor must not create .cursorrules/ directory")
 	}
 }
 
 func TestSetupCursor_CommandsContainRootName(t *testing.T) {
-	dir := t.TempDir()
-	projectDir := filepath.Join(dir, "myproject")
-	if err := os.MkdirAll(projectDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := SetupCursor(projectDir); err != nil {
+	t.Parallel()
+	projectDir := setupProject(t, "myproject")
+	if err := SetupCursor(io.Discard, projectDir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
-	path := filepath.Join(projectDir, ".cursor", "commands", "qode-plan-refine.mdc")
-	data, err := os.ReadFile(path)
+	content := readCursorCommand(t, projectDir, "qode-plan-refine")
+	if !strings.Contains(content, "myproject") {
+		t.Errorf("qode-plan-refine.mdc missing root dir name %q, got:\n%s", "myproject", content)
+	}
+}
+
+// --- Setup orchestration ---
+
+func TestSetup_BothIDEs(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cfg := &config.Config{
+		IDE: config.IDEConfig{
+			Cursor:     config.CursorIDEConfig{Enabled: true},
+			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: true},
+		},
+	}
+	var buf bytes.Buffer
+	if err := Setup(&buf, dir, cfg); err != nil {
+		t.Fatalf("Setup: %v", err)
+	}
+
+	// Both command dirs should exist.
+	if _, err := os.Stat(filepath.Join(dir, ".cursor", "commands")); err != nil {
+		t.Errorf("expected .cursor/commands dir: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".claude", "commands")); err != nil {
+		t.Errorf("expected .claude/commands dir: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "Cursor") || !strings.Contains(out, "Claude Code") {
+		t.Errorf("output should mention both IDEs, got: %q", out)
+	}
+}
+
+func TestSetup_OnlyOneIDE(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cfg := &config.Config{
+		IDE: config.IDEConfig{
+			Cursor:     config.CursorIDEConfig{Enabled: true},
+			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: false},
+		},
+	}
+	var buf bytes.Buffer
+	if err := Setup(&buf, dir, cfg); err != nil {
+		t.Fatalf("Setup: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, ".cursor", "commands")); err != nil {
+		t.Errorf("expected .cursor/commands dir: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".claude", "commands")); !os.IsNotExist(err) {
+		t.Error("expected .claude/commands to not exist when ClaudeCode is disabled")
+	}
+}
+
+func TestSetup_NoIDEs(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cfg := &config.Config{
+		IDE: config.IDEConfig{
+			Cursor:     config.CursorIDEConfig{Enabled: false},
+			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: false},
+		},
+	}
+	var buf bytes.Buffer
+	if err := Setup(&buf, dir, cfg); err != nil {
+		t.Fatalf("Setup: %v", err)
+	}
+	if !strings.Contains(buf.String(), "No IDEs enabled") {
+		t.Errorf("expected 'No IDEs enabled' message, got: %q", buf.String())
+	}
+}
+
+func TestSetupClaudeCode_Idempotent(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// First run.
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
+		t.Fatalf("first SetupClaudeCode: %v", err)
+	}
+	firstContents := readAllCommands(t, filepath.Join(dir, ".claude", "commands"))
+
+	// Second run.
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
+		t.Fatalf("second SetupClaudeCode: %v", err)
+	}
+	secondContents := readAllCommands(t, filepath.Join(dir, ".claude", "commands"))
+
+	if len(firstContents) != len(secondContents) {
+		t.Fatalf("file count changed: %d → %d", len(firstContents), len(secondContents))
+	}
+	for name, first := range firstContents {
+		second, ok := secondContents[name]
+		if !ok {
+			t.Errorf("file %q missing after second run", name)
+			continue
+		}
+		if first != second {
+			t.Errorf("file %q content changed after second run", name)
+		}
+	}
+}
+
+func TestSetupCursor_Idempotent(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	if err := SetupCursor(io.Discard, dir); err != nil {
+		t.Fatalf("first SetupCursor: %v", err)
+	}
+	firstContents := readAllCommands(t, filepath.Join(dir, ".cursor", "commands"))
+
+	if err := SetupCursor(io.Discard, dir); err != nil {
+		t.Fatalf("second SetupCursor: %v", err)
+	}
+	secondContents := readAllCommands(t, filepath.Join(dir, ".cursor", "commands"))
+
+	if len(firstContents) != len(secondContents) {
+		t.Fatalf("file count changed: %d → %d", len(firstContents), len(secondContents))
+	}
+	for name, first := range firstContents {
+		second, ok := secondContents[name]
+		if !ok {
+			t.Errorf("file %q missing after second run", name)
+			continue
+		}
+		if first != second {
+			t.Errorf("file %q content changed after second run", name)
+		}
+	}
+}
+
+// readAllCommands reads every file in dir and returns a map of name → content.
+func readAllCommands(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		t.Fatalf("reading qode-plan-refine.mdc: %v", err)
+		t.Fatalf("ReadDir %s: %v", dir, err)
 	}
-	if !strings.Contains(string(data), "myproject") {
-		t.Errorf("qode-plan-refine.mdc missing root dir name %q, got:\n%s", "myproject", string(data))
+	result := make(map[string]string, len(entries))
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			t.Fatalf("ReadFile %s: %v", e.Name(), err)
+		}
+		result[e.Name()] = string(data)
 	}
+	return result
 }

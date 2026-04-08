@@ -33,3 +33,19 @@ Be strict: only award full marks for genuinely excellent work.
 3.
 
 **Recommendation:** {{"{{"}}if ge .Score {{.TargetScore}}{{"}}"}}✅ Ready for spec generation{{"{{"}}else{{"}}"}}🔄 Iterate again — address improvements above{{"{{"}}end{{"}}"}}
+
+---
+
+At the very end of your response, append this block exactly:
+
+```yaml
+judgment:
+  total_score: <N>
+  max_score: {{.Rubric.Total}}
+  dimensions:
+{{- range .Rubric.Dimensions}}
+    - name: "{{.Name}}"
+      score: <N>
+      max: {{.Weight}}
+{{- end}}
+```

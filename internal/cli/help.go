@@ -2,9 +2,10 @@ package cli
 
 import (
 	"fmt"
+	"io"
 
+	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/config"
-	gocontext "github.com/nqode/qode/internal/context"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/scoring"
 	"github.com/nqode/qode/internal/workflow"
@@ -16,12 +17,16 @@ func newWorkflowCmd() *cobra.Command {
 		Use:   "workflow",
 		Short: "Show or inspect the qode workflow",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Print(workflowList)
-			return nil
+			return runWorkflow(cmd.OutOrStdout())
 		},
 	}
 	cmd.AddCommand(newWorkflowShowCmd(), newWorkflowStatusCmd())
 	return cmd
+}
+
+func runWorkflow(out io.Writer) error {
+	_, _ = fmt.Fprint(out, workflowList)
+	return nil
 }
 
 func newWorkflowShowCmd() *cobra.Command {
@@ -29,7 +34,7 @@ func newWorkflowShowCmd() *cobra.Command {
 		Use:   "show",
 		Short: "Print the full qode workflow steps",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Print(workflowList)
+			_, _ = fmt.Fprint(cmd.OutOrStdout(), workflowList)
 		},
 	}
 }
@@ -39,43 +44,31 @@ func newWorkflowStatusCmd() *cobra.Command {
 		Use:   "status",
 		Short: "Show live completion status for each workflow step",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runWorkflowStatus()
+			return runWorkflowStatus(cmd.OutOrStdout())
 		},
 	}
 }
 
-func runWorkflowStatus() error {
-	root, err := resolveRoot()
-	if err != nil {
-		return err
-	}
-	cfg, err := config.Load(root)
-	if err != nil {
-		return err
-	}
-	branch, err := git.CurrentBranch(root)
-	if err != nil {
-		return err
-	}
-	ctx, err := gocontext.Load(root, branch)
+func runWorkflowStatus(out io.Writer) error {
+	sess, err := loadSession()
 	if err != nil {
 		return err
 	}
 
-	diff, _ := git.DiffFromBase(root, "")
+	diff, _ := git.DiffFromBase(sess.Root, "")
 
-	lines, upNext := buildStatusLines(ctx, cfg, diff)
+	lines, upNext := buildStatusLines(sess.Context, sess.Config, diff)
 	for _, line := range lines {
-		fmt.Println(line)
+		_, _ = fmt.Fprintln(out, line)
 	}
 	if upNext != "" {
-		fmt.Println()
-		fmt.Println("Up next:", upNext)
+		_, _ = fmt.Fprintln(out)
+		_, _ = fmt.Fprintln(out, "Up next:", upNext)
 	}
 	return nil
 }
 
-func buildStatusLines(ctx *gocontext.Context, cfg *config.Config, diff string) (lines []string, upNext string) {
+func buildStatusLines(ctx *branchcontext.Context, cfg *config.Config, diff string) (lines []string, upNext string) {
 	step := func(n int, label, status string) string {
 		return fmt.Sprintf("%d. %s - %s", n, label, status)
 	}
@@ -129,7 +122,7 @@ func buildStatusLines(ctx *gocontext.Context, cfg *config.Config, diff string) (
 	return lines, upNext
 }
 
-func refineStatus(ctx *gocontext.Context, cfg *config.Config, upNext *string) string {
+func refineStatus(ctx *branchcontext.Context, cfg *config.Config, upNext *string) string {
 	if !ctx.HasRefinedAnalysis() {
 		if *upNext == "" {
 			*upNext = "Run /qode-plan-refine."
@@ -155,7 +148,7 @@ func refineStatus(ctx *gocontext.Context, cfg *config.Config, upNext *string) st
 	return fmt.Sprintf("%d iteration(s), latest score: %d/%d.", n, score, maxScore)
 }
 
-func reviewStatus(ctx *gocontext.Context, cfg *config.Config, upNext *string) []string {
+func reviewStatus(ctx *branchcontext.Context, cfg *config.Config, upNext *string) []string {
 	var lines []string
 	codeMax := scoring.BuildRubric(scoring.RubricReview, cfg).Total()
 	secMax := scoring.BuildRubric(scoring.RubricSecurity, cfg).Total()
