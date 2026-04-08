@@ -1,4 +1,4 @@
-# qode — Architecture Report
+# qode Architecture Report
 
 Go CLI that generates structured AI prompts for a standardized developer workflow. It does **not** run AI — it assembles context and renders prompt templates for AI IDEs (Cursor, Claude Code, etc.).
 
@@ -14,51 +14,38 @@ go install ./cmd/qode/                                  # Install locally
 
 ## Architecture
 
-### Package map
+### Directory layout
 
-| Package | Layer | Purpose |
-|---|---|---|
-| `cmd/qode` | Entry point | `main()` — delegates to `cli.Execute()` |
-| `cli` | Orchestration | Cobra command tree; wires config → context → prompts → output |
-| `config` | Core | Loads/validates/merges `qode.yaml` + `scoring.yaml` + user-level config |
-| `branchcontext` | Core | Reads per-branch state from `.qode/branches/<branch>/` (ticket, analysis, spec, iterations, reviews) |
-| `prompt` | Core | Template engine with local-override-first resolution (`go:embed` fallback); single `Renderer` interface; builder pattern for `TemplateData` |
-| `scoring` | Core | Two-pass worker/judge scoring engine; rubric construction; YAML + regex score parsing |
-| `workflow` | Core | Step-ordering enforcement (pure functions, no I/O) |
-| `plan` | Domain | Builds refine, spec, start, and judge prompts; manages iteration files |
-| `review` | Domain | Builds code-review and security-review prompts |
-| `knowledge` | Domain | Manages project lessons-learned markdown files; search, list, save |
-| `scaffold` | Domain | Generates IDE-specific configuration files for Cursor and Claude Code |
-| `git` | Leaf | Thin wrappers around `git` CLI; branch ops, diffs, merge-base resolution |
-| `iokit` | Leaf | File I/O utilities: atomic writes, directory helpers, safe reads |
-| `env` | Leaf | `.env` file loading via `godotenv` |
-| `log` | Leaf | Structured `slog`-based logging with `QODE_LOG_LEVEL` support |
-| `version` | Leaf | Semver parsing and binary/config compatibility checks |
+```
+cmd/qode/          Entry point (main.go)
+internal/
+  cli/             Cobra command definitions — the only fan-out package
+  config/          Loads, validates, and normalizes qode.yaml
+  branchcontext/   Per-branch state from .qode/branches/<branch>/
+  prompt/          Template engine with go:embed + local-override resolution
+  plan/            Builds refine, spec, and start prompts
+  review/          Builds code-review and security-review prompts
+  scoring/         Rubrics, two-pass worker/judge scoring
+  workflow/        Step-ordering guards (pure, no I/O)
+  knowledge/       Project lessons-learned markdown loader
+  scaffold/        IDE configuration generator (qode init)
+  git/             Thin wrappers around git CLI
+  env/             .env file loader
+  iokit/           File I/O utilities, atomic writes
+  log/             Structured logging (slog)
+  version/         Semver parsing, compatibility checks
+docs/              User-facing documentation
+tools/             Release scripts
+```
 
 ### Data flow
 
-Config (`config`) → Branch context (`branchcontext`) → Prompt engine (`prompt`) → Domain builders (`plan`, `review`) → CLI commands (`cli`) → Output
+Config (`config`) -> Branch context (`branchcontext`) -> Prompt engine (`prompt`) -> Domain builders (`plan`, `review`) -> CLI commands (`cli`) -> Output
 
-- **Config** loads `qode.yaml`; merges project, scoring, and user-level configs
+- **Config** loads `qode.yaml`; normalizes shorthand (`stack:`) and multi-layer (`layers:[]`) into `[]LayerConfig`
 - **Branch context** reads per-branch state from `.qode/branches/<branch>/` (ticket, analysis, spec, reviews)
 - **Prompt engine** resolves templates local-override-first: `.qode/prompts/` before `go:embed` fallback. `TemplateData` is the single struct for all templates
 - **Workflow guards** (`workflow`) enforce step ordering — e.g. spec requires minimum refine score
-- **Session** (`cli/session.go`) bootstraps the common state (root, config, branch, context, engine) used by most commands
-
-### Dependency layering (MUST preserve)
-
-Leaf packages (zero internal deps): `git`, `env`, `iokit`, `log`, `version`. Core packages depend only on leaves and each other where necessary. Domain packages depend on core + leaves. Only `cli` fans out to all packages. **Never introduce circular dependencies or upward imports.**
-
-Current production dependency graph (non-test):
-- `scoring` → `config`
-- `prompt` → `scoring`
-- `branchcontext` → `config`, `git`, `iokit`, `scoring`
-- `workflow` → `config`, `branchcontext`, `scoring`
-- `plan` → `branchcontext`, `config`, `git`, `iokit`, `prompt`, `scoring`
-- `review` → `config`, `branchcontext`, `prompt`, `scoring`
-- `knowledge` → `config`, `iokit`
-- `scaffold` → `config`
-- `cli` → all of the above
 
 ### Two-pass scoring
 
@@ -67,69 +54,47 @@ Reviews use a worker/judge split to eliminate self-scoring bias:
 - **Worker**: produces analysis without a score
 - **Judge**: scores the analysis against a configurable rubric independently
 
+### Dependency graph (production code only)
+
+```
+Leaf packages (zero internal deps):
+  git, env, iokit, log, version
+
+Mid-level:
+  config      -> iokit
+  scoring     -> config
+  knowledge   -> config, iokit
+
+Domain:
+  branchcontext -> config, git, iokit, scoring
+  prompt        -> config, scoring
+  workflow      -> branchcontext, config, scoring
+  plan          -> branchcontext, config, git, iokit, prompt, scoring
+  review        -> branchcontext, config, prompt, scoring
+  scaffold      -> config, iokit, prompt
+
+Top-level (fan-out):
+  cli           -> ALL packages
+```
+
+**Rule: Only `cli` fans out to all packages. Never introduce circular deps or upward imports.**
+
 ### Key design decisions
 
 - Only one interface exists: `prompt.Renderer` — define interfaces only at consumption boundaries, not preemptively
 - Use `iokit.AtomicWrite` for any file consumed by subsequent workflow steps
-- Template override (local `.qode/prompts/` → embedded fallback) is the standard for user-extensible assets
+- Template override (local `.qode/prompts/` -> embedded fallback) is the standard for user-extensible assets
+- `TemplateDataBuilder` uses a fluent builder pattern (`.WithXxx().Build()`) for constructing template data
 - Dependencies are minimal (cobra, yaml.v3, godotenv) — prefer stdlib over new dependencies
-- `Session` struct centralizes bootstrap; all commands use `loadSession()` to avoid repeated init logic
+- `context.Context` is threaded through CLI commands and I/O-performing functions
 
----
+### External dependencies
 
-## Architectural Patterns
-
-### Continue doing
-
-1. **Strict dependency layering.** Leaf packages have zero internal deps; domain packages depend only on core and leaves; only `cli` fans out to everything. This keeps the compile graph shallow and prevents circular imports. *Example: `iokit` depends on nothing; `plan` depends on `prompt` and `scoring` but never on `cli`.*
-
-2. **Single canonical interface at consumption boundary.** `prompt.Renderer` is the only interface, defined where consumers need it, not where implementors live. This avoids speculative abstraction and keeps the coupling explicit. *Example: `review.BuildCodePrompt` accepts `prompt.Renderer`, not `*prompt.Engine`.*
-
-3. **Builder pattern for complex value objects.** `TemplateDataBuilder` provides fluent, method-chained construction of `TemplateData` — making it impossible to forget mandatory fields while keeping optional ones ergonomic. *Example: `prompt.NewTemplateData(name, branch).WithRubric(r).WithOutputPath(p).Build()`.*
-
-4. **Workflow guards as pure functions.** `workflow.CheckStep` takes immutable state and returns a `CheckResult` — no side effects, fully testable, easy to reason about.
-
-5. **Sentinel errors for common failure conditions.** `cli/errors.go` defines named errors (`ErrNotInitialised`, `ErrNoAnalysis`, `ErrNoSpec`, `ErrNoChanges`) enabling callers to match on specific conditions rather than parsing strings.
-
-6. **Atomic file writes for pipeline artifacts.** Files consumed by subsequent workflow steps use `iokit.AtomicWrite` (temp + rename) to prevent partial writes from corrupting the pipeline.
-
-7. **Template override ladder (local → embedded).** Users can customize prompts by dropping files in `.qode/prompts/` without modifying the binary. The engine checks local first, then falls back to `go:embed`.
-
-8. **Minimal external dependencies.** Only three direct deps (cobra, yaml.v3, godotenv). Everything else is stdlib. This reduces supply-chain risk and keeps the binary small.
-
-9. **Session centralizes bootstrap.** `loadSession()` wires root → config → branch → context → engine in one place, preventing duplication across commands and ensuring consistent initialization order.
-
-10. **Good test coverage ratio.** ~175 test functions covering ~155 production functions. Tests exist for all core and domain packages.
-
-### Stop doing
-
-1. **Package-level mutable state in `cli`.** `root.go` uses `var rootCmd *cobra.Command` and `var flagRoot string` at package scope, mutated during `init()`. This makes the command tree untestable in isolation and ties the process to a single root command. *Example: `flagStrict` is a package-level bool read deep inside `runReview` — threading it through `Session` or method parameters would be cleaner.*
-
-2. **Mixed output concerns in command functions.** Some commands write to `out` (stdout) for prompts and `errOut` (stderr) for status, but the decision of whether to write a file or stdout is handled by the same function with a `toFile` bool. This mixes I/O strategy into business logic. *Example: `runReview` both generates the prompt and decides how to deliver it.*
-
-3. **Duplicated "resolve output path" logic across commands.** Each command (`plan.go`, `review.go`, `knowledge_cmd.go`) independently constructs `branchDir`, `promptPath`, and `outputPath` with similar `filepath.Join` patterns. This is not yet abstracted because each path differs slightly, but the pattern is repeated enough to warrant consolidation.
-
-### Start doing
-
-1. **Separate command wiring from business logic in `cli`.** Each `runXxx` function currently does both session bootstrap and domain orchestration. Extract the domain logic into the respective domain packages (e.g., `plan`, `review`) so that `cli` only handles flag parsing, session setup, and output routing. This would make the domain logic independently testable without cobra.
-
-2. **Consolidate path construction for branch artifacts.** Branch artifact paths (e.g., `refined-analysis.md`, `code-review.md`, `.refine-prompt.md`) are computed by string concatenation across multiple packages. A single `branchcontext.Paths` type (or methods on `Context`) returning canonical paths would reduce duplication and prevent path drift.
-
-3. **Make `Session` fields read-only after construction.** Currently `Session` fields are exported and mutable — any command handler can modify `sess.Config.Scoring.Strict = true`. Using a constructor that returns a frozen struct (or unexported fields with accessors) would make the data flow more predictable.
-
-### Proposals for adoption (beneficial but optional)
-
-1. **Functional options for Engine construction.** `NewEngine` currently takes only `root` and returns a fixed `funcMap`. If template functions need to grow (e.g., project-specific helpers), a functional options pattern (`WithFuncMap(...)`) would keep the constructor clean without a breaking API change.
-
-2. **Structured error types for workflow violations.** `workflow.CheckResult` uses `Blocked bool` + `Message string`. A typed error (e.g., `StepBlockedError{Step, Reason, Remediation}`) would let callers programmatically distinguish violation kinds (missing prerequisite vs. insufficient score) rather than parsing messages.
-
-3. **Table-driven command registration.** The `init()` block in `root.go` manually adds each subcommand. A registry pattern (slice of command descriptors) would make adding new commands more mechanical and reduce the chance of forgetting to wire one up.
-
----
+Only three direct dependencies: `cobra`, `yaml.v3`, `godotenv`. Stdlib is strongly preferred.
 
 ## Code standards
 
-- Functions ≤ 50 lines, single responsibility
+- Functions <= 50 lines, single responsibility
 - Named constants — no magic numbers
 - Explicit error handling — never swallow errors; wrap with `%w` for context
 - No TODO comments in committed code
@@ -147,3 +112,51 @@ Reviews use a worker/judge split to eliminate self-scoring bias:
 - IMPORTANT: Never change `CLAUDE.md` file
 - If asked to add something to `notes` or `notes.md`, always append to `.qode/branches/$(git branch --show-current | sed 's|/|--|g')/context/notes.md`
 - The `.qode/`, `.claude/`, `.cursor/`, `.cursorrules/` directories and `qode.yaml` are configuration — only read them when testing changes that affect these files, never modify directly (use `qode init` instead)
+
+---
+
+## Architectural Patterns Assessment
+
+### Continue doing
+
+1. **Strict dependency layering** — Leaf packages have zero internal imports; domain packages depend only on config and leaves; only `cli` fans out. This prevents circular dependencies and keeps compilation fast. _Apply: every new package must declare its layer; reject PRs that add upward imports._
+
+2. **Single interface at consumption boundary** — `prompt.Renderer` is the only interface, defined where it is consumed, not where it is implemented. This avoids premature abstraction and keeps the codebase concrete. _Apply: introduce a new interface only when a second implementation or a test double at a package boundary demands it._
+
+3. **Fluent builder for template data** — `TemplateDataBuilder` with `WithXxx()` chains keeps template construction readable and extensible without constructor bloat. _Apply: prefer builders over large parameter lists or option structs when the number of optional fields exceeds 3-4._
+
+4. **Atomic file writes** — `iokit.AtomicWrite` (temp + rename) prevents partial writes that would corrupt state consumed by later workflow steps. _Apply: always use `AtomicWrite` for any file that is an input to a subsequent step._
+
+5. **Template override chain** — Local `.qode/prompts/` first, then `go:embed` fallback. Users can customize without forking. _Apply: any user-extensible asset should follow the same local-then-embedded resolution pattern._
+
+6. **Minimal external dependencies** — Three direct deps (cobra, yaml.v3, godotenv). Stdlib preferred. _Apply: any new dependency must justify itself against a stdlib alternative; reject convenience-only deps._
+
+7. **Parallel-safe tests** — Widespread use of `t.Parallel()` keeps the test suite fast and flushes out shared-state bugs early. _Apply: every new test function must call `t.Parallel()` unless it mutates truly global state._
+
+8. **Sentinel errors at package boundaries** — `ErrConfigNotFound`, `ErrNoBaseBranch`, `ErrEmptyJudgment` are exported, enabling callers to use `errors.Is()`. _Apply: define sentinel errors for conditions that callers must programmatically distinguish._
+
+9. **Context threading** — `context.Context` is passed through CLI -> domain -> I/O layers, enabling cancellation and timeout propagation. _Apply: every function that performs I/O or calls a subprocess must accept a context as its first parameter._
+
+### Stop doing
+
+1. **Oversized CLI functions** — Several `cli/` functions exceed the 50-line guideline (e.g. `runInitExisting` at 71, `runReview` at 62). This pushes domain logic into the command layer. _Fix: extract the domain logic into the relevant domain package, leaving `cli/` as a thin orchestration shell._
+
+2. **Self-referential internal imports** — `iokit` and `version` import themselves (likely via sub-files referencing sibling symbols through the full module path). While technically harmless, it obscures the dependency graph. _Fix: use package-local references instead of fully-qualified self-imports._
+
+### Start doing
+
+1. **Consistent `Ctx` suffix convention** — Some functions have both `Foo` and `FooCtx` variants (e.g. `AtomicWrite` / `AtomicWriteCtx`). New code should accept `context.Context` as the primary signature and drop the non-context variant over time. _Apply: default to context-accepting signatures; callers that lack a context should pass `context.Background()` at the call site, not force a wrapper function._
+
+2. **Structured error types for domain failures** — Currently only sentinel `var` errors exist. When errors carry structured data (iteration number, file path, threshold vs actual score), a typed error struct would enable richer handling without string parsing. _Apply: when an error must carry context beyond a message, define a struct type implementing `error`._
+
+3. **Package-level doc comments** — Most packages have a doc comment (`// Package foo ...`) but not all. _Apply: every package must have a `doc.go` or a comment on the `package` line describing its responsibility in one sentence._
+
+### Proposals for adoption (beneficial but not mandatory)
+
+1. **Table-driven CLI integration tests** — The CLI layer is the largest package (~1363 LOC) but testing individual command flows end-to-end via table-driven tests against a temp directory would catch regressions cheaply without needing mocks. _Benefit: high coverage of the orchestration layer with low maintenance cost._
+
+2. **Functional options for complex constructors** — Where the builder pattern becomes cumbersome (many optional fields with validation), consider functional options (`func WithFoo(v T) Option`) which allow validation at construction time. _Benefit: compile-time safety and self-documenting option names._
+
+3. **Internal `testutil` package** — Shared test fixtures (temp dirs, sample configs, branch context builders) are likely duplicated across test files. A small `internal/testutil` package would reduce boilerplate. _Benefit: DRY test setup without leaking test helpers into production code._
+
+4. **Makefile or Taskfile** — The project relies on raw `go` commands. A thin `Makefile` (or `Taskfile.yml`) wrapping build, test, lint, and release would standardize CI and developer workflows. _Benefit: single entry point for all common operations._
