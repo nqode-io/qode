@@ -1,10 +1,15 @@
+// Package git provides thin wrappers around git CLI operations.
 package git
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
 )
+
+// ErrNoBaseBranch is returned when no base branch (main, master, develop) can be found.
+var ErrNoBaseBranch = errors.New("could not find base branch")
 
 // SanitizeBranchName returns a filesystem-safe directory name for the branch,
 // replacing "/" with "--" so slashed branch names (e.g. feat/jira-123) map to
@@ -104,7 +109,7 @@ func resolveBase(root, preferred string) (string, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("could not find base branch")
+	return "", ErrNoBaseBranch
 }
 
 func run(root string, args ...string) (string, error) {
@@ -113,7 +118,7 @@ func run(root string, args ...string) (string, error) {
 	out, err := cmd.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("git %s: %s", strings.Join(args, " "), string(exitErr.Stderr))
+			return "", fmt.Errorf("git %s: %s: %w", strings.Join(args, " "), string(exitErr.Stderr), exitErr)
 		}
 		return "", fmt.Errorf("git %s: %w", strings.Join(args, " "), err)
 	}

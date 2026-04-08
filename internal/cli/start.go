@@ -44,7 +44,7 @@ func runStart(out, errOut io.Writer, toFile, force bool) error {
 	if !toFile && !force {
 		if result := workflow.CheckStep("start", sess.Context, sess.Config); result.Blocked {
 			if sess.Config.Scoring.Strict {
-				return fmt.Errorf("%s", result.Message)
+				return fmt.Errorf("step guard: %s", result.Message)
 			}
 			_, _ = fmt.Fprintf(out, "STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
 			return nil
@@ -54,7 +54,7 @@ func runStart(out, errOut io.Writer, toFile, force bool) error {
 	if !sess.Context.HasSpec() {
 		_, _ = fmt.Fprintln(errOut, "No spec.md found.")
 		_, _ = fmt.Fprintf(errOut, "Run /qode-plan-spec first and save the output to:\n  %s/spec.md\n", sess.Context.ContextDir)
-		return fmt.Errorf("no spec")
+		return ErrNoSpec
 	}
 
 	paths, _ := knowledge.List(sess.Root, sess.Config)

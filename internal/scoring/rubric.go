@@ -5,6 +5,7 @@ import "github.com/nqode/qode/internal/config"
 // RubricKind identifies which rubric to use.
 type RubricKind string
 
+// Supported rubric kinds used to select scoring schemes.
 const (
 	RubricRefine   RubricKind = "refine"
 	RubricReview   RubricKind = "review"

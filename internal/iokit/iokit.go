@@ -1,3 +1,4 @@
+// Package iokit provides file I/O utilities including atomic writes and directory helpers.
 package iokit
 
 import (

@@ -1,3 +1,4 @@
+// Package knowledge manages project lessons-learned markdown files.
 package knowledge
 
 import (

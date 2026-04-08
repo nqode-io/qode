@@ -12,6 +12,7 @@
 package scoring
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -19,6 +20,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
+// ErrEmptyJudgment is returned when the judge output contains no scoring data.
+var ErrEmptyJudgment = errors.New("empty judgment")
 
 // Result holds the judge's scoring output.
 type Result struct {
@@ -85,7 +89,7 @@ func parseYAMLBlock(raw string, rubric Rubric) (Result, bool) {
 			return err
 		}
 		if wrapped.Judgment.TotalScore == 0 && len(wrapped.Judgment.Dimensions) == 0 {
-			return fmt.Errorf("empty judgment")
+			return ErrEmptyJudgment
 		}
 		jy = wrapped.Judgment
 		return nil

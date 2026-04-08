@@ -224,17 +224,15 @@ func buildBranchLessonData(root string, engine prompt.Renderer, branches []strin
 
 	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branches[0]))
 
-	return prompt.TemplateData{
-		Project:   prompt.TemplateProject{Name: engine.ProjectName()},
-		Branch:    branches[0],
-		Ticket:    allTicket.String(),
-		Analysis:  allAnalysis.String(),
-		Spec:      allSpec.String(),
-		Diff:      diff,
-		Extra:     allExtra.String(),
-		Lessons:   lessonsStr,
-		BranchDir: branchDir,
-	}, nil
+	return prompt.NewTemplateData(engine.ProjectName(), branches[0]).
+		WithTicket(allTicket.String()).
+		WithAnalysis(allAnalysis.String()).
+		WithSpec(allSpec.String()).
+		WithDiff(diff).
+		WithExtra(allExtra.String()).
+		WithLessons(lessonsStr).
+		WithBranchDir(branchDir).
+		Build(), nil
 }
 
 func parseBranchArgs(args []string) []string {

@@ -1,3 +1,4 @@
+// Package branchcontext reads and manages per-branch state files under .qode/branches/<branch>/.
 package branchcontext
 
 import (

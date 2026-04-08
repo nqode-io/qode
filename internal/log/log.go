@@ -1,3 +1,4 @@
+// Package log provides structured logging built on slog.
 package log
 
 import (

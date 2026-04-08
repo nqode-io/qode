@@ -1,3 +1,4 @@
+// Package scaffold generates IDE-specific configuration files for Claude Code and Cursor.
 package scaffold
 
 import (

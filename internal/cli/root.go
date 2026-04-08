@@ -1,8 +1,7 @@
+// Package cli defines the Cobra command tree and orchestrates the qode workflow.
 package cli
 
 import (
-	"fmt"
-
 	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/version"
 	"github.com/spf13/cobra"
@@ -83,14 +82,14 @@ func checkVersion(cmd *cobra.Command, _ []string) error {
 	}
 	root, err := resolveRoot()
 	if err != nil {
-		return fmt.Errorf("project not initialised: run 'qode init'")
+		return ErrNotInitialised
 	}
 	cfg, err := config.Load(root)
 	if err != nil {
-		return fmt.Errorf("project not initialised: run 'qode init'")
+		return ErrNotInitialised
 	}
 	if cfg.QodeVersion == "" {
-		return fmt.Errorf("project not initialised: run 'qode init'")
+		return ErrNotInitialised
 	}
 	return version.CheckCompatibility(rootCmd.Version, cfg.QodeVersion)
 }

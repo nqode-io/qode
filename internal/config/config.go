@@ -1,6 +1,8 @@
+// Package config loads, validates, and normalizes qode.yaml configuration.
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +10,9 @@ import (
 	"github.com/nqode/qode/internal/iokit"
 	"gopkg.in/yaml.v3"
 )
+
+// ErrConfigNotFound is returned when qode.yaml cannot be located in any parent directory.
+var ErrConfigNotFound = errors.New("config not found")
 
 const (
 	// ConfigFileName is the default config file name.
@@ -93,7 +98,7 @@ func FindRoot(dir string) (string, error) {
 		}
 		parent := filepath.Dir(abs)
 		if parent == abs {
-			return "", fmt.Errorf("no %s found in %s or any parent directory", ConfigFileName, dir)
+			return "", fmt.Errorf("no %s found in %s or any parent directory: %w", ConfigFileName, dir, ErrConfigNotFound)
 		}
 		abs = parent
 	}

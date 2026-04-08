@@ -1,12 +1,11 @@
+// Package plan builds refine, spec, and start prompts and manages iteration file I/O.
 package plan
 
 import (
-	"fmt"
 	"path/filepath"
-	"strings"
 
-	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/branchcontext"
+	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/prompt"
@@ -28,18 +27,18 @@ func BuildRefinePrompt(engine prompt.Renderer, cfg *config.Config, ctx *branchco
 // optional output path so the AI writes its analysis directly to that file.
 func BuildRefinePromptWithOutput(engine prompt.Renderer, cfg *config.Config, ctx *branchcontext.Context, ticketURL string, iteration int, outputPath string) (*RefineOutput, error) {
 	if iteration == 0 {
-		iteration = len(ctx.Iterations) + 1
+		iteration = ctx.NextIteration()
 	}
 
-	data := prompt.TemplateData{
-		Project:    prompt.TemplateProject{Name: engine.ProjectName()},
-		Branch:     ctx.Branch,
-		OutputPath: outputPath,
-		BranchDir:  ctx.ContextDir,
-	}
+	var extra string
 	for _, e := range ctx.Extra {
-		data.Extra += e + "\n\n"
+		extra += e + "\n\n"
 	}
+	data := prompt.NewTemplateData(engine.ProjectName(), ctx.Branch).
+		WithOutputPath(outputPath).
+		WithBranchDir(ctx.ContextDir).
+		WithExtra(extra).
+		Build()
 
 	workerPrompt, err := engine.Render("refine/base", data)
 	if err != nil {
@@ -62,23 +61,19 @@ func BuildSpecPrompt(engine prompt.Renderer, cfg *config.Config, ctx *branchcont
 // BuildSpecPromptWithOutput generates the spec creation prompt with an optional
 // output path so the AI writes the spec directly to that file.
 func BuildSpecPromptWithOutput(engine prompt.Renderer, cfg *config.Config, ctx *branchcontext.Context, outputPath string) (string, error) {
-	data := prompt.TemplateData{
-		Project:    prompt.TemplateProject{Name: engine.ProjectName()},
-		Branch:     ctx.Branch,
-		OutputPath: outputPath,
-		BranchDir:  ctx.ContextDir,
-	}
+	data := prompt.NewTemplateData(engine.ProjectName(), ctx.Branch).
+		WithOutputPath(outputPath).
+		WithBranchDir(ctx.ContextDir).
+		Build()
 	return engine.Render("spec/base", data)
 }
 
 // BuildStartPrompt generates the implementation kickoff prompt.
 func BuildStartPrompt(engine prompt.Renderer, cfg *config.Config, ctx *branchcontext.Context, kb string) (string, error) {
-	data := prompt.TemplateData{
-		Project:   prompt.TemplateProject{Name: engine.ProjectName()},
-		Branch:    ctx.Branch,
-		KB:        kb,
-		BranchDir: ctx.ContextDir,
-	}
+	data := prompt.NewTemplateData(engine.ProjectName(), ctx.Branch).
+		WithKB(kb).
+		WithBranchDir(ctx.ContextDir).
+		Build()
 	return engine.Render("start/base", data)
 }
 
@@ -107,64 +102,11 @@ func BuildJudgePrompt(engine prompt.Renderer, cfg *config.Config, ctx *branchcon
 	if cfg != nil && cfg.Scoring.TargetScore > 0 {
 		targetScore = cfg.Scoring.TargetScore
 	}
-	data := prompt.TemplateData{
-		BranchDir:   ctx.ContextDir,
-		Rubric:      rubric,
-		TargetScore: targetScore,
-	}
+	data := prompt.NewTemplateData("", "").
+		WithBranchDir(ctx.ContextDir).
+		WithRubric(rubric).
+		WithTargetScore(targetScore).
+		Build()
 	return engine.Render("scoring/judge_refine", data)
 }
 
-// SaveIterationResult writes iteration files using a pre-computed score result.
-// Use this instead of ParseIterationFromOutput when the score is known from
-// judge output rather than parsed from the analysis text.
-func SaveIterationResult(root, branch string, iteration int, analysisText string, result scoring.Result) error {
-	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
-	if err := iokit.EnsureDir(branchDir); err != nil {
-		return err
-	}
-
-	iterFile := filepath.Join(branchDir, fmt.Sprintf("refined-analysis-%d-score-%d.md", iteration, result.TotalScore))
-	if err := iokit.WriteFile(iterFile, []byte(analysisText), 0644); err != nil {
-		return err
-	}
-
-	latestFile := filepath.Join(branchDir, "refined-analysis.md")
-	header := buildAnalysisHeader(iteration, result)
-	return iokit.WriteFile(latestFile, []byte(header+analysisText), 0644)
-}
-
-// ParseIterationFromOutput tries to extract a score and save the analysis file.
-func ParseIterationFromOutput(root, branch string, iteration int, analysisText string, cfg *config.Config) (scoring.Result, error) {
-	rubric := scoring.BuildRubric(scoring.RubricRefine, cfg)
-	result := scoring.ParseScore(analysisText, rubric)
-	if cfg != nil && cfg.Scoring.TargetScore > 0 {
-		result.TargetScore = cfg.Scoring.TargetScore
-	}
-
-	branchDir := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch))
-	if err := iokit.EnsureDir(branchDir); err != nil {
-		return result, fmt.Errorf("create branch directory %q: %w", branchDir, err)
-	}
-
-	// Save numbered iteration file.
-	iterFile := filepath.Join(branchDir, fmt.Sprintf("refined-analysis-%d-score-%d.md", iteration, result.TotalScore))
-	if err := iokit.WriteFile(iterFile, []byte(analysisText), 0644); err != nil {
-		return result, fmt.Errorf("write iteration file %q: %w", iterFile, err)
-	}
-
-	// Always update the canonical "latest" file.
-	latestFile := filepath.Join(branchDir, "refined-analysis.md")
-	header := buildAnalysisHeader(iteration, result)
-	if err := iokit.WriteFile(latestFile, []byte(header+analysisText), 0644); err != nil {
-		return result, fmt.Errorf("write canonical analysis file %q: %w", latestFile, err)
-	}
-
-	return result, nil
-}
-
-func buildAnalysisHeader(iteration int, result scoring.Result) string {
-	var sb strings.Builder
-	fmt.Fprintf(&sb, "<!-- qode:iteration=%d score=%d/%d -->\n\n", iteration, result.TotalScore, result.MaxScore)
-	return sb.String()
-}

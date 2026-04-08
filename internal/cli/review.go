@@ -68,7 +68,7 @@ func runReview(out, errOut io.Writer, kind string, toFile, force bool) error {
 	}
 	if diff == "" && !force {
 		if sess.Config.Scoring.Strict {
-			return fmt.Errorf("no changes detected: commit code first before running a review")
+			return ErrNoChanges
 		}
 		_, _ = fmt.Fprintln(errOut, "No changes detected. Commit some code first.")
 		return nil

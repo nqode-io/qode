@@ -18,6 +18,8 @@ jobs:
 
       - run: go test ./...
 
+      - run: go test -tags integration ./internal/cli/...
+
       - uses: golangci/golangci-lint-action@v6
         with:
           version: latest

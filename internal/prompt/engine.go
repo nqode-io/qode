@@ -1,3 +1,4 @@
+// Package prompt renders Go templates with local-override-first resolution against embedded fallbacks.
 package prompt
 
 import (

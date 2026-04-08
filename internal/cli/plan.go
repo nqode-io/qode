@@ -94,7 +94,7 @@ func runPlanJudge(out, errOut io.Writer, toFile bool) error {
 	if !sess.Context.HasRefinedAnalysis() {
 		_, _ = fmt.Fprintln(errOut, "No refined analysis found.")
 		_, _ = fmt.Fprintf(errOut, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", sess.Context.ContextDir)
-		return fmt.Errorf("no refined analysis")
+		return ErrNoAnalysis
 	}
 
 	p, err := plan.BuildJudgePrompt(sess.Engine, sess.Config, sess.Context)
@@ -156,7 +156,7 @@ func runPlanSpec(out, errOut io.Writer, toFile, force bool) error {
 	if !toFile && !force {
 		if result := workflow.CheckStep("spec", sess.Context, sess.Config); result.Blocked {
 			if sess.Config.Scoring.Strict {
-				return fmt.Errorf("%s", result.Message)
+				return fmt.Errorf("step guard: %s", result.Message)
 			}
 			_, _ = fmt.Fprintf(out, "STOP. Do not continue with this prompt.\n\n%s\n\nInform the user: %q and wait for further instructions.\n", result.Message, result.Message)
 			return nil
@@ -166,7 +166,7 @@ func runPlanSpec(out, errOut io.Writer, toFile, force bool) error {
 	if !sess.Context.HasRefinedAnalysis() {
 		_, _ = fmt.Fprintln(errOut, "No refined analysis found.")
 		_, _ = fmt.Fprintf(errOut, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", sess.Context.ContextDir)
-		return fmt.Errorf("no refined analysis")
+		return ErrNoAnalysis
 	}
 
 	branchDir := sess.Context.ContextDir
