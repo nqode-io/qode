@@ -35,6 +35,7 @@ func validConfig() Config {
 }
 
 func TestValidate_ValidConfig(t *testing.T) {
+	t.Parallel()
 	cfg := validConfig()
 	if err := cfg.Validate(); err != nil {
 		t.Errorf("expected no error for valid config, got: %v", err)
@@ -42,6 +43,7 @@ func TestValidate_ValidConfig(t *testing.T) {
 }
 
 func TestValidate_NegativeMinCodeScore(t *testing.T) {
+	t.Parallel()
 	cfg := validConfig()
 	cfg.Review.MinCodeScore = -1.0
 	err := cfg.Validate()
@@ -54,6 +56,7 @@ func TestValidate_NegativeMinCodeScore(t *testing.T) {
 }
 
 func TestValidate_NegativeMinSecurityScore(t *testing.T) {
+	t.Parallel()
 	cfg := validConfig()
 	cfg.Review.MinSecurityScore = -5.0
 	err := cfg.Validate()
@@ -66,6 +69,7 @@ func TestValidate_NegativeMinSecurityScore(t *testing.T) {
 }
 
 func TestValidate_NegativeTargetScore(t *testing.T) {
+	t.Parallel()
 	cfg := validConfig()
 	cfg.Scoring.TargetScore = -3
 	err := cfg.Validate()
@@ -78,6 +82,7 @@ func TestValidate_NegativeTargetScore(t *testing.T) {
 }
 
 func TestValidate_UnknownRubricKey(t *testing.T) {
+	t.Parallel()
 	cfg := validConfig()
 	cfg.Scoring.Rubrics["unknown"] = RubricConfig{
 		Dimensions: []DimensionConfig{{Name: "Foo", Weight: 1}},
@@ -92,6 +97,7 @@ func TestValidate_UnknownRubricKey(t *testing.T) {
 }
 
 func TestValidate_ZeroWeightDimension(t *testing.T) {
+	t.Parallel()
 	cfg := validConfig()
 	cfg.Scoring.Rubrics["refine"] = RubricConfig{
 		Dimensions: []DimensionConfig{
@@ -108,6 +114,7 @@ func TestValidate_ZeroWeightDimension(t *testing.T) {
 }
 
 func TestValidate_NegativeWeightDimension(t *testing.T) {
+	t.Parallel()
 	cfg := validConfig()
 	cfg.Scoring.Rubrics["review"] = RubricConfig{
 		Dimensions: []DimensionConfig{
@@ -124,6 +131,7 @@ func TestValidate_NegativeWeightDimension(t *testing.T) {
 }
 
 func TestValidate_EmptyDimensionName(t *testing.T) {
+	t.Parallel()
 	cfg := validConfig()
 	cfg.Scoring.Rubrics["security"] = RubricConfig{
 		Dimensions: []DimensionConfig{
@@ -140,6 +148,7 @@ func TestValidate_EmptyDimensionName(t *testing.T) {
 }
 
 func TestValidate_EmptyDimensionsSlice(t *testing.T) {
+	t.Parallel()
 	cfg := validConfig()
 	cfg.Scoring.Rubrics["refine"] = RubricConfig{
 		Dimensions: []DimensionConfig{},
@@ -154,6 +163,7 @@ func TestValidate_EmptyDimensionsSlice(t *testing.T) {
 }
 
 func TestValidate_MultipleErrors(t *testing.T) {
+	t.Parallel()
 	cfg := validConfig()
 	cfg.Review.MinCodeScore = -1.0
 	cfg.Review.MinSecurityScore = -2.0

@@ -47,7 +47,7 @@ func newBranchCreateCmd() *cobra.Command {
 			if len(args) > 1 {
 				base = args[1]
 			}
-			return runBranchCreate(os.Stdout, name, base)
+			return runBranchCreate(cmd.OutOrStdout(), name, base)
 		},
 	}
 	return cmd
@@ -110,7 +110,7 @@ func newBranchRemoveCmd() *cobra.Command {
 		Short: "Remove branch context folder and delete git branch",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runBranchRemove(os.Stdout, os.Stderr, args[0], keepBranchCtx)
+			return runBranchRemove(cmd.OutOrStdout(), cmd.ErrOrStderr(), args[0], keepBranchCtx)
 		},
 	}
 	cmd.Flags().BoolVar(&keepBranchCtx, "keep-branch-context", false, "keep the .qode/branches/ context folder")

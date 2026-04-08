@@ -31,7 +31,7 @@ func newKnowledgeListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List knowledge base files",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKnowledgeList(os.Stdout)
+			return runKnowledgeList(cmd.OutOrStdout())
 		},
 	}
 }
@@ -66,7 +66,7 @@ func newKnowledgeAddCmd() *cobra.Command {
 		Short: "Add a file to the knowledge base",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKnowledgeAdd(os.Stdout, args[0])
+			return runKnowledgeAdd(cmd.OutOrStdout(), args[0])
 		},
 	}
 }
@@ -101,7 +101,7 @@ func newKnowledgeSearchCmd() *cobra.Command {
 		Short: "Search the knowledge base",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKnowledgeSearch(os.Stdout, args[0])
+			return runKnowledgeSearch(cmd.OutOrStdout(), args[0])
 		},
 	}
 }
@@ -139,7 +139,7 @@ func newKnowledgeAddBranchCmd() *cobra.Command {
 		Long:  "Reads branch artifacts (ticket, spec, reviews, diff) and writes a lesson extraction prompt to stdout.",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKnowledgeAddBranch(os.Stdout, os.Stderr, args, toFile)
+			return runKnowledgeAddBranch(cmd.OutOrStdout(), cmd.ErrOrStderr(), args, toFile)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")

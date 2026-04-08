@@ -12,6 +12,7 @@ import (
 )
 
 func TestBuildCodePrompt_OmitsDiffAndSpec(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
@@ -41,6 +42,7 @@ func TestBuildCodePrompt_OmitsDiffAndSpec(t *testing.T) {
 }
 
 func TestBuildCodePrompt_PctConstraints(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
@@ -83,6 +85,7 @@ func TestBuildCodePrompt_PctConstraints(t *testing.T) {
 }
 
 func TestBuildSecurityPrompt_OmitsDiff(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
@@ -105,6 +108,7 @@ func TestBuildSecurityPrompt_OmitsDiff(t *testing.T) {
 }
 
 func TestBuildCodePrompt_ContainsProjectName(t *testing.T) {
+	t.Parallel()
 	base := t.TempDir()
 	root := filepath.Join(base, "myproject")
 	if err := os.MkdirAll(root, 0755); err != nil {
@@ -132,6 +136,7 @@ func TestBuildCodePrompt_ContainsProjectName(t *testing.T) {
 }
 
 func TestBuildSecurityPrompt_ContainsProjectName(t *testing.T) {
+	t.Parallel()
 	base := t.TempDir()
 	root := filepath.Join(base, "myproject")
 	if err := os.MkdirAll(root, 0755); err != nil {

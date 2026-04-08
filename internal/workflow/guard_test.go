@@ -9,6 +9,7 @@ import (
 )
 
 func TestCheckStep(t *testing.T) {
+	t.Parallel()
 	defaultCfg := config.DefaultConfig()
 	customCfg := config.DefaultConfig()
 	customCfg.Scoring.TargetScore = 20
@@ -115,6 +116,7 @@ func TestCheckStep(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			result := CheckStep(tc.step, tc.ctx, tc.cfg)
 			if result.Blocked != tc.wantBlocked {
 				t.Errorf("Blocked: want %v, got %v (message: %q)", tc.wantBlocked, result.Blocked, result.Message)

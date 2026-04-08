@@ -3,10 +3,9 @@ package cli
 import (
 	"fmt"
 	"io"
-	"os"
 
-	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/branchcontext"
+	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/scoring"
 	"github.com/nqode/qode/internal/workflow"
@@ -18,7 +17,7 @@ func newWorkflowCmd() *cobra.Command {
 		Use:   "workflow",
 		Short: "Show or inspect the qode workflow",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runWorkflow(os.Stdout)
+			return runWorkflow(cmd.OutOrStdout())
 		},
 	}
 	cmd.AddCommand(newWorkflowShowCmd(), newWorkflowStatusCmd())
@@ -35,7 +34,7 @@ func newWorkflowShowCmd() *cobra.Command {
 		Use:   "show",
 		Short: "Print the full qode workflow steps",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Print(workflowList)
+			_, _ = fmt.Fprint(cmd.OutOrStdout(), workflowList)
 		},
 	}
 }
@@ -45,7 +44,7 @@ func newWorkflowStatusCmd() *cobra.Command {
 		Use:   "status",
 		Short: "Show live completion status for each workflow step",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runWorkflowStatus(os.Stdout)
+			return runWorkflowStatus(cmd.OutOrStdout())
 		},
 	}
 }

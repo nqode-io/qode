@@ -7,6 +7,7 @@ import (
 )
 
 func TestParse(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input     string
 		wantMajor int
@@ -27,6 +28,7 @@ func TestParse(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
 			v, err := version.Parse(tc.input)
 			if tc.wantErr {
 				if err == nil {
@@ -47,6 +49,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestCheckCompatibility(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		binary    string
@@ -82,6 +85,7 @@ func TestCheckCompatibility(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			err := version.CheckCompatibility(tc.binary, tc.config)
 			if tc.wantError && err == nil {
 				t.Errorf("CheckCompatibility(%q, %q) = nil, want error", tc.binary, tc.config)

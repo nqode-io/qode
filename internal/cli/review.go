@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -30,7 +29,7 @@ func newReviewCodeCmd() *cobra.Command {
 		Use:   "code",
 		Short: "Generate a code review prompt for the current changes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runReview(os.Stdout, os.Stderr, "code", toFile, force)
+			return runReview(cmd.OutOrStdout(), cmd.ErrOrStderr(), "code", toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
@@ -45,7 +44,7 @@ func newReviewSecurityCmd() *cobra.Command {
 		Use:   "security",
 		Short: "Generate a security review prompt for the current changes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runReview(os.Stdout, os.Stderr, "security", toFile, force)
+			return runReview(cmd.OutOrStdout(), cmd.ErrOrStderr(), "security", toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")

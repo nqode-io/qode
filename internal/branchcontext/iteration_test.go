@@ -18,6 +18,7 @@ func setupIterationDir(t *testing.T) (root, branchDir string) {
 }
 
 func TestSaveIterationResult_WritesCorrectScore(t *testing.T) {
+	t.Parallel()
 	root, branchDir := setupIterationDir(t)
 	if err := os.MkdirAll(branchDir, 0755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
@@ -43,6 +44,7 @@ func TestSaveIterationResult_WritesCorrectScore(t *testing.T) {
 }
 
 func TestSaveIterationResult_ZeroScore(t *testing.T) {
+	t.Parallel()
 	root, branchDir := setupIterationDir(t)
 	if err := os.MkdirAll(branchDir, 0755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
@@ -68,6 +70,7 @@ func TestSaveIterationResult_ZeroScore(t *testing.T) {
 }
 
 func TestSaveIterationResult_CreatesDir(t *testing.T) {
+	t.Parallel()
 	root, _ := setupIterationDir(t)
 	// branchDir does NOT exist yet
 
@@ -84,6 +87,7 @@ func TestSaveIterationResult_CreatesDir(t *testing.T) {
 }
 
 func TestParseAndSaveIteration_TargetScoreOverride(t *testing.T) {
+	t.Parallel()
 	root, branchDir := setupIterationDir(t)
 	if err := os.MkdirAll(branchDir, 0755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
@@ -117,6 +121,7 @@ func TestParseAndSaveIteration_TargetScoreOverride(t *testing.T) {
 }
 
 func TestParseAndSaveIteration_TargetScoreDefaultsToRubricTotal(t *testing.T) {
+	t.Parallel()
 	root, branchDir := setupIterationDir(t)
 	if err := os.MkdirAll(branchDir, 0755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
@@ -144,6 +149,7 @@ func TestParseAndSaveIteration_TargetScoreDefaultsToRubricTotal(t *testing.T) {
 }
 
 func TestNextIteration_Empty(t *testing.T) {
+	t.Parallel()
 	ctx := &Context{}
 	if got := ctx.NextIteration(); got != 1 {
 		t.Errorf("NextIteration on empty = %d, want 1", got)
@@ -151,6 +157,7 @@ func TestNextIteration_Empty(t *testing.T) {
 }
 
 func TestNextIteration_WithExisting(t *testing.T) {
+	t.Parallel()
 	ctx := &Context{
 		Iterations: []Iteration{
 			{Number: 1, Score: 20},

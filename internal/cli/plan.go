@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 
 	"github.com/nqode/qode/internal/plan"
@@ -37,7 +36,7 @@ Use --to-file to write the prompt files to disk (worker + judge) for debugging.`
 			if len(args) > 0 {
 				ticketURL = args[0]
 			}
-			return runPlanRefine(os.Stdout, os.Stderr, ticketURL, toFile)
+			return runPlanRefine(cmd.OutOrStdout(), cmd.ErrOrStderr(), ticketURL, toFile)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
@@ -55,7 +54,7 @@ func newPlanSpecCmd() *cobra.Command {
 The LLM reads the stdout output and executes it to produce spec.md.
 Use --to-file to write the prompt to disk for debugging.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPlanSpec(os.Stdout, os.Stderr, toFile, force)
+			return runPlanSpec(cmd.OutOrStdout(), cmd.ErrOrStderr(), toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
@@ -75,7 +74,7 @@ Requires refined-analysis.md to exist in the branch directory.
 
 Use --to-file to write the prompt to disk for debugging the judge template.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPlanJudge(os.Stdout, os.Stderr, toFile)
+			return runPlanJudge(cmd.OutOrStdout(), cmd.ErrOrStderr(), toFile)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")

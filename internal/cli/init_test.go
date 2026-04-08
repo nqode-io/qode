@@ -111,15 +111,8 @@ func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 	dir := t.TempDir()
 
 	var buf bytes.Buffer
-	stdoutOutput := captureStdout(t, func() {
-		if err := runInitExisting(&buf, dir); err != nil {
-			t.Errorf("runInitExisting: %v", err)
-		}
-	})
-
-	// Nothing should reach os.Stdout — all output goes through the writer.
-	if stdoutOutput != "" {
-		t.Errorf("expected nothing on stdout, got: %s", stdoutOutput)
+	if err := runInitExisting(&buf, dir); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
 	}
 
 	// The writer must not contain legacy detection phrases.

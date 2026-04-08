@@ -6,53 +6,63 @@ import (
 	"bytes"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// setupPlanTestRoot initialises a real git repo so git.CurrentBranch works,
-// sets flagRoot, and returns the root path.
-func setupPlanTestRoot(t *testing.T, branch string) (root string) {
-	t.Helper()
-	root = t.TempDir()
-	flagRoot = root
+func TestRunPlanRefine_HappyPath(t *testing.T) {
+	_ = setupTestRootWithConfig(t, "test-branch", "project:\n  name: test\n  stack: go\n")
 
-	gitCmds := [][]string{
-		{"init", "-b", branch},
-		{"config", "user.email", "test@test.com"},
-		{"config", "user.name", "Test"},
-		{"commit", "--allow-empty", "-m", "init"},
+	var buf bytes.Buffer
+	err := runPlanRefine(&buf, io.Discard, "", false)
+	if err != nil {
+		t.Fatalf("runPlanRefine: %v", err)
 	}
-	for _, args := range gitCmds {
-		cmd := exec.Command("git", args...)
-		cmd.Dir = root
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
+	if buf.Len() == 0 {
+		t.Error("expected non-empty refine prompt output")
 	}
-
-	branchDir := filepath.Join(root, ".qode", "branches", branch)
-	if err := os.MkdirAll(filepath.Join(branchDir, "context"), 0755); err != nil {
-		t.Fatalf("MkdirAll branch dir: %v", err)
-	}
-
-	t.Cleanup(func() { flagRoot = "" })
-	return root
 }
 
-// writePlanFile writes content to a file in the branch context dir.
-func writePlanFile(t *testing.T, root, branch, name, content string) {
-	t.Helper()
-	path := filepath.Join(root, ".qode", "branches", branch, name)
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		t.Fatalf("WriteFile %s: %v", name, err)
+func TestRunPlanRefine_ToFile(t *testing.T) {
+	setupTestRootWithConfig(t, "test-branch", "project:\n  name: test\n  stack: go\n")
+
+	var errBuf bytes.Buffer
+	err := runPlanRefine(io.Discard, &errBuf, "", true)
+	if err != nil {
+		t.Fatalf("runPlanRefine --to-file: %v", err)
+	}
+	if !strings.Contains(errBuf.String(), "worker prompt saved") {
+		t.Errorf("expected save confirmation on stderr, got: %q", errBuf.String())
+	}
+}
+
+func TestRunPlanJudge_NoAnalysis(t *testing.T) {
+	_ = setupTestRootWithConfig(t, "test-branch", "project:\n  name: test\n  stack: go\n")
+
+	err := runPlanJudge(io.Discard, io.Discard, false)
+	if err != ErrNoAnalysis {
+		t.Errorf("expected ErrNoAnalysis, got: %v", err)
+	}
+}
+
+func TestRunPlanJudge_HappyPath(t *testing.T) {
+	root := setupTestRootWithConfig(t, "test-branch", "project:\n  name: test\n  stack: go\n")
+	writeBranchFile(t, root, "test-branch", "refined-analysis.md",
+		"<!-- qode:iteration=1 -->\n# Analysis\nContent.")
+
+	var buf bytes.Buffer
+	err := runPlanJudge(&buf, io.Discard, false)
+	if err != nil {
+		t.Fatalf("runPlanJudge: %v", err)
+	}
+	if buf.Len() == 0 {
+		t.Error("expected non-empty judge prompt output")
 	}
 }
 
 func TestRunPlanSpec_GuardBlocked_NoAnalysis_Strict(t *testing.T) {
-	root := setupPlanTestRoot(t, "test-branch")
+	root := setupTestRoot(t, "test-branch")
 
 	// Write a qode.yaml with strict: true
 	cfg := "scoring:\n  strict: true\n"
@@ -70,7 +80,7 @@ func TestRunPlanSpec_GuardBlocked_NoAnalysis_Strict(t *testing.T) {
 }
 
 func TestRunPlanSpec_GuardBlocked_NonStrict(t *testing.T) {
-	root := setupPlanTestRoot(t, "test-branch")
+	root := setupTestRoot(t, "test-branch")
 
 	cfg := ""
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
@@ -89,7 +99,7 @@ func TestRunPlanSpec_GuardBlocked_NonStrict(t *testing.T) {
 }
 
 func TestRunPlanSpec_GuardBlocked_Unscored(t *testing.T) {
-	root := setupPlanTestRoot(t, "test-branch")
+	root := setupTestRoot(t, "test-branch")
 
 	cfg := "scoring:\n  strict: true\n"
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
@@ -97,7 +107,7 @@ func TestRunPlanSpec_GuardBlocked_Unscored(t *testing.T) {
 	}
 
 	// Write analysis without a score header — file present but unscored.
-	writePlanFile(t, root, "test-branch", "refined-analysis.md",
+	writeBranchFile(t, root, "test-branch", "refined-analysis.md",
 		"<!-- qode:iteration=1 -->\n# Analysis\nContent.")
 
 	err := runPlanSpec(io.Discard, io.Discard, false, false)
@@ -110,7 +120,7 @@ func TestRunPlanSpec_GuardBlocked_Unscored(t *testing.T) {
 }
 
 func TestRunPlanSpec_Force_SkipsGuard(t *testing.T) {
-	root := setupPlanTestRoot(t, "test-branch")
+	root := setupTestRoot(t, "test-branch")
 
 	cfg := "scoring:\n  strict: true\n"
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
@@ -130,7 +140,7 @@ func TestRunPlanSpec_Force_SkipsGuard(t *testing.T) {
 }
 
 func TestRunPlanSpec_Pass(t *testing.T) {
-	root := setupPlanTestRoot(t, "test-branch")
+	root := setupTestRoot(t, "test-branch")
 
 	cfg := "scoring:\n  strict: true\n"
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
@@ -138,7 +148,7 @@ func TestRunPlanSpec_Pass(t *testing.T) {
 	}
 
 	// Write a scored refined-analysis.md that meets the threshold.
-	writePlanFile(t, root, "test-branch", "refined-analysis.md",
+	writeBranchFile(t, root, "test-branch", "refined-analysis.md",
 		"<!-- qode:iteration=1 score=25/25 -->\n# Analysis\nContent.")
 
 	var buf bytes.Buffer

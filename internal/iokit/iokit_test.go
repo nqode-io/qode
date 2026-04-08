@@ -9,6 +9,7 @@ import (
 )
 
 func TestReadFileOrString_FileExists(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "file.txt")
 	want := "hello world"
@@ -22,6 +23,7 @@ func TestReadFileOrString_FileExists(t *testing.T) {
 }
 
 func TestReadFileOrString_FileMissing(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "nonexistent.txt")
 	want := "fallback"
@@ -32,6 +34,7 @@ func TestReadFileOrString_FileMissing(t *testing.T) {
 }
 
 func TestWriteFile_CreatesParentDirs(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "a", "b", "c", "file.txt")
 	data := []byte("content")
@@ -48,6 +51,7 @@ func TestWriteFile_CreatesParentDirs(t *testing.T) {
 }
 
 func TestWriteFile_VerifyPermissions(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "file.txt")
 	const perm os.FileMode = 0644
@@ -64,6 +68,7 @@ func TestWriteFile_VerifyPermissions(t *testing.T) {
 }
 
 func TestAtomicWrite_ContentCorrect(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "out.txt")
 	want := "atomic content"
@@ -80,6 +85,7 @@ func TestAtomicWrite_ContentCorrect(t *testing.T) {
 }
 
 func TestAtomicWrite_VerifyPermissions(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "out.txt")
 	const perm os.FileMode = 0644
@@ -96,6 +102,7 @@ func TestAtomicWrite_VerifyPermissions(t *testing.T) {
 }
 
 func TestAtomicWrite_NoTempFileLeft(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "out.txt")
 	if err := iokit.AtomicWrite(path, []byte("data"), 0644); err != nil {
@@ -113,6 +120,7 @@ func TestAtomicWrite_NoTempFileLeft(t *testing.T) {
 }
 
 func TestEnsureDir_CreatesNestedDirs(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	target := filepath.Join(dir, "x", "y", "z")
 	if err := iokit.EnsureDir(target); err != nil {
@@ -128,6 +136,7 @@ func TestEnsureDir_CreatesNestedDirs(t *testing.T) {
 }
 
 func TestEnsureDir_Idempotent(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	target := filepath.Join(dir, "existing")
 	if err := os.Mkdir(target, 0755); err != nil {
@@ -135,5 +144,73 @@ func TestEnsureDir_Idempotent(t *testing.T) {
 	}
 	if err := iokit.EnsureDir(target); err != nil {
 		t.Errorf("second EnsureDir: %v", err)
+	}
+}
+
+func TestAtomicWrite_ReadOnlyDir(t *testing.T) {
+	t.Parallel()
+	if os.Getuid() == 0 {
+		t.Skip("skipping: running as root")
+	}
+	dir := t.TempDir()
+	roDir := filepath.Join(dir, "readonly")
+	if err := os.Mkdir(roDir, 0555); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(roDir, 0755) })
+
+	err := iokit.AtomicWrite(filepath.Join(roDir, "file.txt"), []byte("data"), 0644)
+	if err == nil {
+		t.Fatal("expected error writing to read-only directory")
+	}
+}
+
+func TestWriteFile_ReadOnlyParent(t *testing.T) {
+	t.Parallel()
+	if os.Getuid() == 0 {
+		t.Skip("skipping: running as root")
+	}
+	dir := t.TempDir()
+	roDir := filepath.Join(dir, "readonly")
+	if err := os.Mkdir(roDir, 0555); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(roDir, 0755) })
+
+	err := iokit.WriteFile(filepath.Join(roDir, "sub", "file.txt"), []byte("data"), 0644)
+	if err == nil {
+		t.Fatal("expected error writing under read-only parent")
+	}
+}
+
+func TestEnsureDir_PathIsFile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "afile")
+	if err := os.WriteFile(filePath, []byte("x"), 0644); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	// Trying to create a dir at a path that is already a file should fail.
+	err := iokit.EnsureDir(filepath.Join(filePath, "sub"))
+	if err == nil {
+		t.Fatal("expected error when path component is a file")
+	}
+}
+
+func TestReadFileOrString_PermissionDenied(t *testing.T) {
+	t.Parallel()
+	if os.Getuid() == 0 {
+		t.Skip("skipping: running as root")
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "secret.txt")
+	if err := os.WriteFile(path, []byte("secret"), 0000); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0644) })
+
+	got := iokit.ReadFileOrString(path, "fallback")
+	if got != "fallback" {
+		t.Errorf("expected fallback on permission denied, got %q", got)
 	}
 }

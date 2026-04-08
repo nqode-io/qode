@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -24,7 +23,7 @@ func newStartCmd() *cobra.Command {
 The prompt is written to stdout for the LLM to execute directly.
 Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md for debugging.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runStart(os.Stdout, os.Stderr, toFile, force)
+			return runStart(cmd.OutOrStdout(), cmd.ErrOrStderr(), toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")

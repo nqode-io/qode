@@ -28,7 +28,7 @@ for Cursor and Claude Code.`,
 			if err != nil {
 				return err
 			}
-			return runInitExisting(os.Stdout, root)
+			return runInitExisting(cmd.OutOrStdout(), root)
 		},
 	}
 	return cmd

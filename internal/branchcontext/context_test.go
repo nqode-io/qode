@@ -22,6 +22,7 @@ func setupBranchDir(t *testing.T) (root, branchDir string) {
 // resolves to a flat sanitized directory (slashes replaced with "--") rather
 // than nested subdirectories.
 func TestLoad_SlashedBranchName(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	// Create the sanitized directory (feat--jira-123) that Load should resolve to.
 	sanitizedDir := filepath.Join(root, ".qode", "branches", "feat--jira-123")
@@ -58,6 +59,7 @@ func writeFile(t *testing.T, path, content string) {
 
 // TestParseIterationFromAnalysis_HeaderPresent verifies happy-path parsing.
 func TestParseIterationFromAnalysis_HeaderPresent(t *testing.T) {
+	t.Parallel()
 	_, branchDir := setupBranchDir(t)
 	writeFile(t, filepath.Join(branchDir, "refined-analysis.md"),
 		"<!-- qode:iteration=2 score=23/25 -->\n# Analysis\n...")
@@ -76,6 +78,7 @@ func TestParseIterationFromAnalysis_HeaderPresent(t *testing.T) {
 
 // TestParseIterationFromAnalysis_MissingFile returns false gracefully.
 func TestParseIterationFromAnalysis_MissingFile(t *testing.T) {
+	t.Parallel()
 	_, branchDir := setupBranchDir(t)
 
 	_, _, ok := parseIterationFromAnalysis(branchDir)
@@ -86,6 +89,7 @@ func TestParseIterationFromAnalysis_MissingFile(t *testing.T) {
 
 // TestParseIterationFromAnalysis_NoHeader returns false when header is absent.
 func TestParseIterationFromAnalysis_NoHeader(t *testing.T) {
+	t.Parallel()
 	_, branchDir := setupBranchDir(t)
 	writeFile(t, filepath.Join(branchDir, "refined-analysis.md"), "# Analysis\nNo header here.\n")
 
@@ -97,6 +101,7 @@ func TestParseIterationFromAnalysis_NoHeader(t *testing.T) {
 
 // TestParseIterationFromAnalysis_CorruptedHeader returns false on bad values.
 func TestParseIterationFromAnalysis_CorruptedHeader(t *testing.T) {
+	t.Parallel()
 	_, branchDir := setupBranchDir(t)
 	writeFile(t, filepath.Join(branchDir, "refined-analysis.md"),
 		"<!-- qode:iteration=abc score=x/25 -->\n")
@@ -109,6 +114,7 @@ func TestParseIterationFromAnalysis_CorruptedHeader(t *testing.T) {
 
 // TestMaxIterationNumber covers empty and non-empty slices.
 func TestMaxIterationNumber(t *testing.T) {
+	t.Parallel()
 	if got := maxIterationNumber(nil); got != 0 {
 		t.Errorf("want 0, got %d", got)
 	}
@@ -120,6 +126,7 @@ func TestMaxIterationNumber(t *testing.T) {
 
 // TestLoad_OnlyAnalysisMdHeader — no numbered files; header is the only source.
 func TestLoad_OnlyAnalysisMdHeader(t *testing.T) {
+	t.Parallel()
 	root, branchDir := setupBranchDir(t)
 	writeFile(t, filepath.Join(branchDir, "refined-analysis.md"),
 		"<!-- qode:iteration=1 score=22/25 -->\n# Analysis\n")
@@ -138,6 +145,7 @@ func TestLoad_OnlyAnalysisMdHeader(t *testing.T) {
 
 // TestLoad_NumberedFilesMatchHeader — header matches glob; no duplicate.
 func TestLoad_NumberedFilesMatchHeader(t *testing.T) {
+	t.Parallel()
 	root, branchDir := setupBranchDir(t)
 	writeFile(t, filepath.Join(branchDir, "refined-analysis-1-score-22.md"), "content")
 	writeFile(t, filepath.Join(branchDir, "refined-analysis.md"),
@@ -154,6 +162,7 @@ func TestLoad_NumberedFilesMatchHeader(t *testing.T) {
 
 // TestLoad_HeaderNewerThanGlob — header has higher iteration than any numbered file.
 func TestLoad_HeaderNewerThanGlob(t *testing.T) {
+	t.Parallel()
 	root, branchDir := setupBranchDir(t)
 	writeFile(t, filepath.Join(branchDir, "refined-analysis-1-score-22.md"), "content")
 	writeFile(t, filepath.Join(branchDir, "refined-analysis.md"),
@@ -174,6 +183,7 @@ func TestLoad_HeaderNewerThanGlob(t *testing.T) {
 // TestLatestScore_ReturnsScoreOfHighestNumberedIteration verifies that the score
 // of the highest-numbered iteration is returned, not the highest score.
 func TestLatestScore_ReturnsScoreOfHighestNumberedIteration(t *testing.T) {
+	t.Parallel()
 	ctx := &Context{
 		Iterations: []Iteration{
 			{Number: 1, Score: 18},
@@ -188,6 +198,7 @@ func TestLatestScore_ReturnsScoreOfHighestNumberedIteration(t *testing.T) {
 
 // TestLatestScore_Empty returns 0 when no iterations exist.
 func TestLatestScore_Empty(t *testing.T) {
+	t.Parallel()
 	ctx := &Context{}
 	if got := ctx.LatestScore(); got != 0 {
 		t.Errorf("want 0, got %d", got)
@@ -196,6 +207,7 @@ func TestLatestScore_Empty(t *testing.T) {
 
 // TestLatestScore_SingleIteration returns the score of the only iteration.
 func TestLatestScore_SingleIteration(t *testing.T) {
+	t.Parallel()
 	ctx := &Context{
 		Iterations: []Iteration{{Number: 1, Score: 22}},
 	}
@@ -206,6 +218,7 @@ func TestLatestScore_SingleIteration(t *testing.T) {
 
 // TestLoad_NoAnalysisMd — graceful fallback when file is absent.
 func TestLoad_NoAnalysisMd(t *testing.T) {
+	t.Parallel()
 	root, branchDir := setupBranchDir(t)
 	writeFile(t, filepath.Join(branchDir, "refined-analysis-1-score-20.md"), "content")
 
@@ -219,6 +232,7 @@ func TestLoad_NoAnalysisMd(t *testing.T) {
 }
 
 func TestHasCodeReview_Present(t *testing.T) {
+	t.Parallel()
 	root, branchDir := setupBranchDir(t)
 	writeFile(t, filepath.Join(branchDir, "code-review.md"), "**Total Score: 10/12**")
 	ctx, err := Load(root, "test-branch")
@@ -231,6 +245,7 @@ func TestHasCodeReview_Present(t *testing.T) {
 }
 
 func TestHasCodeReview_Absent(t *testing.T) {
+	t.Parallel()
 	root, _ := setupBranchDir(t)
 	ctx, err := Load(root, "test-branch")
 	if err != nil {
@@ -242,6 +257,7 @@ func TestHasCodeReview_Absent(t *testing.T) {
 }
 
 func TestHasSecurityReview_Present(t *testing.T) {
+	t.Parallel()
 	root, branchDir := setupBranchDir(t)
 	writeFile(t, filepath.Join(branchDir, "security-review.md"), "**Total Score: 8/10**")
 	ctx, err := Load(root, "test-branch")
@@ -254,6 +270,7 @@ func TestHasSecurityReview_Present(t *testing.T) {
 }
 
 func TestHasSecurityReview_Absent(t *testing.T) {
+	t.Parallel()
 	root, _ := setupBranchDir(t)
 	ctx, err := Load(root, "test-branch")
 	if err != nil {
@@ -265,6 +282,7 @@ func TestHasSecurityReview_Absent(t *testing.T) {
 }
 
 func TestCodeReviewScore_ReturnsScore(t *testing.T) {
+	t.Parallel()
 	root, branchDir := setupBranchDir(t)
 	writeFile(t, filepath.Join(branchDir, "code-review.md"), "**Total Score: 10/12**")
 	ctx, err := Load(root, "test-branch")
@@ -277,6 +295,7 @@ func TestCodeReviewScore_ReturnsScore(t *testing.T) {
 }
 
 func TestCodeReviewScore_MissingFile(t *testing.T) {
+	t.Parallel()
 	root, _ := setupBranchDir(t)
 	ctx, err := Load(root, "test-branch")
 	if err != nil {
@@ -288,6 +307,7 @@ func TestCodeReviewScore_MissingFile(t *testing.T) {
 }
 
 func TestSecurityReviewScore_ReturnsScore(t *testing.T) {
+	t.Parallel()
 	root, branchDir := setupBranchDir(t)
 	writeFile(t, filepath.Join(branchDir, "security-review.md"), "**Total Score: 8/10**")
 	ctx, err := Load(root, "test-branch")
@@ -300,6 +320,7 @@ func TestSecurityReviewScore_ReturnsScore(t *testing.T) {
 }
 
 func TestSecurityReviewScore_MissingFile(t *testing.T) {
+	t.Parallel()
 	root, _ := setupBranchDir(t)
 	ctx, err := Load(root, "test-branch")
 	if err != nil {

@@ -12,6 +12,7 @@ import (
 )
 
 func TestBuildSpecPromptWithOutput_OmitsAnalysis(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
@@ -38,6 +39,7 @@ func TestBuildSpecPromptWithOutput_OmitsAnalysis(t *testing.T) {
 }
 
 func TestBuildStartPrompt_OmitsSpec(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
@@ -64,6 +66,7 @@ func TestBuildStartPrompt_OmitsSpec(t *testing.T) {
 }
 
 func TestBuildJudgePrompt_ReferencesRefinedAnalysis(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
@@ -89,6 +92,7 @@ func TestBuildJudgePrompt_ReferencesRefinedAnalysis(t *testing.T) {
 }
 
 func TestBuildJudgePrompt_CustomRubric(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
@@ -134,6 +138,7 @@ func TestBuildJudgePrompt_CustomRubric(t *testing.T) {
 }
 
 func TestBuildRefinePromptWithOutput_OmitsAnalysisAndTicket(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	engine, err := prompt.NewEngine(root)
 	if err != nil {
@@ -160,7 +165,100 @@ func TestBuildRefinePromptWithOutput_OmitsAnalysisAndTicket(t *testing.T) {
 	}
 }
 
+func TestBuildStartPrompt_WithKB(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	ctx := &branchcontext.Context{
+		Branch:     "test-branch",
+		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	}
+
+	kb := "- lessons/error-handling.md\n- lessons/naming.md"
+	got, err := BuildStartPrompt(engine, &config.Config{}, ctx, kb)
+	if err != nil {
+		t.Fatalf("BuildStartPrompt: %v", err)
+	}
+	if !strings.Contains(got, "error-handling.md") {
+		t.Error("prompt must contain KB file references when provided")
+	}
+}
+
+func TestBuildRefinePromptWithOutput_WithOutputPath(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	ctx := &branchcontext.Context{
+		Branch:     "test-branch",
+		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	}
+
+	out, err := BuildRefinePromptWithOutput(engine, &config.Config{}, ctx, "", 1, "/tmp/output.md")
+	if err != nil {
+		t.Fatalf("BuildRefinePromptWithOutput: %v", err)
+	}
+	if !strings.Contains(out.WorkerPrompt, "/tmp/output.md") {
+		t.Error("prompt must contain output path when specified")
+	}
+}
+
+func TestBuildRefinePromptWithOutput_WithExtra(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	ctx := &branchcontext.Context{
+		Branch:     "test-branch",
+		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+		Extra:      []string{"review feedback sentinel"},
+	}
+
+	out, err := BuildRefinePromptWithOutput(engine, &config.Config{}, ctx, "", 1, "")
+	if err != nil {
+		t.Fatalf("BuildRefinePromptWithOutput: %v", err)
+	}
+	if !strings.Contains(out.WorkerPrompt, "review feedback sentinel") {
+		t.Error("prompt must contain extra context when provided")
+	}
+}
+
+func TestBuildRefinePromptWithOutput_AutoIteration(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	engine, err := prompt.NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	ctx := &branchcontext.Context{
+		Branch:     "test-branch",
+		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+		Iterations: []branchcontext.Iteration{{Number: 2, Score: 15}},
+	}
+
+	// iteration=0 should trigger auto-increment via ctx.NextIteration().
+	out, err := BuildRefinePromptWithOutput(engine, &config.Config{}, ctx, "", 0, "")
+	if err != nil {
+		t.Fatalf("BuildRefinePromptWithOutput: %v", err)
+	}
+	if out.Iteration != 3 {
+		t.Errorf("expected auto-iteration 3, got %d", out.Iteration)
+	}
+}
+
 func TestBuildRefinePromptWithOutput_ContainsProjectName(t *testing.T) {
+	t.Parallel()
 	base := t.TempDir()
 	root := filepath.Join(base, "myproject")
 	if err := os.MkdirAll(root, 0755); err != nil {

@@ -1,11 +1,14 @@
 package scaffold
 
 import (
+	"bytes"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/nqode/qode/internal/config"
 )
 
 // helpers
@@ -42,6 +45,7 @@ func readCursorCommand(t *testing.T, root, name string) string {
 // --- SetupClaudeCode ---
 
 func TestSetupClaudeCode_WritesTicketFetchCommand(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupClaudeCode(io.Discard, dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
@@ -58,7 +62,8 @@ func TestSetupClaudeCode_WritesTicketFetchCommand(t *testing.T) {
 	}
 }
 
-func TestSetupClaudeCode_WritesNineCommands(t *testing.T) {
+func TestSetupClaudeCode_WritesAllCommands(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupClaudeCode(io.Discard, dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
@@ -68,12 +73,13 @@ func TestSetupClaudeCode_WritesNineCommands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading commands dir: %v", err)
 	}
-	if len(entries) != 9 {
-		t.Errorf("SetupClaudeCode: wrote %d commands, want 9", len(entries))
+	if len(entries) != len(claudeCommands) {
+		t.Errorf("SetupClaudeCode: wrote %d commands, want %d", len(entries), len(claudeCommands))
 	}
 }
 
 func TestSetupClaudeCode_WritesKnowledgeCommands(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupClaudeCode(io.Discard, dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
@@ -88,6 +94,7 @@ func TestSetupClaudeCode_WritesKnowledgeCommands(t *testing.T) {
 }
 
 func TestSetupClaudeCode_IncludesQodeCheck(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupClaudeCode(io.Discard, dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
@@ -110,6 +117,7 @@ func TestSetupClaudeCode_IncludesQodeCheck(t *testing.T) {
 }
 
 func TestSetupClaudeCode_NoPromptOnly(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupClaudeCode(io.Discard, dir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
@@ -124,6 +132,7 @@ func TestSetupClaudeCode_NoPromptOnly(t *testing.T) {
 }
 
 func TestSetupClaudeCode_CommandsContainRootName(t *testing.T) {
+	t.Parallel()
 	projectDir := setupProject(t, "myproject")
 	if err := SetupClaudeCode(io.Discard, projectDir); err != nil {
 		t.Fatalf("SetupClaudeCode: %v", err)
@@ -138,6 +147,7 @@ func TestSetupClaudeCode_CommandsContainRootName(t *testing.T) {
 // --- SetupCursor ---
 
 func TestSetupCursor_WritesTicketFetchCommand(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
@@ -154,7 +164,8 @@ func TestSetupCursor_WritesTicketFetchCommand(t *testing.T) {
 	}
 }
 
-func TestSetupCursor_WritesNineCommands(t *testing.T) {
+func TestSetupCursor_WritesAllCommands(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
@@ -164,12 +175,13 @@ func TestSetupCursor_WritesNineCommands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading cursor commands dir: %v", err)
 	}
-	if len(entries) != 9 {
-		t.Errorf("SetupCursor: wrote %d commands, want 9", len(entries))
+	if len(entries) != len(cursorCommands) {
+		t.Errorf("SetupCursor: wrote %d commands, want %d", len(entries), len(cursorCommands))
 	}
 }
 
 func TestSetupCursor_WritesKnowledgeCommands(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
@@ -184,6 +196,7 @@ func TestSetupCursor_WritesKnowledgeCommands(t *testing.T) {
 }
 
 func TestSetupCursor_IncludesQodeCheck(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
@@ -206,6 +219,7 @@ func TestSetupCursor_IncludesQodeCheck(t *testing.T) {
 }
 
 func TestSetupCursor_NoPromptOnly(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
@@ -220,6 +234,7 @@ func TestSetupCursor_NoPromptOnly(t *testing.T) {
 }
 
 func TestSetupCursor_NoCursorRulesDir(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupCursor(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
@@ -231,6 +246,7 @@ func TestSetupCursor_NoCursorRulesDir(t *testing.T) {
 }
 
 func TestSetupCursor_CommandsContainRootName(t *testing.T) {
+	t.Parallel()
 	projectDir := setupProject(t, "myproject")
 	if err := SetupCursor(io.Discard, projectDir); err != nil {
 		t.Fatalf("SetupCursor: %v", err)
@@ -239,5 +255,74 @@ func TestSetupCursor_CommandsContainRootName(t *testing.T) {
 	content := readCursorCommand(t, projectDir, "qode-plan-refine")
 	if !strings.Contains(content, "myproject") {
 		t.Errorf("qode-plan-refine.mdc missing root dir name %q, got:\n%s", "myproject", content)
+	}
+}
+
+// --- Setup orchestration ---
+
+func TestSetup_BothIDEs(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cfg := &config.Config{
+		IDE: config.IDEConfig{
+			Cursor:     config.CursorIDEConfig{Enabled: true},
+			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: true},
+		},
+	}
+	var buf bytes.Buffer
+	if err := Setup(&buf, dir, cfg); err != nil {
+		t.Fatalf("Setup: %v", err)
+	}
+
+	// Both command dirs should exist.
+	if _, err := os.Stat(filepath.Join(dir, ".cursor", "commands")); err != nil {
+		t.Errorf("expected .cursor/commands dir: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".claude", "commands")); err != nil {
+		t.Errorf("expected .claude/commands dir: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "Cursor") || !strings.Contains(out, "Claude Code") {
+		t.Errorf("output should mention both IDEs, got: %q", out)
+	}
+}
+
+func TestSetup_OnlyOneIDE(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cfg := &config.Config{
+		IDE: config.IDEConfig{
+			Cursor:     config.CursorIDEConfig{Enabled: true},
+			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: false},
+		},
+	}
+	var buf bytes.Buffer
+	if err := Setup(&buf, dir, cfg); err != nil {
+		t.Fatalf("Setup: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, ".cursor", "commands")); err != nil {
+		t.Errorf("expected .cursor/commands dir: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".claude", "commands")); !os.IsNotExist(err) {
+		t.Error("expected .claude/commands to not exist when ClaudeCode is disabled")
+	}
+}
+
+func TestSetup_NoIDEs(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cfg := &config.Config{
+		IDE: config.IDEConfig{
+			Cursor:     config.CursorIDEConfig{Enabled: false},
+			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: false},
+		},
+	}
+	var buf bytes.Buffer
+	if err := Setup(&buf, dir, cfg); err != nil {
+		t.Fatalf("Setup: %v", err)
+	}
+	if !strings.Contains(buf.String(), "No IDEs enabled") {
+		t.Errorf("expected 'No IDEs enabled' message, got: %q", buf.String())
 	}
 }

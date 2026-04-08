@@ -6,40 +6,15 @@ import (
 	"bytes"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// setupBranchTestRoot initialises a real git repo so branch operations work,
-// sets flagRoot, and returns the root path.
-func setupBranchTestRoot(t *testing.T) string {
-	t.Helper()
-	root := t.TempDir()
-	flagRoot = root
-
-	for _, args := range [][]string{
-		{"init", "-b", "main"},
-		{"config", "user.email", "test@test.com"},
-		{"config", "user.name", "Test"},
-		{"commit", "--allow-empty", "-m", "init"},
-	} {
-		cmd := exec.Command("git", args...)
-		cmd.Dir = root
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
-
-	t.Cleanup(func() { flagRoot = "" })
-	return root
-}
-
 // TestRunBranchCreate_WritesStubFiles verifies that runBranchCreate creates the
 // context directory and both stub files when they don't already exist.
 func TestRunBranchCreate_WritesStubFiles(t *testing.T) {
-	root := setupBranchTestRoot(t)
+	root := setupTestRoot(t, "main")
 
 	var buf bytes.Buffer
 	if err := runBranchCreate(&buf, "my-feature", ""); err != nil {
@@ -57,8 +32,7 @@ func TestRunBranchCreate_WritesStubFiles(t *testing.T) {
 // TestRunBranchCreate_OutputMentionsBranchName verifies that the success message
 // includes the branch name.
 func TestRunBranchCreate_OutputMentionsBranchName(t *testing.T) {
-	root := setupBranchTestRoot(t)
-	_ = root
+	setupTestRoot(t, "main")
 
 	var buf bytes.Buffer
 	if err := runBranchCreate(&buf, "feat-login", ""); err != nil {
@@ -73,8 +47,7 @@ func TestRunBranchCreate_OutputMentionsBranchName(t *testing.T) {
 
 // TestRunBranchCreate_InvalidBase rejects a base branch starting with '-'.
 func TestRunBranchCreate_InvalidBase(t *testing.T) {
-	root := setupBranchTestRoot(t)
-	_ = root
+	setupTestRoot(t, "main")
 
 	err := runBranchCreate(io.Discard, "my-feature", "-bad-base")
 	if err == nil {
@@ -88,7 +61,7 @@ func TestRunBranchCreate_InvalidBase(t *testing.T) {
 // TestRunBranchRemove_RemovesContextDir verifies that runBranchRemove deletes
 // the branch context directory when keepCtx is false.
 func TestRunBranchRemove_RemovesContextDir(t *testing.T) {
-	root := setupBranchTestRoot(t)
+	root := setupTestRoot(t, "main")
 
 	// Pre-create the branch context directory.
 	branchDir := filepath.Join(root, ".qode", "branches", "old-feature")
@@ -112,7 +85,7 @@ func TestRunBranchRemove_RemovesContextDir(t *testing.T) {
 // TestRunBranchRemove_KeepCtxFromFlag verifies that the --keep-branch-context
 // flag prevents the context directory from being deleted.
 func TestRunBranchRemove_KeepCtxFromFlag(t *testing.T) {
-	root := setupBranchTestRoot(t)
+	root := setupTestRoot(t, "main")
 
 	branchDir := filepath.Join(root, ".qode", "branches", "keep-me")
 	if err := os.MkdirAll(branchDir, 0755); err != nil {
@@ -132,8 +105,10 @@ func TestRunBranchRemove_KeepCtxFromFlag(t *testing.T) {
 	}
 }
 
-// TestSafeBranchDir_SlashedName verifies that a branch name containing "/"
-// produces a flat sanitized directory, not nested subdirectories.
+// TestSafeBranchDir_SlashedName exercises the full safeBranchDir path:
+// sanitization + path-traversal validation. This integration path is not
+// covered by git.TestSanitizeBranchName (pure sanitization) or
+// branchcontext.TestLoad_SlashedBranchName (load behavior).
 func TestSafeBranchDir_SlashedName(t *testing.T) {
 	root := t.TempDir()
 	dir, err := safeBranchDir(root, "feat/jira-123")

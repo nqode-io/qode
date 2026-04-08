@@ -3,6 +3,8 @@
 package cli
 
 import (
+	"bytes"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -101,18 +103,17 @@ func setupProject(t *testing.T, branch string, opts ...setupOption) string {
 // runCommand executes a CLI command (e.g. "plan", "refine") in the context of
 // the already-configured project root and captures stdout.
 //
-// It sets rootCmd.Args so the full cobra hierarchy is exercised, then calls
-// rootCmd.Execute(). captureStdout replaces os.Stdout before Execute() is called;
-// each cobra RunE closure passes os.Stdout (evaluated at call time, after replacement)
-// to its run function, so output is captured correctly.
+// It sets rootCmd.SetOut so cobra routes output through the buffer instead of
+// os.Stdout. Each RunE closure uses cmd.OutOrStdout(), which resolves to the
+// buffer set on the root command.
 func runCommand(t *testing.T, args ...string) (stdout string, err error) {
 	t.Helper()
-	var runErr error
-	out := captureStdout(t, func() {
-		rootCmd.SetArgs(args)
-		runErr = rootCmd.Execute()
-	})
-	return out, runErr
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	rootCmd.SetArgs(args)
+	runErr := rootCmd.Execute()
+	rootCmd.SetOut(nil)
+	return buf.String(), runErr
 }
 
 // TestIntegration_PlanRefine_DefaultRubric verifies that 'plan refine' renders
@@ -233,7 +234,7 @@ func TestIntegration_ReviewCode_StrictNoDiff(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for empty diff in strict mode")
 	}
-	if !strings.Contains(err.Error(), "no changes") {
-		t.Errorf("error should mention 'no changes', got: %v", err)
+	if !errors.Is(err, ErrNoChanges) {
+		t.Errorf("expected ErrNoChanges, got: %v", err)
 	}
 }
