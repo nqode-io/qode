@@ -44,12 +44,13 @@ func TestListDir_Recursive(t *testing.T) {
 	writeTempFile(t, filepath.Join(kbDir, "lessons", "lesson1.md"), "lesson 1")
 	writeTempFile(t, filepath.Join(kbDir, "lessons", "lesson2.md"), "lesson 2")
 
+	const wantFiles = 3 // top-level.md, lessons/lesson1.md, lessons/lesson2.md
 	files, err := listDir(kbDir)
 	if err != nil {
 		t.Fatalf("listDir: %v", err)
 	}
-	if len(files) != 3 {
-		t.Errorf("listDir: got %d files, want 3", len(files))
+	if len(files) != wantFiles {
+		t.Errorf("listDir: got %d files, want %d", len(files), wantFiles)
 	}
 }
 
@@ -352,5 +353,33 @@ func TestKnowledgeSearch_FindsInLessons(t *testing.T) {
 	}
 	if len(results) == 0 {
 		t.Error("Search: expected to find goroutine in lesson file")
+	}
+}
+
+func TestLoad_UnreadableFile(t *testing.T) {
+	t.Parallel()
+	if os.Getuid() == 0 {
+		t.Skip("running as root — cannot test permission denied")
+	}
+	root := setupKBDir(t)
+	kbDir := filepath.Join(root, ".qode", "knowledge")
+	writeTempFile(t, filepath.Join(kbDir, "readable.md"), "# Readable\nContent")
+	unreadable := filepath.Join(kbDir, "unreadable.md")
+	writeTempFile(t, unreadable, "# Unreadable\nSecret")
+	if err := os.Chmod(unreadable, 0000); err != nil {
+		t.Fatalf("Chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(unreadable, 0644) })
+
+	content, err := Load(root, minimalConfig())
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	// The readable file should appear in the output; the unreadable one should be skipped.
+	if !strings.Contains(content, "Readable") {
+		t.Error("expected readable file content in output")
+	}
+	if strings.Contains(content, "Unreadable") {
+		t.Error("unreadable file content should have been skipped")
 	}
 }

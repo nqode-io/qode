@@ -111,8 +111,9 @@ func TestTruncateLines_PreservesContent(t *testing.T) {
 		t.Error("expected (truncated) suffix for input over limit")
 	}
 	lines := strings.Split(got, "\n")
-	// 500 content lines + empty line + "(truncated)" = 502
-	if len(lines) != 502 {
-		t.Errorf("expected 502 lines, got %d", len(lines))
+	const maxLines = 500
+	const wantLines = maxLines + 2 // content lines + empty line + "(truncated)"
+	if len(lines) != wantLines {
+		t.Errorf("expected %d lines, got %d", wantLines, len(lines))
 	}
 }

@@ -4,6 +4,8 @@ package cli
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -12,10 +14,10 @@ import (
 )
 
 func TestRunPlanRefine_HappyPath(t *testing.T) {
-	_ = setupTestRootWithConfig(t, "test-branch", "project:\n  name: test\n  stack: go\n")
+	_ = setupTestRootWithConfig(t, "test-branch", testYAMLWithStack)
 
 	var buf bytes.Buffer
-	err := runPlanRefine(&buf, io.Discard, "", false)
+	err := runPlanRefine(context.Background(),&buf, io.Discard, "", false)
 	if err != nil {
 		t.Fatalf("runPlanRefine: %v", err)
 	}
@@ -25,34 +27,47 @@ func TestRunPlanRefine_HappyPath(t *testing.T) {
 }
 
 func TestRunPlanRefine_ToFile(t *testing.T) {
-	setupTestRootWithConfig(t, "test-branch", "project:\n  name: test\n  stack: go\n")
+	root := setupTestRootWithConfig(t, "test-branch", testYAMLWithStack)
 
 	var errBuf bytes.Buffer
-	err := runPlanRefine(io.Discard, &errBuf, "", true)
+	err := runPlanRefine(context.Background(),io.Discard, &errBuf, "", true)
 	if err != nil {
 		t.Fatalf("runPlanRefine --to-file: %v", err)
 	}
 	if !strings.Contains(errBuf.String(), "worker prompt saved") {
 		t.Errorf("expected save confirmation on stderr, got: %q", errBuf.String())
 	}
+
+	// Verify the saved file has actual prompt content.
+	promptPath := filepath.Join(root, ".qode", "branches", "test-branch", ".refine-prompt.md")
+	data, readErr := os.ReadFile(promptPath)
+	if readErr != nil {
+		t.Fatalf("reading saved prompt: %v", readErr)
+	}
+	if len(data) == 0 {
+		t.Error("saved prompt file is empty")
+	}
+	if !strings.Contains(string(data), "Requirements Refinement") {
+		t.Errorf("saved prompt missing expected heading, got: %q", string(data)[:min(200, len(data))])
+	}
 }
 
 func TestRunPlanJudge_NoAnalysis(t *testing.T) {
-	_ = setupTestRootWithConfig(t, "test-branch", "project:\n  name: test\n  stack: go\n")
+	_ = setupTestRootWithConfig(t, "test-branch", testYAMLWithStack)
 
-	err := runPlanJudge(io.Discard, io.Discard, false)
-	if err != ErrNoAnalysis {
+	err := runPlanJudge(context.Background(),io.Discard, io.Discard, false)
+	if !errors.Is(err, ErrNoAnalysis) {
 		t.Errorf("expected ErrNoAnalysis, got: %v", err)
 	}
 }
 
 func TestRunPlanJudge_HappyPath(t *testing.T) {
-	root := setupTestRootWithConfig(t, "test-branch", "project:\n  name: test\n  stack: go\n")
+	root := setupTestRootWithConfig(t, "test-branch", testYAMLWithStack)
 	writeBranchFile(t, root, "test-branch", "refined-analysis.md",
 		"<!-- qode:iteration=1 -->\n# Analysis\nContent.")
 
 	var buf bytes.Buffer
-	err := runPlanJudge(&buf, io.Discard, false)
+	err := runPlanJudge(context.Background(),&buf, io.Discard, false)
 	if err != nil {
 		t.Fatalf("runPlanJudge: %v", err)
 	}
@@ -65,12 +80,11 @@ func TestRunPlanSpec_GuardBlocked_NoAnalysis_Strict(t *testing.T) {
 	root := setupTestRoot(t, "test-branch")
 
 	// Write a qode.yaml with strict: true
-	cfg := "scoring:\n  strict: true\n"
-	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(testYAMLStrictMode), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
 
-	err := runPlanSpec(io.Discard, io.Discard, false, false)
+	err := runPlanSpec(context.Background(),io.Discard, io.Discard, false, false)
 	if err == nil {
 		t.Fatal("expected error for missing analysis in strict mode")
 	}
@@ -82,13 +96,12 @@ func TestRunPlanSpec_GuardBlocked_NoAnalysis_Strict(t *testing.T) {
 func TestRunPlanSpec_GuardBlocked_NonStrict(t *testing.T) {
 	root := setupTestRoot(t, "test-branch")
 
-	cfg := ""
-	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(testYAMLNonStrict), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
 
 	var buf bytes.Buffer
-	runErr := runPlanSpec(&buf, io.Discard, false, false)
+	runErr := runPlanSpec(context.Background(),&buf, io.Discard, false, false)
 
 	if runErr != nil {
 		t.Fatalf("expected nil error in non-strict mode, got: %v", runErr)
@@ -101,8 +114,7 @@ func TestRunPlanSpec_GuardBlocked_NonStrict(t *testing.T) {
 func TestRunPlanSpec_GuardBlocked_Unscored(t *testing.T) {
 	root := setupTestRoot(t, "test-branch")
 
-	cfg := "scoring:\n  strict: true\n"
-	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(testYAMLStrictMode), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
 
@@ -110,7 +122,7 @@ func TestRunPlanSpec_GuardBlocked_Unscored(t *testing.T) {
 	writeBranchFile(t, root, "test-branch", "refined-analysis.md",
 		"<!-- qode:iteration=1 -->\n# Analysis\nContent.")
 
-	err := runPlanSpec(io.Discard, io.Discard, false, false)
+	err := runPlanSpec(context.Background(),io.Discard, io.Discard, false, false)
 	if err == nil {
 		t.Fatal("expected error for unscored analysis in strict mode")
 	}
@@ -122,14 +134,13 @@ func TestRunPlanSpec_GuardBlocked_Unscored(t *testing.T) {
 func TestRunPlanSpec_Force_SkipsGuard(t *testing.T) {
 	root := setupTestRoot(t, "test-branch")
 
-	cfg := "scoring:\n  strict: true\n"
-	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(testYAMLStrictMode), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
 
 	// No refined-analysis.md — guard would block, but force bypasses it.
 	// The hard-error ("no refined analysis") fires instead of the guard error.
-	err := runPlanSpec(io.Discard, io.Discard, false, true)
+	err := runPlanSpec(context.Background(),io.Discard, io.Discard, false, true)
 	if err == nil {
 		t.Fatal("expected hard error for missing analysis file")
 	}
@@ -142,8 +153,7 @@ func TestRunPlanSpec_Force_SkipsGuard(t *testing.T) {
 func TestRunPlanSpec_Pass(t *testing.T) {
 	root := setupTestRoot(t, "test-branch")
 
-	cfg := "scoring:\n  strict: true\n"
-	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(testYAMLStrictMode), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
 
@@ -152,7 +162,7 @@ func TestRunPlanSpec_Pass(t *testing.T) {
 		"<!-- qode:iteration=1 score=25/25 -->\n# Analysis\nContent.")
 
 	var buf bytes.Buffer
-	runErr := runPlanSpec(&buf, io.Discard, false, false)
+	runErr := runPlanSpec(context.Background(),&buf, io.Discard, false, false)
 
 	if runErr != nil {
 		t.Fatalf("expected nil error for passing score, got: %v", runErr)

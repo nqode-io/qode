@@ -116,7 +116,7 @@ func TestSetupClaudeCode_IncludesQodeCheck(t *testing.T) {
 	}
 }
 
-func TestSetupClaudeCode_NoPromptOnly(t *testing.T) {
+func TestSetupClaudeCode_CommandContent(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupClaudeCode(io.Discard, dir); err != nil {
@@ -127,6 +127,10 @@ func TestSetupClaudeCode_NoPromptOnly(t *testing.T) {
 		content := readClaudeCommand(t, dir, name)
 		if strings.Contains(content, "--prompt-only") {
 			t.Errorf("%s.md contains --prompt-only", name)
+		}
+		// Each command must render a non-trivial prompt body.
+		if len(content) < 50 {
+			t.Errorf("%s.md too short (%d bytes), expected rendered command content", name, len(content))
 		}
 	}
 }
@@ -218,7 +222,7 @@ func TestSetupCursor_IncludesQodeCheck(t *testing.T) {
 	}
 }
 
-func TestSetupCursor_NoPromptOnly(t *testing.T) {
+func TestSetupCursor_CommandContent(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupCursor(io.Discard, dir); err != nil {
@@ -230,6 +234,9 @@ func TestSetupCursor_NoPromptOnly(t *testing.T) {
 		if strings.Contains(content, "--prompt-only") {
 			t.Errorf("%s.mdc contains --prompt-only", name)
 		}
+		if len(content) < 50 {
+			t.Errorf("%s.mdc too short (%d bytes), expected rendered command content", name, len(content))
+		}
 	}
 }
 
@@ -240,6 +247,11 @@ func TestSetupCursor_NoCursorRulesDir(t *testing.T) {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
+	// Positive: .cursor/commands/ must exist.
+	if _, err := os.Stat(filepath.Join(dir, ".cursor", "commands")); err != nil {
+		t.Errorf("expected .cursor/commands/ to exist: %v", err)
+	}
+	// Negative: legacy .cursorrules/ must not be created.
 	if _, err := os.Stat(filepath.Join(dir, ".cursorrules")); !os.IsNotExist(err) {
 		t.Error("SetupCursor must not create .cursorrules/ directory")
 	}
@@ -325,4 +337,85 @@ func TestSetup_NoIDEs(t *testing.T) {
 	if !strings.Contains(buf.String(), "No IDEs enabled") {
 		t.Errorf("expected 'No IDEs enabled' message, got: %q", buf.String())
 	}
+}
+
+func TestSetupClaudeCode_Idempotent(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// First run.
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
+		t.Fatalf("first SetupClaudeCode: %v", err)
+	}
+	firstContents := readAllCommands(t, filepath.Join(dir, ".claude", "commands"))
+
+	// Second run.
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
+		t.Fatalf("second SetupClaudeCode: %v", err)
+	}
+	secondContents := readAllCommands(t, filepath.Join(dir, ".claude", "commands"))
+
+	if len(firstContents) != len(secondContents) {
+		t.Fatalf("file count changed: %d → %d", len(firstContents), len(secondContents))
+	}
+	for name, first := range firstContents {
+		second, ok := secondContents[name]
+		if !ok {
+			t.Errorf("file %q missing after second run", name)
+			continue
+		}
+		if first != second {
+			t.Errorf("file %q content changed after second run", name)
+		}
+	}
+}
+
+func TestSetupCursor_Idempotent(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	if err := SetupCursor(io.Discard, dir); err != nil {
+		t.Fatalf("first SetupCursor: %v", err)
+	}
+	firstContents := readAllCommands(t, filepath.Join(dir, ".cursor", "commands"))
+
+	if err := SetupCursor(io.Discard, dir); err != nil {
+		t.Fatalf("second SetupCursor: %v", err)
+	}
+	secondContents := readAllCommands(t, filepath.Join(dir, ".cursor", "commands"))
+
+	if len(firstContents) != len(secondContents) {
+		t.Fatalf("file count changed: %d → %d", len(firstContents), len(secondContents))
+	}
+	for name, first := range firstContents {
+		second, ok := secondContents[name]
+		if !ok {
+			t.Errorf("file %q missing after second run", name)
+			continue
+		}
+		if first != second {
+			t.Errorf("file %q content changed after second run", name)
+		}
+	}
+}
+
+// readAllCommands reads every file in dir and returns a map of name → content.
+func readAllCommands(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir %s: %v", dir, err)
+	}
+	result := make(map[string]string, len(entries))
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			t.Fatalf("ReadFile %s: %v", e.Name(), err)
+		}
+		result[e.Name()] = string(data)
+	}
+	return result
 }

@@ -2,6 +2,7 @@
 package git
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -20,7 +21,12 @@ func SanitizeBranchName(name string) string {
 
 // CurrentBranch returns the current git branch name.
 func CurrentBranch(root string) (string, error) {
-	out, err := run(root, "rev-parse", "--abbrev-ref", "HEAD")
+	return CurrentBranchCtx(context.Background(), root)
+}
+
+// CurrentBranchCtx returns the current git branch name, respecting context cancellation.
+func CurrentBranchCtx(ctx context.Context, root string) (string, error) {
+	out, err := runCtx(ctx, root, "rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil {
 		return "", fmt.Errorf("getting current branch: %w", err)
 	}
@@ -47,18 +53,22 @@ func DeleteBranch(root, name string) error {
 // since the merge-base with baseBranch (defaults to "main" then "master"),
 // including both committed and uncommitted (staged + unstaged) changes.
 func DiffFromBase(root, baseBranch string) (string, error) {
-	uncommitted, err := run(root, "diff", "HEAD", "--", ":(exclude).qode/")
+	return DiffFromBaseCtx(context.Background(), root, baseBranch)
+}
+
+// DiffFromBaseCtx is like DiffFromBase but respects context cancellation.
+func DiffFromBaseCtx(ctx context.Context, root, baseBranch string) (string, error) {
+	uncommitted, err := runCtx(ctx, root, "diff", "HEAD", "--", ":(exclude).qode/")
 	if err != nil {
 		uncommitted = ""
 	}
 
-	base, err := resolveBase(root, baseBranch)
+	base, err := resolveBaseCtx(ctx, root, baseBranch)
 	if err != nil {
-		// No base branch found; return uncommitted changes only.
 		return strings.TrimRight(uncommitted, "\n"), nil
 	}
 
-	committed, err := run(root, "diff", base+"...HEAD", "--", ":(exclude).qode/")
+	committed, err := runCtx(ctx, root, "diff", base+"...HEAD", "--", ":(exclude).qode/")
 	if err != nil {
 		return "", err
 	}
@@ -75,11 +85,16 @@ func DiffFromBase(root, baseBranch string) (string, error) {
 
 // ChangedFiles returns files changed since the merge-base.
 func ChangedFiles(root, baseBranch string) ([]string, error) {
-	base, err := resolveBase(root, baseBranch)
+	return ChangedFilesCtx(context.Background(), root, baseBranch)
+}
+
+// ChangedFilesCtx is like ChangedFiles but respects context cancellation.
+func ChangedFilesCtx(ctx context.Context, root, baseBranch string) ([]string, error) {
+	base, err := resolveBaseCtx(ctx, root, baseBranch)
 	if err != nil {
 		return nil, err
 	}
-	out, err := run(root, "diff", "--name-only", base+"...HEAD")
+	out, err := runCtx(ctx, root, "diff", "--name-only", base+"...HEAD")
 	if err != nil {
 		return nil, err
 	}
@@ -92,18 +107,18 @@ func ChangedFiles(root, baseBranch string) ([]string, error) {
 	return files, nil
 }
 
-func resolveBase(root, preferred string) (string, error) {
+func resolveBaseCtx(ctx context.Context, root, preferred string) (string, error) {
 	if preferred != "" {
-		if _, err := run(root, "rev-parse", "--verify", preferred); err == nil {
-			out, err := run(root, "merge-base", "HEAD", preferred)
+		if _, err := runCtx(ctx, root, "rev-parse", "--verify", preferred); err == nil {
+			out, err := runCtx(ctx, root, "merge-base", "HEAD", preferred)
 			if err == nil {
 				return strings.TrimSpace(out), nil
 			}
 		}
 	}
 	for _, candidate := range []string{"main", "master", "develop"} {
-		if _, err := run(root, "rev-parse", "--verify", candidate); err == nil {
-			out, err := run(root, "merge-base", "HEAD", candidate)
+		if _, err := runCtx(ctx, root, "rev-parse", "--verify", candidate); err == nil {
+			out, err := runCtx(ctx, root, "merge-base", "HEAD", candidate)
 			if err == nil {
 				return strings.TrimSpace(out), nil
 			}
@@ -113,7 +128,11 @@ func resolveBase(root, preferred string) (string, error) {
 }
 
 func run(root string, args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
+	return runCtx(context.Background(), root, args...)
+}
+
+func runCtx(ctx context.Context, root string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {

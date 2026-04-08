@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,15 +25,17 @@ func TestDefaultConfig(t *testing.T) {
 	if !cfg.IDE.ClaudeCode.Enabled {
 		t.Error("expected ClaudeCode enabled by default")
 	}
-	if len(cfg.Scoring.Rubrics) != 3 {
-		t.Errorf("expected 3 default rubrics, got %d", len(cfg.Scoring.Rubrics))
+	wantRubrics := DefaultRubricConfigs()
+	if len(cfg.Scoring.Rubrics) != len(wantRubrics) {
+		t.Errorf("expected %d default rubrics, got %d", len(wantRubrics), len(cfg.Scoring.Rubrics))
 	}
 	reviewRubric, ok := cfg.Scoring.Rubrics["review"]
 	if !ok {
 		t.Fatal("expected review rubric in defaults")
 	}
-	if len(reviewRubric.Dimensions) != 6 {
-		t.Errorf("expected 6 review dimensions (including Performance), got %d", len(reviewRubric.Dimensions))
+	wantReviewDims := len(wantRubrics["review"].Dimensions)
+	if len(reviewRubric.Dimensions) != wantReviewDims {
+		t.Errorf("expected %d review dimensions, got %d", wantReviewDims, len(reviewRubric.Dimensions))
 	}
 }
 
@@ -51,9 +54,29 @@ func TestSave_Load(t *testing.T) {
 	}
 
 	// QodeVersion is set by qode init (cli layer), not by DefaultConfig.
-	// A round-tripped DefaultConfig has no version set.
 	if loaded.QodeVersion != "" {
 		t.Errorf("expected empty QodeVersion from DefaultConfig round-trip, got %q", loaded.QodeVersion)
+	}
+	if loaded.Review.MinCodeScore != cfg.Review.MinCodeScore {
+		t.Errorf("MinCodeScore: got %.1f, want %.1f", loaded.Review.MinCodeScore, cfg.Review.MinCodeScore)
+	}
+	if loaded.Review.MinSecurityScore != cfg.Review.MinSecurityScore {
+		t.Errorf("MinSecurityScore: got %.1f, want %.1f", loaded.Review.MinSecurityScore, cfg.Review.MinSecurityScore)
+	}
+	if loaded.Scoring.Strict != cfg.Scoring.Strict {
+		t.Errorf("Strict: got %v, want %v", loaded.Scoring.Strict, cfg.Scoring.Strict)
+	}
+	if loaded.Scoring.TargetScore != cfg.Scoring.TargetScore {
+		t.Errorf("TargetScore: got %d, want %d", loaded.Scoring.TargetScore, cfg.Scoring.TargetScore)
+	}
+	if loaded.IDE.Cursor.Enabled != cfg.IDE.Cursor.Enabled {
+		t.Errorf("Cursor.Enabled: got %v, want %v", loaded.IDE.Cursor.Enabled, cfg.IDE.Cursor.Enabled)
+	}
+	if loaded.IDE.ClaudeCode.Enabled != cfg.IDE.ClaudeCode.Enabled {
+		t.Errorf("ClaudeCode.Enabled: got %v, want %v", loaded.IDE.ClaudeCode.Enabled, cfg.IDE.ClaudeCode.Enabled)
+	}
+	if len(loaded.Scoring.Rubrics) != len(cfg.Scoring.Rubrics) {
+		t.Errorf("Rubrics count: got %d, want %d", len(loaded.Scoring.Rubrics), len(cfg.Scoring.Rubrics))
 	}
 }
 
@@ -80,6 +103,15 @@ func TestBranchConfig_YAMLRoundTrip(t *testing.T) {
 	if !loaded.Branch.KeepBranchContext {
 		t.Error("expected Branch.KeepBranchContext true after round-trip")
 	}
+	if loaded.Review.MinCodeScore != cfg.Review.MinCodeScore {
+		t.Errorf("MinCodeScore: got %.1f, want %.1f", loaded.Review.MinCodeScore, cfg.Review.MinCodeScore)
+	}
+	if len(loaded.Scoring.Rubrics) != len(cfg.Scoring.Rubrics) {
+		t.Errorf("Rubrics count: got %d, want %d", len(loaded.Scoring.Rubrics), len(cfg.Scoring.Rubrics))
+	}
+	if loaded.IDE.Cursor.Enabled != cfg.IDE.Cursor.Enabled {
+		t.Errorf("Cursor.Enabled: got %v, want %v", loaded.IDE.Cursor.Enabled, cfg.IDE.Cursor.Enabled)
+	}
 }
 
 func TestBranchConfig_OmitEmpty(t *testing.T) {
@@ -101,10 +133,10 @@ func TestFindRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// No qode.yaml → error.
+	// No qode.yaml → ErrConfigNotFound.
 	_, err := FindRoot(subDir)
-	if err == nil {
-		t.Error("expected error when no qode.yaml exists")
+	if !errors.Is(err, ErrConfigNotFound) {
+		t.Errorf("expected ErrConfigNotFound, got: %v", err)
 	}
 
 	// Write qode.yaml at root.
@@ -118,5 +150,42 @@ func TestFindRoot(t *testing.T) {
 	}
 	if found != dir {
 		t.Errorf("expected %s, got %s", dir, found)
+	}
+}
+
+func TestLoad_InvalidYAML(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ConfigFileName), []byte("invalid: [unterminated"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Load(dir)
+	if err == nil {
+		t.Fatal("expected error for invalid YAML")
+	}
+	if !strings.Contains(err.Error(), "loading") {
+		t.Errorf("expected error to mention 'loading', got: %v", err)
+	}
+}
+
+func TestLoad_InvalidScoringYAML(t *testing.T) {
+	dir := t.TempDir()
+	// Valid qode.yaml.
+	if err := os.WriteFile(filepath.Join(dir, ConfigFileName), []byte("qode_version: \"1\"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// Broken scoring.yaml.
+	scoringDir := filepath.Join(dir, QodeDir)
+	if err := os.MkdirAll(scoringDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(scoringDir, ScoringFileName), []byte("rubrics: [bad"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Load(dir)
+	if err == nil {
+		t.Fatal("expected error for invalid scoring YAML")
+	}
+	if !strings.Contains(err.Error(), "scoring") {
+		t.Errorf("expected error to mention 'scoring', got: %v", err)
 	}
 }

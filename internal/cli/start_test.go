@@ -4,6 +4,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -13,7 +14,7 @@ import (
 )
 
 func TestRunStart_HappyPath(t *testing.T) {
-	root := setupTestRootWithConfig(t, "test-branch", "project:\n  name: test\n  stack: go\n")
+	root := setupTestRootWithConfig(t, "test-branch", testYAMLWithStack)
 
 	// Write spec.md and analysis so guards pass.
 	writeBranchFile(t, root, "test-branch", "refined-analysis.md",
@@ -21,7 +22,7 @@ func TestRunStart_HappyPath(t *testing.T) {
 	writeBranchFile(t, root, "test-branch", "spec.md", "# Spec\nImplementation spec.")
 
 	var buf bytes.Buffer
-	err := runStart(&buf, io.Discard, false, true) // force=true to bypass guards
+	err := runStart(context.Background(),&buf, io.Discard, false, true) // force=true to bypass guards
 	if err != nil {
 		t.Fatalf("runStart: %v", err)
 	}
@@ -31,10 +32,10 @@ func TestRunStart_HappyPath(t *testing.T) {
 }
 
 func TestRunStart_NoSpec_HardError(t *testing.T) {
-	_ = setupTestRootWithConfig(t, "test-branch", "project:\n  name: test\n  stack: go\n")
+	_ = setupTestRootWithConfig(t, "test-branch", testYAMLWithStack)
 
-	err := runStart(io.Discard, io.Discard, false, true) // force bypasses guard, but spec still missing
-	if err != ErrNoSpec {
+	err := runStart(context.Background(),io.Discard, io.Discard, false, true) // force bypasses guard, but spec still missing
+	if !errors.Is(err, ErrNoSpec) {
 		t.Errorf("expected ErrNoSpec, got: %v", err)
 	}
 }
@@ -42,7 +43,7 @@ func TestRunStart_NoSpec_HardError(t *testing.T) {
 func TestRunStart_GuardBlocked_NoSpec_Strict(t *testing.T) {
 	root := setupTestRoot(t, "test-branch")
 
-	cfg := "project:\n  name: test\n  stack: go\nscoring:\n  strict: true\n"
+	cfg := testYAMLStrictMode
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
@@ -61,7 +62,7 @@ func TestRunStart_GuardBlocked_NoSpec_Strict(t *testing.T) {
 func TestRunStart_GuardBlocked_NonStrict(t *testing.T) {
 	root := setupTestRoot(t, "test-branch")
 
-	cfg := "project:\n  name: test\n  stack: go\n"
+	cfg := testYAMLWithStack
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
@@ -83,7 +84,7 @@ func TestRunStart_GuardBlocked_NonStrict(t *testing.T) {
 func TestRunStart_Force_SkipsGuard_HardErrors_NoSpec(t *testing.T) {
 	root := setupTestRoot(t, "test-branch")
 
-	cfg := "project:\n  name: test\n  stack: go\nscoring:\n  strict: true\n"
+	cfg := testYAMLStrictMode
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}

@@ -88,8 +88,9 @@ func TestBuildRubric_WithOverride(t *testing.T) {
 
 func TestDefaultReviewRubricHasPerformance(t *testing.T) {
 	dims := DefaultReviewRubric.Dimensions
-	if len(dims) != 6 {
-		t.Fatalf("expected 6 review dimensions, got %d", len(dims))
+	wantDims := len(defaultRubrics[string(RubricReview)].Dimensions)
+	if len(dims) != wantDims {
+		t.Fatalf("expected %d review dimensions, got %d", wantDims, len(dims))
 	}
 	last := dims[len(dims)-1]
 	if last.Name != "Performance" {
@@ -135,8 +136,9 @@ func TestDefaultRefineRubricLevels(t *testing.T) {
 		t.Fatal("expected non-empty refine dimensions")
 	}
 	first := dims[0]
-	if len(first.Levels) != 6 {
-		t.Errorf("expected 6 levels on first dimension, got %d", len(first.Levels))
+	wantLevels := len(defaultRubrics[string(RubricRefine)].Dimensions[0].Levels)
+	if len(first.Levels) != wantLevels {
+		t.Errorf("expected %d levels on first dimension, got %d", wantLevels, len(first.Levels))
 	}
 	if len(first.Levels[0]) < 2 || first.Levels[0][:2] != "5:" {
 		t.Errorf("expected first level to start with '5:', got %q", first.Levels[0])

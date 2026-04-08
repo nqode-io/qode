@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -36,7 +37,7 @@ Use --to-file to write the prompt files to disk (worker + judge) for debugging.`
 			if len(args) > 0 {
 				ticketURL = args[0]
 			}
-			return runPlanRefine(cmd.OutOrStdout(), cmd.ErrOrStderr(), ticketURL, toFile)
+			return runPlanRefine(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), ticketURL, toFile)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
@@ -54,7 +55,7 @@ func newPlanSpecCmd() *cobra.Command {
 The LLM reads the stdout output and executes it to produce spec.md.
 Use --to-file to write the prompt to disk for debugging.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPlanSpec(cmd.OutOrStdout(), cmd.ErrOrStderr(), toFile, force)
+			return runPlanSpec(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
@@ -74,15 +75,15 @@ Requires refined-analysis.md to exist in the branch directory.
 
 Use --to-file to write the prompt to disk for debugging the judge template.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPlanJudge(cmd.OutOrStdout(), cmd.ErrOrStderr(), toFile)
+			return runPlanJudge(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), toFile)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
 	return cmd
 }
 
-func runPlanJudge(out, errOut io.Writer, toFile bool) error {
-	sess, err := loadSession()
+func runPlanJudge(ctx context.Context, out, errOut io.Writer, toFile bool) error {
+	sess, err := loadSessionCtx(ctx)
 	if err != nil {
 		return err
 	}
@@ -116,8 +117,8 @@ func runPlanJudge(out, errOut io.Writer, toFile bool) error {
 	return err
 }
 
-func runPlanRefine(out, errOut io.Writer, ticketURL string, toFile bool) error {
-	sess, err := loadSession()
+func runPlanRefine(ctx context.Context, out, errOut io.Writer, ticketURL string, toFile bool) error {
+	sess, err := loadSessionCtx(ctx)
 	if err != nil {
 		return err
 	}
@@ -143,8 +144,8 @@ func runPlanRefine(out, errOut io.Writer, ticketURL string, toFile bool) error {
 	return err
 }
 
-func runPlanSpec(out, errOut io.Writer, toFile, force bool) error {
-	sess, err := loadSession()
+func runPlanSpec(ctx context.Context, out, errOut io.Writer, toFile, force bool) error {
+	sess, err := loadSessionCtx(ctx)
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nqode/qode/internal/prompt"
 	"gopkg.in/yaml.v3"
 )
 
@@ -72,8 +73,16 @@ func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("walking .qode/prompts/: %v", err)
 	}
-	if total == 0 {
-		t.Error("expected at least one .md.tmpl file under .qode/prompts/")
+	embedded, _ := prompt.EmbeddedTemplates()
+	// Only non-scaffold templates are copied to .qode/prompts/.
+	wantTemplates := 0
+	for name := range embedded {
+		if !strings.HasPrefix(name, "scaffold/") {
+			wantTemplates++
+		}
+	}
+	if total != wantTemplates {
+		t.Errorf("expected %d .md.tmpl files under .qode/prompts/, got %d", wantTemplates, total)
 	}
 }
 
@@ -102,6 +111,11 @@ func TestRunInitExisting_NoCursorRules(t *testing.T) {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
+	// Positive: .qode/prompts/ must exist.
+	if _, err := os.Stat(filepath.Join(dir, ".qode", "prompts")); err != nil {
+		t.Errorf("expected .qode/prompts/ to exist: %v", err)
+	}
+	// Negative: legacy .cursorrules/ must not be created.
 	if _, err := os.Stat(filepath.Join(dir, ".cursorrules")); !os.IsNotExist(err) {
 		t.Error("runInitExisting must not create .cursorrules/ directory")
 	}

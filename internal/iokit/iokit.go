@@ -2,6 +2,7 @@
 package iokit
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,6 +20,14 @@ func ReadFileOrString(path, defaultVal string) string {
 
 // WriteFile creates parent directories and writes data to path.
 func WriteFile(path string, data []byte, perm os.FileMode) error {
+	return WriteFileCtx(context.Background(), path, data, perm)
+}
+
+// WriteFileCtx is like WriteFile but respects context cancellation.
+func WriteFileCtx(ctx context.Context, path string, data []byte, perm os.FileMode) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if err := EnsureDir(filepath.Dir(path)); err != nil {
 		return err
 	}
@@ -30,6 +39,14 @@ func WriteFile(path string, data []byte, perm os.FileMode) error {
 
 // AtomicWrite writes via a temp file + rename to avoid partial writes.
 func AtomicWrite(path string, data []byte, perm os.FileMode) error {
+	return AtomicWriteCtx(context.Background(), path, data, perm)
+}
+
+// AtomicWriteCtx is like AtomicWrite but respects context cancellation.
+func AtomicWriteCtx(ctx context.Context, path string, data []byte, perm os.FileMode) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if err := EnsureDir(filepath.Dir(path)); err != nil {
 		return err
 	}
@@ -43,6 +60,9 @@ func AtomicWrite(path string, data []byte, perm os.FileMode) error {
 		return err
 	}
 	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if err := os.Chmod(tmp.Name(), perm); err != nil {

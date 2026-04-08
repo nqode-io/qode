@@ -100,8 +100,8 @@ judgment:
 	if result.Ready {
 		t.Error("expected Ready=false for score 23 < 25")
 	}
-	if len(result.Dimensions) != 5 {
-		t.Errorf("expected 5 dimensions, got %d", len(result.Dimensions))
+	if len(result.Dimensions) != len(DefaultRefineRubric.Dimensions) {
+		t.Errorf("expected %d dimensions, got %d", len(DefaultRefineRubric.Dimensions), len(result.Dimensions))
 	}
 	if result.Dimensions[2].Score != 4 {
 		t.Errorf("expected dimension 3 score 4, got %d", result.Dimensions[2].Score)

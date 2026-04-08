@@ -1,8 +1,10 @@
 package cli
 
 import (
-	"github.com/nqode/qode/internal/config"
+	"context"
+
 	"github.com/nqode/qode/internal/branchcontext"
+	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/prompt"
 )
@@ -17,19 +19,29 @@ type Session struct {
 }
 
 func loadSession() (*Session, error) {
+	return loadSessionCtx(context.Background())
+}
+
+func loadSessionCtx(ctx context.Context) (*Session, error) {
 	root, err := resolveRoot()
 	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 	cfg, err := config.Load(root)
 	if err != nil {
 		return nil, err
 	}
-	branch, err := git.CurrentBranch(root)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	branch, err := git.CurrentBranchCtx(ctx, root)
 	if err != nil {
 		return nil, err
 	}
-	ctx, err := branchcontext.Load(root, branch)
+	bctx, err := branchcontext.Load(root, branch)
 	if err != nil {
 		return nil, err
 	}
@@ -37,5 +49,5 @@ func loadSession() (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Session{Root: root, Config: cfg, Branch: branch, Context: ctx, Engine: engine}, nil
+	return &Session{Root: root, Config: cfg, Branch: branch, Context: bctx, Engine: engine}, nil
 }

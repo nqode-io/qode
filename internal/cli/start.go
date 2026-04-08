@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -23,7 +24,7 @@ func newStartCmd() *cobra.Command {
 The prompt is written to stdout for the LLM to execute directly.
 Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md for debugging.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runStart(cmd.OutOrStdout(), cmd.ErrOrStderr(), toFile, force)
+			return runStart(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
@@ -31,8 +32,8 @@ Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md fo
 	return cmd
 }
 
-func runStart(out, errOut io.Writer, toFile, force bool) error {
-	sess, err := loadSession()
+func runStart(ctx context.Context, out, errOut io.Writer, toFile, force bool) error {
+	sess, err := loadSessionCtx(ctx)
 	if err != nil {
 		return err
 	}

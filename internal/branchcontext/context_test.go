@@ -330,3 +330,38 @@ func TestSecurityReviewScore_MissingFile(t *testing.T) {
 		t.Errorf("want 0, got %f", got)
 	}
 }
+
+// TestLoad_MissingBranchDir verifies Load degrades gracefully when the branch
+// directory does not exist at all.
+func TestLoad_MissingBranchDir(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	ctx, err := Load(root, "nonexistent-branch")
+	if err != nil {
+		t.Fatalf("expected no error for missing branch dir, got: %v", err)
+	}
+	if len(ctx.Iterations) != 0 {
+		t.Errorf("expected 0 iterations, got %d", len(ctx.Iterations))
+	}
+	if ctx.Ticket != "" {
+		t.Errorf("expected empty Ticket, got %q", ctx.Ticket)
+	}
+}
+
+// TestLoad_MissingContextSubdir verifies Load works when the branch dir exists
+// but context/ does not.
+func TestLoad_MissingContextSubdir(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	branchDir := filepath.Join(root, ".qode", "branches", "no-context")
+	if err := os.MkdirAll(branchDir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	ctx, err := Load(root, "no-context")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if ctx.Ticket != "" {
+		t.Errorf("expected empty Ticket, got %q", ctx.Ticket)
+	}
+}

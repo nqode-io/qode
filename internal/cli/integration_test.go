@@ -4,9 +4,9 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -52,49 +52,30 @@ func withQodeYAML(content string) setupOption {
 // qode.yaml, then applies any functional options. It returns the project root.
 func setupProject(t *testing.T, branch string, opts ...setupOption) string {
 	t.Helper()
-	root := t.TempDir()
 
-	// Initialise the git repo on the requested branch.
-	gitCmds := [][]string{
-		{"init", "-b", branch},
-		{"config", "user.email", "test@integration.test"},
-		{"config", "user.name", "Integration Test"},
-		{"commit", "--allow-empty", "-m", "init"},
-	}
-	for _, args := range gitCmds {
-		cmd := exec.Command("git", args...)
-		cmd.Dir = root
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
+	// Delegate git init, branch dir creation, and flagRoot to shared helper.
+	root := setupTestRootWithConfig(t, branch, testYAMLNonStrict)
 
-	// Write a minimal qode.yaml (no strict mode by default so guards emit STOP
-	// rather than hard-errors — easier to assert in tests).
-	minimalCfg := "scoring:\n  strict: false\n"
-	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(minimalCfg), 0644); err != nil {
-		t.Fatalf("WriteFile qode.yaml: %v", err)
-	}
-
-	// Create the branch context directory structure.
+	// Resolve the branch directory for functional options.
 	sanitized := strings.ReplaceAll(branch, "/", "--")
 	branchDir := filepath.Join(root, ".qode", "branches", sanitized)
-	ctxDir := filepath.Join(branchDir, "context")
-	if err := os.MkdirAll(ctxDir, 0755); err != nil {
-		t.Fatalf("MkdirAll branch context: %v", err)
-	}
 
-	// Apply options in order (they may override the defaults above).
 	for _, opt := range opts {
 		opt(root, branchDir, t)
 	}
 
-	// Point the CLI at this temp root and restore on cleanup.
-	flagRoot = root
+	// Integration tests also need to reset cobra state, including child command
+	// contexts — Cobra only propagates parent context when cmd.ctx == nil.
 	t.Cleanup(func() {
-		flagRoot = ""
 		flagStrict = false
 		rootCmd.SetArgs(nil)
+		rootCmd.SetContext(nil)
+		for _, cmd := range rootCmd.Commands() {
+			cmd.SetContext(nil)
+			for _, sub := range cmd.Commands() {
+				sub.SetContext(nil)
+			}
+		}
 	})
 
 	return root
@@ -187,7 +168,7 @@ func TestIntegration_PlanSpec_GuardBlocked(t *testing.T) {
 func TestIntegration_PlanSpec_PassesWithAnalysis(t *testing.T) {
 	const analysis = "<!-- qode:iteration=1 score=25/25 -->\n\n# Analysis\n\nFull analysis here.\n"
 	setupProject(t, "test-spec-pass",
-		withQodeYAML("scoring:\n  strict: true\n"),
+		withQodeYAML(testYAMLStrictMode),
 		withRefinedAnalysis(analysis),
 	)
 
@@ -209,7 +190,7 @@ func TestIntegration_PlanSpec_PassesWithAnalysis(t *testing.T) {
 func TestIntegration_ReviewCode_NoDiff(t *testing.T) {
 	// Non-strict mode: empty diff yields a message to stderr, nil error, empty stdout.
 	setupProject(t, "test-review-no-diff",
-		withQodeYAML("project:\n  name: test\n  stack: go\nscoring:\n  strict: false\n"),
+		withQodeYAML(testYAMLFullNonStrict),
 	)
 
 	out, err := runCommand(t, "review", "code")
@@ -227,7 +208,7 @@ func TestIntegration_ReviewCode_NoDiff(t *testing.T) {
 // an error in strict mode when there is no diff.
 func TestIntegration_ReviewCode_StrictNoDiff(t *testing.T) {
 	setupProject(t, "test-review-strict",
-		withQodeYAML("project:\n  name: test\n  stack: go\nscoring:\n  strict: true\n"),
+		withQodeYAML(testYAMLStrictMode),
 	)
 
 	_, err := runCommand(t, "review", "code")
@@ -236,5 +217,26 @@ func TestIntegration_ReviewCode_StrictNoDiff(t *testing.T) {
 	}
 	if !errors.Is(err, ErrNoChanges) {
 		t.Errorf("expected ErrNoChanges, got: %v", err)
+	}
+}
+
+// TestIntegration_PlanRefine_CancelledContext verifies that CLI commands
+// respect context cancellation and return an error promptly.
+func TestIntegration_PlanRefine_CancelledContext(t *testing.T) {
+	setupProject(t, "test-cancel")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	rootCmd.SetArgs([]string{"plan", "refine"})
+	rootCmd.SetContext(ctx)
+	err := rootCmd.Execute()
+	rootCmd.SetOut(nil)
+	rootCmd.SetContext(nil)
+
+	if err == nil {
+		t.Fatal("expected error for cancelled context")
 	}
 }

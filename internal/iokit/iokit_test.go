@@ -1,6 +1,8 @@
 package iokit_test
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -212,5 +214,37 @@ func TestReadFileOrString_PermissionDenied(t *testing.T) {
 	got := iokit.ReadFileOrString(path, "fallback")
 	if got != "fallback" {
 		t.Errorf("expected fallback on permission denied, got %q", got)
+	}
+}
+
+func TestAtomicWriteCtx_CancelledContext(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	target := filepath.Join(dir, "output.txt")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := iokit.AtomicWriteCtx(ctx, target, []byte("data"), 0644)
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context.Canceled, got: %v", err)
+	}
+	// Target file must not exist.
+	if _, statErr := os.Stat(target); !os.IsNotExist(statErr) {
+		t.Error("expected no file at target path after cancelled write")
+	}
+}
+
+func TestWriteFileCtx_CancelledContext(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	target := filepath.Join(dir, "output.txt")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := iokit.WriteFileCtx(ctx, target, []byte("data"), 0644)
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context.Canceled, got: %v", err)
 	}
 }

@@ -4,7 +4,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
+)
+
+// Shared YAML config constants for tests — eliminates scattered inline YAML.
+const (
+	testYAMLMinimal       = "project:\n  name: test\n"
+	testYAMLWithStack     = "project:\n  name: test\n  stack: go\n"
+	testYAMLStrictMode    = "scoring:\n  strict: true\n"
+	testYAMLNonStrict     = "scoring:\n  strict: false\n"
+	testYAMLFullNonStrict = "project:\n  name: test\n  stack: go\nscoring:\n  strict: false\n"
 )
 
 // setupTestRoot initialises a real git repo on the given branch, sets flagRoot,
@@ -28,7 +38,8 @@ func setupTestRoot(t *testing.T, branch string) string {
 		}
 	}
 
-	branchDir := filepath.Join(root, ".qode", "branches", branch)
+	sanitized := strings.ReplaceAll(branch, "/", "--")
+	branchDir := filepath.Join(root, ".qode", "branches", sanitized)
 	if err := os.MkdirAll(filepath.Join(branchDir, "context"), 0755); err != nil {
 		t.Fatalf("MkdirAll branch dir: %v", err)
 	}

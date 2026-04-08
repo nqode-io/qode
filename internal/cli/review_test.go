@@ -4,6 +4,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -13,7 +14,7 @@ import (
 )
 
 func TestRunReview_HappyPath_Code(t *testing.T) {
-	root := setupTestRootWithConfig(t, "test-branch", "project:\n  name: test\n  stack: go\n")
+	root := setupTestRootWithConfig(t, "test-branch", testYAMLWithStack)
 
 	// Create a change so diff is non-empty.
 	if err := os.WriteFile(filepath.Join(root, "app.go"), []byte("package main\n"), 0644); err != nil {
@@ -27,7 +28,7 @@ func TestRunReview_HappyPath_Code(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runReview(&buf, io.Discard, "code", false, true) // force=true
+	err := runReview(context.Background(),&buf, io.Discard, "code", false, true) // force=true
 	if err != nil {
 		t.Fatalf("runReview code: %v", err)
 	}
@@ -39,12 +40,12 @@ func TestRunReview_HappyPath_Code(t *testing.T) {
 func TestRunReview_StrictEmptyDiff_Code(t *testing.T) {
 	root := setupTestRoot(t, "test-branch")
 
-	cfg := "project:\n  name: test\n  stack: go\nscoring:\n  strict: true\n"
+	cfg := testYAMLStrictMode
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
 
-	err := runReview(io.Discard, io.Discard, "code", false, false)
+	err := runReview(context.Background(),io.Discard, io.Discard, "code", false, false)
 	if err == nil {
 		t.Fatal("expected error for empty diff in strict mode")
 	}
@@ -56,12 +57,12 @@ func TestRunReview_StrictEmptyDiff_Code(t *testing.T) {
 func TestRunReview_StrictEmptyDiff_Security(t *testing.T) {
 	root := setupTestRoot(t, "test-branch")
 
-	cfg := "project:\n  name: test\n  stack: go\nscoring:\n  strict: true\n"
+	cfg := testYAMLStrictMode
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
 
-	err := runReview(io.Discard, io.Discard, "security", false, false)
+	err := runReview(context.Background(),io.Discard, io.Discard, "security", false, false)
 	if err == nil {
 		t.Fatal("expected error for empty diff in strict mode")
 	}
@@ -73,12 +74,12 @@ func TestRunReview_StrictEmptyDiff_Security(t *testing.T) {
 func TestRunReview_NonStrict_EmptyDiff_ReturnsNil(t *testing.T) {
 	root := setupTestRoot(t, "test-branch")
 
-	cfg := "project:\n  name: test\n  stack: go\n"
+	cfg := testYAMLWithStack
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
 
-	err := runReview(io.Discard, io.Discard, "code", false, false)
+	err := runReview(context.Background(),io.Discard, io.Discard, "code", false, false)
 	if err != nil {
 		t.Errorf("expected nil error in non-strict mode with empty diff, got: %v", err)
 	}
@@ -87,14 +88,14 @@ func TestRunReview_NonStrict_EmptyDiff_ReturnsNil(t *testing.T) {
 func TestRunReview_Force_EmptyDiff_Proceeds(t *testing.T) {
 	root := setupTestRoot(t, "test-branch")
 
-	cfg := "project:\n  name: test\n  stack: go\nscoring:\n  strict: true\n"
+	cfg := testYAMLStrictMode
 	if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(cfg), 0644); err != nil {
 		t.Fatalf("WriteFile qode.yaml: %v", err)
 	}
 
 	// force=true bypasses the strict diff-empty check.
 	// It may fail later (context load etc.) but must not fail on "no changes".
-	err := runReview(io.Discard, io.Discard, "code", false, true)
+	err := runReview(context.Background(),io.Discard, io.Discard, "code", false, true)
 	if err != nil && errors.Is(err, ErrNoChanges) {
 		t.Errorf("--force should bypass diff-empty check, got: %v", err)
 	}

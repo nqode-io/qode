@@ -1,11 +1,13 @@
 package git
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestSanitizeBranchName verifies that slashes are replaced with "--" and
@@ -331,5 +333,29 @@ func TestChangedFiles_ReturnsModifiedFiles(t *testing.T) {
 		if !fileSet[want] {
 			t.Errorf("expected %s in changed files, got: %v", want, files)
 		}
+	}
+}
+
+func TestCurrentBranchCtx_CancelledContext(t *testing.T) {
+	t.Parallel()
+	root := initGitRepo(t, "main")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	_, err := CurrentBranchCtx(ctx, root)
+	if err == nil {
+		t.Fatal("expected error for cancelled context")
+	}
+}
+
+func TestRunCtx_DeadlineExceeded(t *testing.T) {
+	t.Parallel()
+	root := initGitRepo(t, "main")
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+
+	_, err := runCtx(ctx, root, "status")
+	if err == nil {
+		t.Fatal("expected error for expired deadline")
 	}
 }

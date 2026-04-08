@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -29,7 +30,7 @@ func newReviewCodeCmd() *cobra.Command {
 		Use:   "code",
 		Short: "Generate a code review prompt for the current changes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runReview(cmd.OutOrStdout(), cmd.ErrOrStderr(), "code", toFile, force)
+			return runReview(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), "code", toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
@@ -44,7 +45,7 @@ func newReviewSecurityCmd() *cobra.Command {
 		Use:   "security",
 		Short: "Generate a security review prompt for the current changes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runReview(cmd.OutOrStdout(), cmd.ErrOrStderr(), "security", toFile, force)
+			return runReview(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), "security", toFile, force)
 		},
 	}
 	cmd.Flags().BoolVar(&toFile, "to-file", false, "save prompt to file instead of stdout")
@@ -52,8 +53,8 @@ func newReviewSecurityCmd() *cobra.Command {
 	return cmd
 }
 
-func runReview(out, errOut io.Writer, kind string, toFile, force bool) error {
-	sess, err := loadSession()
+func runReview(ctx context.Context, out, errOut io.Writer, kind string, toFile, force bool) error {
+	sess, err := loadSessionCtx(ctx)
 	if err != nil {
 		return err
 	}
@@ -61,7 +62,7 @@ func runReview(out, errOut io.Writer, kind string, toFile, force bool) error {
 		sess.Config.Scoring.Strict = true
 	}
 
-	diff, err := git.DiffFromBase(sess.Root, "")
+	diff, err := git.DiffFromBaseCtx(ctx, sess.Root, "")
 	if err != nil {
 		return fmt.Errorf("getting diff: %w", err)
 	}
