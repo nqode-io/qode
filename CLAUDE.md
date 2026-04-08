@@ -6,49 +6,63 @@ Go CLI that generates structured AI prompts for a standardized developer workflo
 
 ```bash
 go build ./...                                          # Build
-go test ./...                                           # All tests
-go test ./internal/<package>/... -run TestFunctionName  # Single test
+go test ./...                                           # Unit tests (<2s)
+go test -race ./...                                     # Unit tests + race detection
+go test -tags integration ./...                         # Integration tests (separate)
+go test ./internal/<pkg>/... -run TestName              # Single test
+go test -update ./...                                   # Regenerate golden files
 golangci-lint run                                       # Lint
 go install ./cmd/qode/                                  # Install locally
 ```
 
-## Architecture
+CI enforces **minimum 70% coverage** with race detection.
 
-### Data flow
+## Architecture
 
 Config (`config`) → Branch context (`branchcontext`) → Prompt engine (`prompt`) → Domain builders (`plan`, `review`) → CLI commands (`cli`) → Output
 
-- **Config** loads `qode.yaml`; normalizes shorthand (`stack:`) and multi-layer (`layers:[]`) into `[]LayerConfig`
-- **Branch context** reads per-branch state from `.qode/branches/<branch>/` (ticket, analysis, spec, reviews)
-- **Prompt engine** resolves templates local-override-first: `.qode/prompts/` before `go:embed` fallback. `TemplateData` is the single struct for all templates
-- **Workflow guards** (`workflow`) enforce step ordering — e.g. spec requires minimum refine score
+### Dependency layering — MUST preserve
 
-### Two-pass scoring
+```text
+Leaf (zero internal deps): git, env, iokit, log, version
+Mid-level:                 config → iokit; scoring → config; knowledge → config, iokit
+Domain:                    branchcontext, prompt, workflow, plan, review, scaffold
+Top-level (fan-out):       cli → ALL packages
+```
 
-Reviews use a worker/judge split to eliminate self-scoring bias:
+**Only `cli` fans out. Never introduce circular deps or upward imports.** Every new package must declare its layer.
 
-- **Worker**: produces analysis without a score
-- **Judge**: scores the analysis against a configurable rubric independently
+### Design decisions
 
-### Dependency layering (MUST preserve)
-
-Leaf packages (zero internal deps): `git`, `env`, `iokit`, `log`, `version`. Domain packages depend only on `config` and leaves. Only `cli` fans out to all packages. **Never introduce circular dependencies or upward imports.**
-
-### Key design decisions
-
-- Only one interface exists: `prompt.Renderer` — define interfaces only at consumption boundaries, not preemptively
-- Use `iokit.AtomicWrite` for any file consumed by subsequent workflow steps
-- Template override (local `.qode/prompts/` → embedded fallback) is the standard for user-extensible assets
-- Dependencies are minimal (cobra, yaml.v3, godotenv) — prefer stdlib over new dependencies
+- **One interface**: `prompt.Renderer` — define interfaces only at consumption boundaries, not preemptively
+- **Atomic writes**: use `iokit.AtomicWrite` for any file consumed by subsequent workflow steps
+- **Template override**: local `.qode/prompts/` → `go:embed` fallback for user-extensible assets
+- **Fluent builder**: `TemplateDataBuilder` with `.WithXxx().Build()` for template data construction
+- **Context threading**: every function performing I/O or calling a subprocess must accept `context.Context` as first parameter. New code uses context-accepting signatures directly; callers without a context pass `context.Background()`
+- **Minimal deps**: only cobra, yaml.v3, godotenv — prefer stdlib; reject convenience-only deps
+- **Two-pass scoring**: worker produces analysis (no score), judge scores independently against configurable rubric
+- **Sentinel errors**: export sentinel errors (`ErrConfigNotFound`, etc.) for programmatic distinction; match with `errors.Is()`
 
 ## Code standards
 
 - Functions ≤ 50 lines, single responsibility
 - Named constants — no magic numbers
-- Explicit error handling — never swallow errors; wrap with `%w` for context
+- Wrap errors with `%w` — never swallow errors
 - No TODO comments in committed code
+- Push domain logic into dedicated packages, not `cli/`
 - Follow existing patterns; do not introduce new ones
-- Push domain logic into dedicated packages, not into `cli/` command files
+
+## Test standards
+
+Default shape: **table-driven** with `t.Run(tc.name, ...)` and `t.Parallel()` on parent and subtests, unless test mutates global state.
+
+- `t.Helper()` on every helper, `t.Cleanup` for teardown, `t.TempDir()` for filesystem tests
+- Never mock what you own — test real implementations; mock only at system boundaries (network, external processes)
+- Golden files for template/structured output — always support `-update` flag
+- Error paths must assert error type (`errors.Is`) or message content, not just `err != nil`
+- Integration tests behind `//go:build integration` — create fresh command instances, never reset globals
+- Sentinel assertions for prompt content — inject unique strings, assert presence/absence
+- One assertion theme per test function — if a name needs "and", split into two tests
 
 ## Quality standards
 
@@ -60,4 +74,4 @@ Leaf packages (zero internal deps): `git`, `env`, `iokit`, `log`, `version`. Dom
 
 - IMPORTANT: Never change `CLAUDE.md` file
 - If asked to add something to `notes` or `notes.md`, always append to `.qode/branches/$(git branch --show-current | sed 's|/|--|g')/context/notes.md`
-- The `.qode/`, `.claude/`, `.cursor/`, `.cursorrules/` directories and `qode.yaml` are configuration — only read them when testing changes that affect these files, never modify directly (use `qode init` instead)
+- `.qode/`, `.claude/`, `.cursor/`, `.cursorrules/` directories and `qode.yaml` are configuration — only read when testing changes to these files, never modify directly (use `qode init` instead)
