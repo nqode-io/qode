@@ -13,22 +13,21 @@ Planned features for qode, in recommended implementation order. Items marked wit
 - [x] [#26](https://github.com/nqode-io/qode/issues/26) — **Configurable scoring rubrics** — Extract hardcoded rubrics into `qode.yaml`, support custom dimensions and weights
 - [x] [#30](https://github.com/nqode-io/qode/issues/30) — **Strict mode** — Block workflow steps when prerequisites are missing or scores are below configured minimums; `--force` flag to bypass gates; `qode workflow status` subcommand *(requires #26)*
 - [x] [#29](https://github.com/nqode-io/qode/issues/29) — **Rethink qode init** — Simplify setup; let the AI read project configs instead of hardcoding test/lint/build commands
+- [x] [#27](https://github.com/nqode-io/qode/issues/27) — **Replace ticket fetch with MCP** — Use MCP servers instead of built-in HTTP clients; support comments, attachments, linked resources
+- [x] [#41](https://github.com/nqode-io/qode/issues/41) — **`qode init`: append gitignore rules** — Add qode-specific `.gitignore` entries (temp prompt files, ticket snapshots, scored iteration copies) during init
 
 ## In Progress
 
-- [x] [#27](https://github.com/nqode-io/qode/issues/27) — **Replace ticket fetch with MCP** — Use MCP servers instead of built-in HTTP clients; support comments, attachments, linked resources
+- [x] [#36](https://github.com/nqode-io/qode/issues/36) — **Add qode pr create command** — Generate PR/MR with AI-written title and description from branch context; store PR URL for subsequent steps *(requires #27)*
 
 ## Up Next (parallel — start after #24)
 
-- [ ] [#41](https://github.com/nqode-io/qode/issues/41) — **`qode init`: append gitignore rules** — Add qode-specific `.gitignore` entries (temp prompt files, ticket snapshots, scored iteration copies) during init
 - [ ] [#33](https://github.com/nqode-io/qode/issues/33) — **Worktree support** — Config flag `branch.use_worktrees` to create git worktrees via worktrunk, phantom, or `git worktree`; enables parallel task development
 - [ ] [#34](https://github.com/nqode-io/qode/issues/34) — **Add Codex IDE support** — Slash commands, IDE setup, templates, and documentation for OpenAI Codex, following the same convention as Cursor and Claude Code
-- [ ] [#35](https://github.com/nqode-io/qode/issues/35) — **Auto-commit after completed tasks** — Config flag `workflow.auto_commit`; instructs AI to commit after each task in `qode start`, after review fixes, and after PR comment resolution
 
 ## After Dependencies
 
 - [ ] [#28](https://github.com/nqode-io/qode/issues/28) — **Post step outputs as ticket comments** — Publish analysis, spec, and review outputs to the original ticket via MCP *(requires #27)*
-- [ ] [#36](https://github.com/nqode-io/qode/issues/36) — **Add qode pr create command** — Generate PR/MR with AI-written title and description from branch context; store PR URL for subsequent steps *(requires #27)*
 - [ ] [#31](https://github.com/nqode-io/qode/issues/31) — **PR/MR review comments step** — Read and address PR review comments using MCP *(requires #27, #36)*
 
 ## Release Preparation (after all features above)
@@ -42,18 +41,17 @@ Planned features for qode, in recommended implementation order. Items marked wit
  ├── #25 Optimize prompts for token usage ✅
  ├── #26 Configurable scoring rubrics ✅
  │    └── #30 Strict mode ✅
- └── #27 Replace ticket fetch with MCP
+ └── #27 Replace ticket fetch with MCP ✅
       ├── #28 Post step outputs as ticket comments
       └── #36 qode pr create
            └── #31 PR/MR review comments step
 
 #29 Rethink qode init ✅
- └── #41 qode init: append gitignore rules
+ └── #41 qode init: append gitignore rules ✅
 
 Independent (can run in parallel with any of the above):
  #33 Worktree support
  #34 Codex IDE support
- #35 Auto-commit after completed tasks
  #45 Replace qode check with /qode-check  ✅
 
 All of the above → #37 Prepare for public beta release
