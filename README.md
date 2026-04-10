@@ -43,8 +43,9 @@ qode branch create feat-user-dashboard
 6. /qode-check                   (in IDE)    Run quality gates (tests + lint)
 7. /qode-review-code             (in IDE)    Code review
 8. /qode-review-security         (in IDE)    Security review
-9. `/qode-knowledge-add-context` (in IDE)    (Recommended) Extract lessons learned
-10. qode branch remove <name>                Cleanup
+9. qode pr create                            Create pull request via MCP
+10. `/qode-knowledge-add-context` (in IDE)   (Recommended) Extract lessons learned
+11. qode branch remove <name>                Cleanup
 ```
 
 Run `qode workflow` for the full diagram.

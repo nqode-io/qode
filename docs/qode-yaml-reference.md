@@ -95,3 +95,24 @@ Override the pass threshold for `/qode-plan-refine`. When not set, the threshold
 ### `scoring.rubrics`
 
 Rubric dimensions are **not configured in `qode.yaml`**. They live in `.qode/scoring.yaml` so that re-running `qode init` never overwrites them. See [scoring-yaml-reference.md](scoring-yaml-reference.md) for the full rubric format and field reference.
+
+### `pr`
+
+Controls pull request generation behaviour for `qode pr create` / `/qode-pr-create`.
+
+```yaml
+pr:
+  template: default      # "default" or path to a custom template under .qode/prompts/
+  draft: false           # create as a draft PR
+  base_branch: ""        # target base branch; auto-detected when empty
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `template` | string | `"default"` | Template name to render. `"default"` uses the built-in `pr/create` template. Set to a relative path under `.qode/prompts/` for a custom template. |
+| `draft` | bool | `false` | When `true`, the AI is instructed to create the PR as a draft. |
+| `base_branch` | string | `""` | Target base branch for the PR. When empty, auto-detected from `git symbolic-ref refs/remotes/origin/HEAD`, falling back to `main`. Override per-invocation with `--base <branch>`. |
+
+**Base branch resolution priority:** `--base` CLI flag > `pr.base_branch` config > git auto-detection > `main`.
+
+**Workflow guard:** `qode pr create` requires `spec.md` to exist. It does not require code or security reviews to have passed.

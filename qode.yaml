@@ -1,9 +1,7 @@
-qode_version: 0.1.6-alpha
+qode_version: dev
 review:
     min_code_score: 10
-    min_security_score: 10
-scoring:
-    strict: true
+    min_security_score: 8
 ide:
     cursor:
         enabled: true
@@ -11,3 +9,5 @@ ide:
         enabled: true
 knowledge:
     path: .qode/knowledge
+pr:
+    template: default

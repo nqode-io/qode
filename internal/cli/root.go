@@ -42,8 +42,9 @@ Workflow:
   6. /qode-check                 (in IDE)       # Run quality gates (tests + lint)
   7. /qode-review-code           (in IDE)       # Code review
   8. /qode-review-security       (in IDE)       # Security review
-  9. /qode-knowledge-add-context (in IDE)       # Capture lessons learned
- 10. qode branch remove <name>                  # Cleanup
+  9. qode pr create                             # Create pull request via MCP
+ 10. /qode-knowledge-add-context (in IDE)       # Capture lessons learned
+ 11. qode branch remove <name>                  # Cleanup
 
 See 'qode workflow' for the full diagram.`,
 		SilenceUsage:  true,
@@ -66,6 +67,7 @@ See 'qode workflow' for the full diagram.`,
 		newBranchCmd(),
 		newKnowledgeCmd(),
 		newWorkflowCmd(),
+		newPrCmd(),
 	)
 }
 

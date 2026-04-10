@@ -82,3 +82,26 @@ func TestTemplateDataBuilder_AllSetters(t *testing.T) {
 		t.Errorf("Rubric not set correctly: %+v", data.Rubric)
 	}
 }
+
+func TestTemplateDataBuilder_PRFields(t *testing.T) {
+	t.Parallel()
+	data := NewTemplateData("proj", "main").
+		WithBaseBranch("develop").
+		WithCodeReview("code review content").
+		WithSecurityReview("security review content").
+		WithDraftPR(true).
+		Build()
+
+	if data.BaseBranch != "develop" {
+		t.Errorf("BaseBranch = %q, want %q", data.BaseBranch, "develop")
+	}
+	if data.CodeReview != "code review content" {
+		t.Errorf("CodeReview = %q, want %q", data.CodeReview, "code review content")
+	}
+	if data.SecurityReview != "security review content" {
+		t.Errorf("SecurityReview = %q, want %q", data.SecurityReview, "security review content")
+	}
+	if !data.DraftPR {
+		t.Error("DraftPR = false, want true")
+	}
+}

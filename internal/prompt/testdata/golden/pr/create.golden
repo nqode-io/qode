@@ -1,0 +1,63 @@
+# PR Creation — test-project
+
+## Context
+
+- **Project:** test-project
+- **Branch:** feat-login
+- **Base branch:** main
+
+## Ticket context
+
+# PROJ-1
+Add login feature.
+
+## Specification
+
+# Spec
+Implementation specification.
+
+## Diff
+
+diff --git a/login.go b/login.go
++package main
+
+
+## Code Review
+
+## Code Review
+Score: 10/12
+
+
+## Security Review
+
+## Security Review
+Score: 10/12
+
+## Your Task
+
+1. Check via MCP whether a PR already exists for branch `feat-login` targeting `main`. If one already exists, report its URL and stop.
+
+2. Generate a PR title and description using the following format:
+
+   ```
+   ## Summary
+   <2–4 bullet points summarising what was implemented, referencing the ticket>
+
+   ## Changes
+   <grouped by area — e.g. CLI, config, template — with file-level callouts for significant changes>
+
+   ## Testing
+   <what was tested; links to relevant test files>
+
+   ## Review notes
+   <anything reviewers should pay attention to; flags from code/security review if present>
+
+   ## Ticket link
+   <link to the original ticket if available in context>
+   ```
+
+3. Create the PR via MCP targeting `main`.
+
+4. After the PR is created, write the PR URL to:
+
+   `/tmp/.qode/branches/feat-login/context/pr-url.txt`

@@ -39,6 +39,21 @@ func TestDefaultConfig(t *testing.T) {
 	}
 }
 
+func TestDefaultConfig_PRDefaults(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultConfig()
+
+	if cfg.PR.Template != "default" {
+		t.Errorf("PR.Template = %q, want %q", cfg.PR.Template, "default")
+	}
+	if cfg.PR.Draft {
+		t.Error("PR.Draft = true, want false")
+	}
+	if cfg.PR.BaseBranch != "" {
+		t.Errorf("PR.BaseBranch = %q, want %q", cfg.PR.BaseBranch, "")
+	}
+}
+
 func TestSave_Load(t *testing.T) {
 	dir := t.TempDir()
 

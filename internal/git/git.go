@@ -33,6 +33,17 @@ func CurrentBranchCtx(ctx context.Context, root string) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
+// DefaultBranch returns the default branch for origin by reading the symbolic
+// ref of origin/HEAD. It strips the "origin/" prefix and returns "main" if
+// the ref is absent, unset, or any git error occurs.
+func DefaultBranch(ctx context.Context, root string) (string, error) {
+	out, err := runCtx(ctx, root, "symbolic-ref", "refs/remotes/origin/HEAD", "--short")
+	if err != nil || strings.TrimSpace(out) == "" {
+		return "main", nil
+	}
+	return strings.TrimPrefix(strings.TrimSpace(out), "origin/"), nil
+}
+
 // CreateBranch creates a new git branch from base (or HEAD if base is empty).
 func CreateBranch(root, name, base string) error {
 	if base == "" {

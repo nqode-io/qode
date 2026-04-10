@@ -8,6 +8,7 @@ type Config struct {
 	IDE          IDEConfig          `yaml:"ide,omitempty"`
 	Knowledge    KnowledgeConfig    `yaml:"knowledge,omitempty"`
 	Branch       BranchConfig       `yaml:"branch,omitempty"`
+	PR           PRConfig           `yaml:"pr,omitempty"`
 }
 
 // ReviewConfig sets thresholds for code and security reviews.
@@ -60,6 +61,13 @@ type KnowledgeConfig struct {
 // BranchConfig controls branch lifecycle behaviour.
 type BranchConfig struct {
 	KeepBranchContext bool `yaml:"keep_branch_context,omitempty"`
+}
+
+// PRConfig controls pull request generation behaviour.
+type PRConfig struct {
+	Template   string `yaml:"template,omitempty"`
+	Draft      bool   `yaml:"draft,omitempty"`
+	BaseBranch string `yaml:"base_branch,omitempty"`
 }
 
 // ScoringFileConfig is written to and read from .qode/scoring.yaml.

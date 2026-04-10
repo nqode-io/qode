@@ -95,6 +95,30 @@ func (b *TemplateDataBuilder) WithLessons(l string) *TemplateDataBuilder {
 	return b
 }
 
+// WithBaseBranch sets the target base branch for PR creation.
+func (b *TemplateDataBuilder) WithBaseBranch(s string) *TemplateDataBuilder {
+	b.data.BaseBranch = s
+	return b
+}
+
+// WithCodeReview sets the contents of code-review.md.
+func (b *TemplateDataBuilder) WithCodeReview(s string) *TemplateDataBuilder {
+	b.data.CodeReview = s
+	return b
+}
+
+// WithSecurityReview sets the contents of security-review.md.
+func (b *TemplateDataBuilder) WithSecurityReview(s string) *TemplateDataBuilder {
+	b.data.SecurityReview = s
+	return b
+}
+
+// WithDraftPR sets whether to create the PR as a draft.
+func (b *TemplateDataBuilder) WithDraftPR(draft bool) *TemplateDataBuilder {
+	b.data.DraftPR = draft
+	return b
+}
+
 // Build returns the constructed TemplateData.
 func (b *TemplateDataBuilder) Build() TemplateData {
 	return b.data

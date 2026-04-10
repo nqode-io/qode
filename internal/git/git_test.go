@@ -78,6 +78,44 @@ func writeAndStage(t *testing.T, root, name, content string) {
 	gitRun(t, root, "add", name)
 }
 
+func TestDefaultBranch_FallsBackToMain(t *testing.T) {
+	t.Parallel()
+	// A local-only repo has no origin/HEAD, so DefaultBranch must return "main".
+	root := initGitRepo(t, "main")
+	got, err := DefaultBranch(context.Background(), root)
+	if err != nil {
+		t.Fatalf("DefaultBranch: %v", err)
+	}
+	if got != "main" {
+		t.Errorf("DefaultBranch() = %q, want %q", got, "main")
+	}
+}
+
+func TestDefaultBranch_StripsOriginPrefix(t *testing.T) {
+	t.Parallel()
+	// Create a local repo and manually set the symbolic-ref so origin/HEAD points to "develop".
+	root := initGitRepo(t, "develop")
+	// Add a fake remote entry and set origin/HEAD directly without needing a real remote.
+	for _, args := range [][]string{
+		{"remote", "add", "origin", "https://example.com/fake-repo.git"},
+		{"symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/develop"},
+	} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = root
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+
+	got, err := DefaultBranch(context.Background(), root)
+	if err != nil {
+		t.Fatalf("DefaultBranch: %v", err)
+	}
+	if got != "develop" {
+		t.Errorf("DefaultBranch() = %q, want %q", got, "develop")
+	}
+}
+
 func TestCurrentBranch(t *testing.T) {
 	t.Parallel()
 	root := initGitRepo(t, "main")

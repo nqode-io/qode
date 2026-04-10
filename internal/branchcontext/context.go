@@ -37,6 +37,7 @@ type Context struct {
 	// Derived.
 	RefinedAnalysis string // most recent refined-analysis.md
 	Spec            string // spec.md content
+	PRURL           string // PR URL stored after creation (context/pr-url.txt)
 }
 
 // Load reads the context folder for a branch.
@@ -55,6 +56,7 @@ func Load(root, branch string) (*Context, error) {
 	ctxSubDir := filepath.Join(dir, "context")
 
 	ctx.Ticket = iokit.ReadFileOrString(filepath.Join(ctxSubDir, "ticket.md"), "")
+	ctx.PRURL = strings.TrimSpace(iokit.ReadFileOrString(filepath.Join(ctxSubDir, "pr-url.txt"), ""))
 
 	// Scan for extra context files.
 	entries, _ := os.ReadDir(ctxSubDir)
@@ -64,7 +66,7 @@ func Load(root, branch string) (*Context, error) {
 		}
 		name := e.Name()
 		switch name {
-		case "ticket.md", "notes.md":
+		case "ticket.md", "notes.md", "pr-url.txt":
 			continue
 		}
 		full := filepath.Join(ctxSubDir, name)
@@ -155,6 +157,15 @@ func (c *Context) CodeReviewScore() float64 {
 // SecurityReviewScore returns the total score from security-review.md, or 0 if absent or unparseable.
 func (c *Context) SecurityReviewScore() float64 {
 	return scoring.ExtractScoreFromFile(filepath.Join(c.ContextDir, "security-review.md"))
+}
+
+// HasPRURL returns true if a PR URL has been stored for this branch.
+func (c *Context) HasPRURL() bool { return c.PRURL != "" }
+
+// StorePRURL writes url to context/pr-url.txt for the given branch.
+func StorePRURL(root, branch, url string) error {
+	path := filepath.Join(root, config.QodeDir, "branches", git.SanitizeBranchName(branch), "context", "pr-url.txt")
+	return iokit.AtomicWrite(path, []byte(url), 0o644)
 }
 
 // EnsureContextDir creates the context sub-directory for a branch if it doesn't exist.

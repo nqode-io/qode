@@ -70,9 +70,13 @@ type TemplateData struct {
 	Lessons      string  // existing lesson summaries for deduplication; set for knowledge/add-branch
 	OutputPath   string  // when set, templates append file-write instructions
 	BranchDir    string  // absolute path to .qode/branches/<branch>/; used by templates for file-path references
-	Rubric       scoring.Rubric // scoring rubric; set for judge-refine, code-review, security-review prompts
-	TargetScore  int            // pass threshold for refine judge (defaults to Rubric.Total(); overridden by scoring.target_score)
-	MinPassScore float64        // minimum score to pass review; set from review.min_code_score or review.min_security_score
+	Rubric         scoring.Rubric // scoring rubric; set for judge-refine, code-review, security-review prompts
+	TargetScore    int            // pass threshold for refine judge (defaults to Rubric.Total(); overridden by scoring.target_score)
+	MinPassScore   float64        // minimum score to pass review; set from review.min_code_score or review.min_security_score
+	BaseBranch     string         // target base branch for PR creation
+	CodeReview     string         // contents of code-review.md (empty if absent)
+	SecurityReview string         // contents of security-review.md (empty if absent)
+	DraftPR        bool           // whether to create the PR as a draft
 }
 
 // Render renders a named template (e.g. "refine/base") with the given data.

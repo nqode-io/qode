@@ -91,6 +91,7 @@ func TestBuildStatusLines_FullyComplete(t *testing.T) {
 		RefinedAnalysis: "analysis",
 		Spec:            "spec content",
 		ContextDir:      ctxDir,
+		PRURL:           "https://github.com/org/repo/pull/1",
 		Iterations: []branchcontext.Iteration{
 			{Number: 1, Score: 25},
 		},

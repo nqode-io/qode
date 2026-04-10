@@ -27,6 +27,8 @@ func CheckStep(step string, ctx *branchcontext.Context, cfg *config.Config) Chec
 		return checkSpec(ctx, cfg)
 	case "start":
 		return checkStart(ctx)
+	case "pr":
+		return checkPR(ctx)
 	}
 	return CheckResult{}
 }
@@ -53,6 +55,16 @@ func checkSpec(ctx *branchcontext.Context, cfg *config.Config) CheckResult {
 				"Refine score is %d/%d, minimum required is %d. Run /qode-plan-refine to improve.",
 				score, maxScore, min,
 			),
+		}
+	}
+	return CheckResult{}
+}
+
+func checkPR(ctx *branchcontext.Context) CheckResult {
+	if !ctx.HasSpec() {
+		return CheckResult{
+			Blocked: true,
+			Message: "spec.md not found — run /qode-plan-spec first",
 		}
 	}
 	return CheckResult{}

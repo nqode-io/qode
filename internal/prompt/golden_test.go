@@ -78,6 +78,19 @@ func TestGolden_Templates(t *testing.T) {
 				WithOutputPath("/tmp/judge-score.md").
 				Build(),
 		},
+		{
+			name: "pr/create",
+			data: NewTemplateData("test-project", "feat-login").
+				WithBranchDir("/tmp/.qode/branches/feat-login").
+				WithBaseBranch("main").
+				WithTicket("# PROJ-1\nAdd login feature.").
+				WithSpec("# Spec\nImplementation specification.").
+				WithDiff("diff --git a/login.go b/login.go\n+package main").
+				WithCodeReview("## Code Review\nScore: 10/12").
+				WithSecurityReview("## Security Review\nScore: 10/12").
+				WithDraftPR(false).
+				Build(),
+		},
 	}
 
 	for _, tt := range tests {

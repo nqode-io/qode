@@ -112,6 +112,21 @@ func TestCheckStep(t *testing.T) {
 			cfg:         &defaultCfg,
 			wantBlocked: false,
 		},
+		{
+			name:        "pr/no-spec",
+			step:        "pr",
+			ctx:         &branchcontext.Context{},
+			cfg:         &defaultCfg,
+			wantBlocked: true,
+			wantMsg:     "spec.md",
+		},
+		{
+			name:        "pr/spec-present",
+			step:        "pr",
+			ctx:         &branchcontext.Context{Spec: "spec content"},
+			cfg:         &defaultCfg,
+			wantBlocked: false,
+		},
 	}
 
 	for _, tc := range cases {

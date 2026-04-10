@@ -19,6 +19,11 @@ func DefaultConfig() Config {
 			Path: ".qode/knowledge",
 		},
 		Branch: BranchConfig{KeepBranchContext: false},
+		PR: PRConfig{
+			Template:   "default",
+			Draft:      false,
+			BaseBranch: "",
+		},
 	}
 }
 

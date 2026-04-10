@@ -116,8 +116,18 @@ func buildStatusLines(ctx *branchcontext.Context, cfg *config.Config, diff strin
 	// Step 8: Reviews.
 	lines = append(lines, reviewStatus(ctx, cfg, &upNext)...)
 
-	// Step 9: Lessons learned — always optional.
-	lines = append(lines, step(9, "Capture lessons learned", "Always optional — run /qode-knowledge-add-context."))
+	// Step 9: PR creation.
+	if ctx.HasPRURL() {
+		lines = append(lines, step(9, "Create pull request", fmt.Sprintf("Completed — %s", ctx.PRURL)))
+	} else {
+		lines = append(lines, step(9, "Create pull request", "Not started — run qode pr create."))
+		if upNext == "" {
+			upNext = "Run qode pr create."
+		}
+	}
+
+	// Step 10: Lessons learned — always optional.
+	lines = append(lines, step(10, "Capture lessons learned", "Always optional — run /qode-knowledge-add-context."))
 
 	return lines, upNext
 }
@@ -211,13 +221,16 @@ const workflowList = `qode Workflow
     /qode-review-code
     /qode-review-security
 
-9.  Capture lessons learned
+9.  Create pull request
+    qode pr create
+
+10. Capture lessons learned
     /qode-knowledge-add-context  (optional)
 
-10. Ship
-    git push && gh pr create
+11. Ship
+    git push
 
-11. Cleanup
+12. Cleanup
     qode branch remove <name>
 
 Run 'qode workflow status' to see live completion status for the current branch.

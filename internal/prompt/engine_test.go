@@ -9,6 +9,110 @@ import (
 	"text/template"
 )
 
+func TestPRCreateTemplate_Conditionals(t *testing.T) {
+	t.Parallel()
+	e, err := NewEngine(t.TempDir())
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+
+	cases := []struct {
+		name        string
+		data        TemplateData
+		mustContain []string
+		mustAbsent  []string
+	}{
+		{
+			name: "all-sections-present",
+			data: NewTemplateData("proj", "feat").
+				WithBranchDir("/tmp/branch").
+				WithBaseBranch("main").
+				WithTicket("UNIQUE-TICKET-SENTINEL").
+				WithSpec("spec content").
+				WithDiff("UNIQUE-DIFF-SENTINEL").
+				WithCodeReview("UNIQUE-CODEREVIEW-SENTINEL").
+				WithSecurityReview("UNIQUE-SECURITYREVIEW-SENTINEL").
+				WithDraftPR(false).
+				Build(),
+			mustContain: []string{
+				"UNIQUE-TICKET-SENTINEL",
+				"UNIQUE-DIFF-SENTINEL",
+				"UNIQUE-CODEREVIEW-SENTINEL",
+				"UNIQUE-SECURITYREVIEW-SENTINEL",
+				"already exists",
+				"## Ticket context",
+			},
+		},
+		{
+			name: "ticket-absent",
+			data: NewTemplateData("proj", "feat").
+				WithBranchDir("/tmp/branch").
+				WithBaseBranch("main").
+				WithSpec("spec content").
+				Build(),
+			mustAbsent: []string{"## Ticket context"},
+		},
+		{
+			name: "reviews-absent",
+			data: NewTemplateData("proj", "feat").
+				WithBranchDir("/tmp/branch").
+				WithBaseBranch("main").
+				WithSpec("spec content").
+				Build(),
+			mustAbsent: []string{"## Code Review", "## Security Review"},
+		},
+		{
+			name: "draft-true",
+			data: NewTemplateData("proj", "feat").
+				WithBranchDir("/tmp/branch").
+				WithBaseBranch("main").
+				WithSpec("spec content").
+				WithDraftPR(true).
+				Build(),
+			mustContain: []string{"as a draft"},
+		},
+		{
+			name: "draft-false",
+			data: NewTemplateData("proj", "feat").
+				WithBranchDir("/tmp/branch").
+				WithBaseBranch("main").
+				WithSpec("spec content").
+				WithDraftPR(false).
+				Build(),
+			mustAbsent: []string{"as a draft"},
+		},
+		{
+			name: "pr-exists-check-always-present",
+			data: NewTemplateData("proj", "feat").
+				WithBranchDir("/tmp/branch").
+				WithBaseBranch("main").
+				WithSpec("spec content").
+				Build(),
+			mustContain: []string{"already exists"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := e.Render("pr/create", tc.data)
+			if err != nil {
+				t.Fatalf("Render: %v", err)
+			}
+			for _, want := range tc.mustContain {
+				if !strings.Contains(got, want) {
+					t.Errorf("expected output to contain %q", want)
+				}
+			}
+			for _, absent := range tc.mustAbsent {
+				if strings.Contains(got, absent) {
+					t.Errorf("expected output NOT to contain %q", absent)
+				}
+			}
+		})
+	}
+}
+
 func TestNewEngine(t *testing.T) {
 	t.Parallel()
 	e, err := NewEngine("/tmp/my-project")

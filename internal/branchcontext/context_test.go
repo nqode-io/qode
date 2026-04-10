@@ -348,6 +348,72 @@ func TestLoad_MissingBranchDir(t *testing.T) {
 	}
 }
 
+func TestContext_LoadPRURL(t *testing.T) {
+	t.Parallel()
+	root, branchDir := setupBranchDir(t)
+	writeFile(t, filepath.Join(branchDir, "context", "pr-url.txt"), "https://github.com/org/repo/pull/42\n")
+
+	ctx, err := Load(root, "test-branch")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if ctx.PRURL != "https://github.com/org/repo/pull/42" {
+		t.Errorf("PRURL = %q, want %q", ctx.PRURL, "https://github.com/org/repo/pull/42")
+	}
+	if !ctx.HasPRURL() {
+		t.Error("HasPRURL() = false, want true")
+	}
+}
+
+func TestContext_LoadPRURL_Missing(t *testing.T) {
+	t.Parallel()
+	root, _ := setupBranchDir(t)
+
+	ctx, err := Load(root, "test-branch")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if ctx.PRURL != "" {
+		t.Errorf("PRURL = %q, want empty", ctx.PRURL)
+	}
+	if ctx.HasPRURL() {
+		t.Error("HasPRURL() = true, want false")
+	}
+}
+
+func TestStorePRURL(t *testing.T) {
+	t.Parallel()
+	root, branchDir := setupBranchDir(t)
+
+	if err := StorePRURL(root, "test-branch", "https://github.com/org/repo/pull/99"); err != nil {
+		t.Fatalf("StorePRURL: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(branchDir, "context", "pr-url.txt"))
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if got := string(data); got != "https://github.com/org/repo/pull/99" {
+		t.Errorf("pr-url.txt = %q, want %q", got, "https://github.com/org/repo/pull/99")
+	}
+}
+
+func TestContext_PRURL_NotInExtra(t *testing.T) {
+	t.Parallel()
+	root, branchDir := setupBranchDir(t)
+	writeFile(t, filepath.Join(branchDir, "context", "pr-url.txt"), "https://github.com/org/repo/pull/1")
+
+	ctx, err := Load(root, "test-branch")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	for _, e := range ctx.Extra {
+		if e == "pr-url.txt" {
+			t.Error("pr-url.txt must not appear in ctx.Extra")
+		}
+	}
+}
+
 // TestLoad_MissingContextSubdir verifies Load works when the branch dir exists
 // but context/ does not.
 func TestLoad_MissingContextSubdir(t *testing.T) {
