@@ -24,12 +24,10 @@ Planned features for qode, in recommended implementation order. Items marked wit
 
 - [ ] [#33](https://github.com/nqode-io/qode/issues/33) — **Worktree support** — Config flag `branch.use_worktrees` to create git worktrees via worktrunk, phantom, or `git worktree`; enables parallel task development
 - [ ] [#34](https://github.com/nqode-io/qode/issues/34) — **Add Codex IDE support** — Slash commands, IDE setup, templates, and documentation for OpenAI Codex, following the same convention as Cursor and Claude Code
-- [ ] [#35](https://github.com/nqode-io/qode/issues/35) — **Auto-commit after completed tasks** — Config flag `workflow.auto_commit`; instructs AI to commit after each task in `qode start`, after review fixes, and after PR comment resolution
 
 ## After Dependencies
 
 - [ ] [#28](https://github.com/nqode-io/qode/issues/28) — **Post step outputs as ticket comments** — Publish analysis, spec, and review outputs to the original ticket via MCP *(requires #27)*
-
 - [ ] [#31](https://github.com/nqode-io/qode/issues/31) — **PR/MR review comments step** — Read and address PR review comments using MCP *(requires #27, #36)*
 
 ## Release Preparation (after all features above)
@@ -54,7 +52,6 @@ Planned features for qode, in recommended implementation order. Items marked wit
 Independent (can run in parallel with any of the above):
  #33 Worktree support
  #34 Codex IDE support
- #35 Auto-commit after completed tasks
  #45 Replace qode check with /qode-check  ✅
 
 All of the above → #37 Prepare for public beta release
