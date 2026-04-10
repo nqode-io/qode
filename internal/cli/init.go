@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -90,6 +91,10 @@ func runInitExisting(out io.Writer, root string) error {
 	// Generate IDE configs and slash commands using the loaded (or default) config.
 	if err := scaffold.Setup(out, root, &cfg); err != nil {
 		return fmt.Errorf("setting up IDE configs: %w", err)
+	}
+
+	if err := scaffold.AppendGitignoreRules(context.Background(), out, root); err != nil {
+		return fmt.Errorf("appending gitignore rules: %w", err)
 	}
 
 	// Remove scaffold prompt overrides: these templates are one-time scaffolding

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/nqode/qode/internal/prompt"
+	"github.com/nqode/qode/internal/scaffold"
 	"gopkg.in/yaml.v3"
 )
 
@@ -185,6 +186,51 @@ func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 
 	if string(firstScoring) != string(secondScoring) {
 		t.Error(".qode/scoring.yaml was overwritten on re-run")
+	}
+}
+
+func TestRunInitExisting_AppendsGitignoreRules(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, ".gitignore"))
+	if err != nil {
+		t.Fatalf("reading .gitignore: %v", err)
+	}
+	content := string(data)
+
+	for _, rule := range scaffold.GitignoreRules {
+		if !strings.Contains(content, rule) {
+			t.Errorf(".gitignore missing rule %q", rule)
+		}
+	}
+}
+
+func TestRunInitExisting_GitignoreIsIdempotent(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+		t.Fatalf("first runInitExisting: %v", err)
+	}
+	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+		t.Fatalf("second runInitExisting: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, ".gitignore"))
+	if err != nil {
+		t.Fatalf("reading .gitignore: %v", err)
+	}
+	content := string(data)
+
+	for _, rule := range scaffold.GitignoreRules {
+		if count := strings.Count(content, rule); count != 1 {
+			t.Errorf("rule %q appears %d times, want 1", rule, count)
+		}
 	}
 }
 
