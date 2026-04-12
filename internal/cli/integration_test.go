@@ -6,33 +6,32 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/nqode/qode/internal/iokit"
+	"github.com/nqode/qode/internal/qodecontext"
 )
 
 // setupOption is a functional option for setupProject.
-type setupOption func(root, branchDir string, t *testing.T)
+type setupOption func(root, ctxDir string, t *testing.T)
 
-// withTicket writes a ticket.md file to the branch context directory.
+// withTicket writes a ticket.md file to the context directory.
 func withTicket(content string) setupOption {
-	return func(root, branchDir string, t *testing.T) {
+	return func(root, ctxDir string, t *testing.T) {
 		t.Helper()
-		ctxDir := filepath.Join(branchDir, "context")
 		if err := iokit.WriteFile(filepath.Join(ctxDir, "ticket.md"), []byte(content), 0644); err != nil {
 			t.Fatalf("withTicket: %v", err)
 		}
 	}
 }
 
-// withRefinedAnalysis writes a refined-analysis.md to the branch directory.
+// withRefinedAnalysis writes a refined-analysis.md to the context directory.
 func withRefinedAnalysis(content string) setupOption {
-	return func(root, branchDir string, t *testing.T) {
+	return func(root, ctxDir string, t *testing.T) {
 		t.Helper()
-		if err := iokit.WriteFile(filepath.Join(branchDir, "refined-analysis.md"), []byte(content), 0644); err != nil {
+		if err := iokit.WriteFile(filepath.Join(ctxDir, "refined-analysis.md"), []byte(content), 0644); err != nil {
 			t.Fatalf("withRefinedAnalysis: %v", err)
 		}
 	}
@@ -40,28 +39,34 @@ func withRefinedAnalysis(content string) setupOption {
 
 // withQodeYAML writes a qode.yaml to the project root.
 func withQodeYAML(content string) setupOption {
-	return func(root, branchDir string, t *testing.T) {
+	return func(root, ctxDir string, t *testing.T) {
 		t.Helper()
-		if err := os.WriteFile(filepath.Join(root, "qode.yaml"), []byte(content), 0644); err != nil {
+		if err := iokit.WriteFile(filepath.Join(root, "qode.yaml"), []byte(content), 0644); err != nil {
 			t.Fatalf("withQodeYAML: %v", err)
 		}
 	}
 }
 
-// setupProject creates a temporary git repository with a branch and minimal
-// qode.yaml, then applies any functional options. It returns the project root.
-func setupProject(t *testing.T, branch string, opts ...setupOption) string {
+// setupProject creates a temporary project root with a named context and
+// minimal qode.yaml, then applies any functional options. It returns the
+// project root.
+func setupProject(t *testing.T, ctxName string, opts ...setupOption) string {
 	t.Helper()
 
-	// Delegate git init, branch dir creation, and flagRoot to shared helper.
-	root := setupTestRootWithConfig(t, branch, testYAMLNonStrict)
+	root := setupTestRootWithConfig(t, testYAMLNonStrict)
 
-	// Resolve the branch directory for functional options.
-	sanitized := strings.ReplaceAll(branch, "/", "--")
-	branchDir := filepath.Join(root, ".qode", "branches", sanitized)
+	// Create and switch to the named context for this test.
+	if err := qodecontext.Init(context.Background(), root, ctxName); err != nil {
+		t.Fatalf("qodecontext.Init: %v", err)
+	}
+	if err := qodecontext.Switch(context.Background(), root, ctxName); err != nil {
+		t.Fatalf("qodecontext.Switch: %v", err)
+	}
+
+	ctxDir := filepath.Join(root, ".qode", "contexts", ctxName)
 
 	for _, opt := range opts {
-		opt(root, branchDir, t)
+		opt(root, ctxDir, t)
 	}
 
 	// Integration tests also need to reset cobra state, including child command
@@ -132,7 +137,7 @@ func TestIntegration_PlanRefine_DefaultRubric(t *testing.T) {
 // succeeds (exit 0) even when no ticket.md has been written, because the
 // template references the file by path and the AI reads it at runtime.
 func TestIntegration_PlanRefine_MissingTicket(t *testing.T) {
-	// No withTicket option — context/ticket.md is absent.
+	// No withTicket option — ticket.md is absent.
 	setupProject(t, "test-no-ticket")
 
 	out, err := runCommand(t, "plan", "refine")
@@ -189,6 +194,7 @@ func TestIntegration_PlanSpec_PassesWithAnalysis(t *testing.T) {
 // there is nothing to review).
 func TestIntegration_ReviewCode_NoDiff(t *testing.T) {
 	// Non-strict mode: empty diff yields a message to stderr, nil error, empty stdout.
+	// runDiffCommand returns "" when the command fails (e.g. no git repo).
 	setupProject(t, "test-review-no-diff",
 		withQodeYAML(testYAMLFullNonStrict),
 	)

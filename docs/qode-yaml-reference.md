@@ -20,6 +20,8 @@ ide:
     enabled: true
 knowledge:
   path: .qode/knowledge
+diff:
+  command: "git diff HEAD -- :(exclude).qode/"
 ```
 
 > **Re-running `qode init` regenerates `qode.yaml` with these defaults.** Any customisations you have made to `qode.yaml` (score thresholds, `scoring.strict`, etc.) will be reset. Re-add them after running `qode init`, or run it only when you want a clean reset.
@@ -46,6 +48,9 @@ ide:
 
 knowledge:
   path: .qode/knowledge
+
+diff:
+  command: "git diff HEAD -- :(exclude).qode/"   # shell command whose stdout is the diff
 ```
 
 ## Field descriptions
@@ -95,3 +100,20 @@ Override the pass threshold for `/qode-plan-refine`. When not set, the threshold
 ### `scoring.rubrics`
 
 Rubric dimensions are **not configured in `qode.yaml`**. They live in `.qode/scoring.yaml` so that re-running `qode init` never overwrites them. See [scoring-yaml-reference.md](scoring-yaml-reference.md) for the full rubric format and field reference.
+
+### `diff.command`
+
+Shell command whose stdout is used as the diff for `qode review code`, `qode review security`, and `qode workflow status`. qode runs the command via `exec.Command` (not a shell), captures stdout, and saves it to `diff.md` in the active context directory.
+
+Default: `"git diff HEAD -- :(exclude).qode/"`.
+
+When the command is empty or exits non-zero, the diff is treated as empty (best-effort). Use `--force` on review commands to bypass the empty-diff guard.
+
+> **Limitation:** The command string is split on whitespace, so arguments containing spaces — even when quoted — are not supported. If you need complex argument handling, wrap your command in a shell script and reference that script instead.
+
+Users on Mercurial, SVN, or custom tooling can replace the default:
+
+```yaml
+diff:
+  command: "hg diff"
+```

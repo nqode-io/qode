@@ -30,9 +30,8 @@ go install ./cmd/qode/
 qode uses its own workflow for development. Once you have qode installed:
 
 ```bash
-qode branch create <name>               # Create a feature branch
-qode ticket fetch <url>                 # Fetch ticket into context
-/qode-ticket-fetch <url> (in IDE)
+qode context init <name> --auto-switch  # Create a new work context and switch to it
+/qode-ticket-fetch <url> (in IDE)       # Fetch ticket into context
 /qode-plan-refine (in IDE)              # Refine requirements—iterate to 25/25
 /qode-plan-spec (in IDE)                # Generate tech spec
 /qode-start (in IDE)                    # Run implementation prompt
@@ -40,7 +39,7 @@ qode ticket fetch <url>                 # Fetch ticket into context
 /qode-review-code (in IDE)              # Code review
 /qode-review-security (in IDE)          # Security review
 /qode-knowledge-add-context (in IDE)    # (Recommended) Extract lessons learned
-qode branch remove <name>               # Cleanup
+qode context remove                     # Cleanup
 ```
 
 See the [README](README.md) for the full workflow.
@@ -67,7 +66,7 @@ Run `/qode-check` (in IDE) to execute all gates interactively.
 ## Submitting Changes
 
 1. Fork the repository
-2. Create a feature branch (`qode branch create feat-description` or `git checkout -b feat-description`)
+2. Create a feature branch (`git checkout -b feat-description`) and initialise a context (`qode context init feat-description --auto-switch`)
 3. Make your changes
 4. Ensure all quality gates pass (`/qode-check` in IDE)
 5. Open a pull request against `main`

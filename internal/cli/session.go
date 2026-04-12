@@ -3,18 +3,16 @@ package cli
 import (
 	"context"
 
-	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/config"
-	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/prompt"
+	"github.com/nqode/qode/internal/qodecontext"
 )
 
 // Session holds the common bootstrapped state used by most CLI commands.
 type Session struct {
 	Root    string
 	Config  *config.Config
-	Branch  string
-	Context *branchcontext.Context
+	Context *qodecontext.Context
 	Engine  prompt.Renderer
 }
 
@@ -37,11 +35,7 @@ func loadSessionCtx(ctx context.Context) (*Session, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	branch, err := git.CurrentBranchCtx(ctx, root)
-	if err != nil {
-		return nil, err
-	}
-	bctx, err := branchcontext.Load(root, branch)
+	qctx, err := qodecontext.Load(ctx, root)
 	if err != nil {
 		return nil, err
 	}
@@ -49,5 +43,5 @@ func loadSessionCtx(ctx context.Context) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Session{Root: root, Config: cfg, Branch: branch, Context: bctx, Engine: engine}, nil
+	return &Session{Root: root, Config: cfg, Context: qctx, Engine: engine}, nil
 }

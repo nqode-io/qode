@@ -77,13 +77,11 @@ func TestAppendGitignoreRules(t *testing.T) {
 			wantOutput: "",
 		},
 		{
-			name: "marker present, two rules missing",
+			name: "marker present, one rule missing",
 			setup: func(t *testing.T, dir string) {
 				t.Helper()
 				present := GitignoreMarker + "\n" +
-					GitignoreRules[0] + "\n" +
-					GitignoreRules[1] + "\n" +
-					GitignoreRules[2] + "\n"
+					strings.Join(GitignoreRules[:len(GitignoreRules)-1], "\n") + "\n"
 				writeGitignore(t, dir, present)
 			},
 			verify: func(t *testing.T, dir string) {

@@ -1,4 +1,4 @@
-qode_version: 0.1.6-alpha
+qode_version: 0.1.7-alpha
 review:
     min_code_score: 10
     min_security_score: 10
@@ -11,3 +11,5 @@ ide:
         enabled: true
 knowledge:
     path: .qode/knowledge
+diff:
+    command: git diff HEAD -- :(exclude).qode/

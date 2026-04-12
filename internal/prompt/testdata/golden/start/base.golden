@@ -6,11 +6,10 @@ Follow the implementation plan in the spec precisely.
 ## Project Context
 
 **Project:** test-project
-**Branch:** feat-login
 
 ## Technical Specification
 
-Read the technical specification from `/spec.md` before beginning implementation.
+Read the technical specification from `.qode/contexts/current/spec.md` before beginning implementation.
 
 
 ## Project Knowledge Base

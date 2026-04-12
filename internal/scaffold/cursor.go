@@ -20,7 +20,6 @@ var cursorCommands = []string{
 	"qode-start",
 	"qode-ticket-fetch",
 	"qode-knowledge-add-context",
-	"qode-knowledge-add-branch",
 }
 
 // SetupCursor generates Cursor IDE configuration files.
@@ -34,7 +33,7 @@ func SetupCursor(out io.Writer, root string) error {
 		return err
 	}
 
-	data := prompt.NewTemplateData(filepath.Base(root), "").
+	data := prompt.NewTemplateData(filepath.Base(root)).
 		WithIDE("cursor").
 		Build()
 

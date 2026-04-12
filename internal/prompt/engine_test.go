@@ -31,7 +31,7 @@ func TestRender_EmbeddedTemplate(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	data := NewTemplateData(e.ProjectName(), "main").Build()
+	data := NewTemplateData(e.ProjectName()).Build()
 	out, err := e.Render("refine/base", data)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
@@ -57,7 +57,7 @@ func TestRender_LocalOverride(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	data := NewTemplateData("test-proj", "main").Build()
+	data := NewTemplateData("test-proj").Build()
 	out, err := e.Render("refine/base", data)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
@@ -211,7 +211,7 @@ func TestEmbeddedTemplates(t *testing.T) {
 		"review/code",
 		"review/security",
 		"scoring/judge_refine",
-		"knowledge/add-branch",
+		"knowledge/add-context-artifacts",
 		"knowledge/add-context",
 	}
 

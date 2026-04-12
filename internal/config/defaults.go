@@ -18,7 +18,9 @@ func DefaultConfig() Config {
 		Knowledge: KnowledgeConfig{
 			Path: ".qode/knowledge",
 		},
-		Branch: BranchConfig{KeepBranchContext: false},
+		Diff: DiffConfig{
+			Command: "git diff HEAD -- :(exclude).qode/",
+		},
 	}
 }
 

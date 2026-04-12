@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/config"
-	"github.com/nqode/qode/internal/git"
+	"github.com/nqode/qode/internal/qodecontext"
 	"github.com/nqode/qode/internal/scoring"
 	"github.com/nqode/qode/internal/workflow"
 	"github.com/spf13/cobra"
@@ -55,7 +54,7 @@ func runWorkflowStatus(out io.Writer) error {
 		return err
 	}
 
-	diff, _ := git.DiffFromBase(sess.Root, "")
+	diff := runDiffCommand(sess.Root, sess.Config.Diff.Command)
 
 	lines, upNext := buildStatusLines(sess.Context, sess.Config, diff)
 	for _, line := range lines {
@@ -68,13 +67,13 @@ func runWorkflowStatus(out io.Writer) error {
 	return nil
 }
 
-func buildStatusLines(ctx *branchcontext.Context, cfg *config.Config, diff string) (lines []string, upNext string) {
+func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string) (lines []string, upNext string) {
 	step := func(n int, label, status string) string {
 		return fmt.Sprintf("%d. %s - %s", n, label, status)
 	}
 
-	// Step 1: always complete once the branch exists.
-	lines = append(lines, step(1, "Create branch", "Completed."))
+	// Step 1: always complete once the context exists.
+	lines = append(lines, step(1, "Create context", "Completed."))
 
 	// Step 2: Add context.
 	if ctx.Ticket != "" {
@@ -122,7 +121,7 @@ func buildStatusLines(ctx *branchcontext.Context, cfg *config.Config, diff strin
 	return lines, upNext
 }
 
-func refineStatus(ctx *branchcontext.Context, cfg *config.Config, upNext *string) string {
+func refineStatus(ctx *qodecontext.Context, cfg *config.Config, upNext *string) string {
 	if !ctx.HasRefinedAnalysis() {
 		if *upNext == "" {
 			*upNext = "Run /qode-plan-refine."
@@ -148,7 +147,7 @@ func refineStatus(ctx *branchcontext.Context, cfg *config.Config, upNext *string
 	return fmt.Sprintf("%d iteration(s), latest score: %d/%d.", n, score, maxScore)
 }
 
-func reviewStatus(ctx *branchcontext.Context, cfg *config.Config, upNext *string) []string {
+func reviewStatus(ctx *qodecontext.Context, cfg *config.Config, upNext *string) []string {
 	var lines []string
 	codeMax := scoring.BuildRubric(scoring.RubricReview, cfg).Total()
 	secMax := scoring.BuildRubric(scoring.RubricSecurity, cfg).Total()
@@ -186,8 +185,8 @@ func reviewItemStatus(present bool, score, min float64, cmd string, maxScore int
 const workflowList = `qode Workflow
 =============
 
-1.  Create branch
-    qode branch create <name>
+1.  Manually create a branch, then initialise the qode context
+    qode context init <name>
 
 2.  Add context
     /qode-ticket-fetch <url>  (in Cursor/Claude Code)
@@ -218,7 +217,7 @@ const workflowList = `qode Workflow
     git push && gh pr create
 
 11. Cleanup
-    qode branch remove <name>
+    qode context remove
 
-Run 'qode workflow status' to see live completion status for the current branch.
+Run 'qode workflow status' to see live completion status for the current context.
 `

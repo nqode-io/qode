@@ -7,12 +7,11 @@ type TemplateDataBuilder struct {
 	data TemplateData
 }
 
-// NewTemplateData starts building a TemplateData with the project name and branch.
-func NewTemplateData(projectName, branch string) *TemplateDataBuilder {
+// NewTemplateData starts building a TemplateData with the project name.
+func NewTemplateData(projectName string) *TemplateDataBuilder {
 	return &TemplateDataBuilder{
 		data: TemplateData{
 			Project: TemplateProject{Name: projectName},
-			Branch:  branch,
 		},
 	}
 }
@@ -26,12 +25,6 @@ func (b *TemplateDataBuilder) WithIDE(ide string) *TemplateDataBuilder {
 // WithOutputPath sets the file-write instruction path.
 func (b *TemplateDataBuilder) WithOutputPath(p string) *TemplateDataBuilder {
 	b.data.OutputPath = p
-	return b
-}
-
-// WithBranchDir sets the absolute path to the branch state directory.
-func (b *TemplateDataBuilder) WithBranchDir(d string) *TemplateDataBuilder {
-	b.data.BranchDir = d
 	return b
 }
 

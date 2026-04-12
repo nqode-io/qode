@@ -52,7 +52,7 @@ func TestSetupClaudeCode_WritesTicketFetchCommand(t *testing.T) {
 	}
 
 	content := readClaudeCommand(t, dir, "qode-ticket-fetch")
-	for _, want := range []string{"$ARGUMENTS", "context/ticket.md", "MCP", "Figma"} {
+	for _, want := range []string{"$ARGUMENTS", "ticket.md", "MCP", "Figma"} {
 		if !strings.Contains(content, want) {
 			t.Errorf("qode-ticket-fetch.md missing %q", want)
 		}
@@ -85,11 +85,9 @@ func TestSetupClaudeCode_WritesKnowledgeCommands(t *testing.T) {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
-	for _, name := range []string{"qode-knowledge-add-context", "qode-knowledge-add-branch"} {
-		content := readClaudeCommand(t, dir, name)
-		if len(content) == 0 {
-			t.Errorf("%s.md is empty", name)
-		}
+	content := readClaudeCommand(t, dir, "qode-knowledge-add-context")
+	if len(content) == 0 {
+		t.Error("qode-knowledge-add-context.md is empty")
 	}
 }
 
@@ -158,7 +156,7 @@ func TestSetupCursor_WritesTicketFetchCommand(t *testing.T) {
 	}
 
 	content := readCursorCommand(t, dir, "qode-ticket-fetch")
-	for _, want := range []string{"$ARGUMENTS", "context/ticket.md", "description:", "MCP", "Figma"} {
+	for _, want := range []string{"$ARGUMENTS", "ticket.md", "description:", "MCP", "Figma"} {
 		if !strings.Contains(content, want) {
 			t.Errorf("qode-ticket-fetch.mdc missing %q", want)
 		}
@@ -191,11 +189,9 @@ func TestSetupCursor_WritesKnowledgeCommands(t *testing.T) {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
-	for _, name := range []string{"qode-knowledge-add-context", "qode-knowledge-add-branch"} {
-		content := readCursorCommand(t, dir, name)
-		if !strings.Contains(content, "description:") {
-			t.Errorf("%s.mdc missing YAML frontmatter", name)
-		}
+	content := readCursorCommand(t, dir, "qode-knowledge-add-context")
+	if !strings.Contains(content, "description:") {
+		t.Error("qode-knowledge-add-context.mdc missing YAML frontmatter")
 	}
 }
 

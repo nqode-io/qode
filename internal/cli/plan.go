@@ -29,7 +29,7 @@ func newPlanRefineCmd() *cobra.Command {
 		Long: `Generates a requirements refinement prompt and writes it to stdout.
 
 The LLM reads the stdout output and executes it as the worker prompt.
-Save your analysis to .qode/branches/<branch>/refined-analysis.md.
+Save your analysis to .qode/contexts/current/refined-analysis.md.
 
 Use --to-file to write the prompt files to disk (worker + judge) for debugging.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -71,7 +71,7 @@ func newPlanJudgeCmd() *cobra.Command {
 		Long: `Generates the judge scoring prompt and writes it to stdout.
 
 The LLM reads the stdout output and scores the refined analysis.
-Requires refined-analysis.md to exist in the branch directory.
+Requires refined-analysis.md to exist in the context directory.
 
 Use --to-file to write the prompt to disk for debugging the judge template.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -102,8 +102,8 @@ func runPlanJudge(ctx context.Context, out, errOut io.Writer, toFile bool) error
 		return err
 	}
 
-	branchDir := sess.Context.ContextDir
-	promptPath := filepath.Join(branchDir, ".refine-judge-prompt.md")
+	contextDir := sess.Context.ContextDir
+	promptPath := filepath.Join(contextDir, ".refine-judge-prompt.md")
 
 	if toFile {
 		if err := writePromptToFile(promptPath, p); err != nil {
@@ -123,8 +123,8 @@ func runPlanRefine(ctx context.Context, out, errOut io.Writer, ticketURL string,
 		return err
 	}
 
-	branchDir := sess.Context.ContextDir
-	analysisPath := filepath.Join(branchDir, "refined-analysis.md")
+	contextDir := sess.Context.ContextDir
+	analysisPath := filepath.Join(contextDir, "refined-analysis.md")
 
 	refOut, err := plan.BuildRefinePromptWithOutput(sess.Engine, sess.Config, sess.Context, ticketURL, 0, analysisPath)
 	if err != nil {
@@ -132,7 +132,7 @@ func runPlanRefine(ctx context.Context, out, errOut io.Writer, ticketURL string,
 	}
 
 	if toFile {
-		workerPath, err := plan.SaveIterationFiles(sess.Root, sess.Branch, refOut)
+		workerPath, err := plan.SaveIterationFiles(sess.Context.ContextDir, refOut)
 		if err != nil {
 			return err
 		}
@@ -169,9 +169,9 @@ func runPlanSpec(ctx context.Context, out, errOut io.Writer, toFile, force bool)
 		return ErrNoAnalysis
 	}
 
-	branchDir := sess.Context.ContextDir
-	specPath := filepath.Join(branchDir, "spec.md")
-	promptPath := filepath.Join(branchDir, ".spec-prompt.md")
+	contextDir := sess.Context.ContextDir
+	specPath := filepath.Join(contextDir, "spec.md")
+	promptPath := filepath.Join(contextDir, ".spec-prompt.md")
 
 	p, err := plan.BuildSpecPromptWithOutput(sess.Engine, sess.Config, sess.Context, specPath)
 	if err != nil {

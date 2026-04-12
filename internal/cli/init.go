@@ -60,7 +60,7 @@ func runInitExisting(out io.Writer, root string) error {
 
 	// Create .qode directory structure.
 	for _, dir := range []string{
-		filepath.Join(root, config.QodeDir, "branches"),
+		filepath.Join(root, config.QodeDir, "contexts"),
 		filepath.Join(root, config.QodeDir, "knowledge"),
 		filepath.Join(root, config.QodeDir, "prompts"),
 	} {
@@ -104,12 +104,6 @@ func runInitExisting(out io.Writer, root string) error {
 	if err := os.RemoveAll(scaffoldPromptsDir); err != nil {
 		return fmt.Errorf("removing scaffold prompts: %w", err)
 	}
-
-	_, _ = fmt.Fprintln(out)
-	_, _ = fmt.Fprintln(out, "Next steps:")
-	_, _ = fmt.Fprintln(out, "  1. Run 'qode branch create <name>' to start your first feature")
-	_, _ = fmt.Fprintln(out, "  2. Fetch your ticket with /qode-ticket-fetch <url> (in IDE) or edit .qode/branches/<name>/context/ticket.md")
-	_, _ = fmt.Fprintln(out, "  3. Use /qode-plan-refine in your IDE to begin requirements refinement")
 
 	return nil
 }

@@ -6,20 +6,21 @@ Work through this systematically. Do NOT score your own output.
 ## Project Context
 
 **Project:** test-project
-**Branch:** feat-login
 
 ## Ticket / Feature Description
 
-Read `/tmp/.qode/branches/feat-login/context/ticket.md` if it exists. If the file is absent, stop execution immediately with an error message `Ticket file not found`.
+Read `.qode/contexts/current/ticket.md` if it exists. If the file is absent, stop execution immediately with an error message `Ticket file not found`.
+Read `.qode/contexts/current/ticket-comments.md` if it exists.
+Read `.qode/contexts/current/ticket-links.md` if it exists.
 
 ## Additional Notes
 
-Read `/tmp/.qode/branches/feat-login/context/notes.md` if it exists.
+Read `.qode/contexts/current/notes.md` if it exists.
 
 ## Previous Analysis
 
 If you have already refined this analysis in a previous iteration, read
-`/tmp/.qode/branches/feat-login/refined-analysis.md` for context. Otherwise begin fresh.
+`.qode/contexts/current/refined-analysis.md` for context. Otherwise begin fresh.
 
 
 

@@ -17,11 +17,10 @@ Unverified trust is where vulnerabilities live.
 ## Project Context
 
 **Project:** test-project
-**Branch:** feat-login
 
 ## Changes to Review
 
-Read the diff from `/diff.md`.
+Read the diff from `.qode/contexts/current/diff.md`.
 
 ## Security Checklist
 

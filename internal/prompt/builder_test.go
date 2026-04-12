@@ -8,13 +8,10 @@ import (
 
 func TestNewTemplateData_Defaults(t *testing.T) {
 	t.Parallel()
-	data := NewTemplateData("my-project", "feat/login").Build()
+	data := NewTemplateData("my-project").Build()
 
 	if data.Project.Name != "my-project" {
 		t.Errorf("Project.Name = %q, want %q", data.Project.Name, "my-project")
-	}
-	if data.Branch != "feat/login" {
-		t.Errorf("Branch = %q, want %q", data.Branch, "feat/login")
 	}
 	if data.IDE != "" {
 		t.Errorf("IDE = %q, want empty", data.IDE)
@@ -35,10 +32,9 @@ func TestTemplateDataBuilder_AllSetters(t *testing.T) {
 		},
 	}
 
-	data := NewTemplateData("proj", "main").
+	data := NewTemplateData("proj").
 		WithIDE("claude").
 		WithOutputPath("/tmp/out.md").
-		WithBranchDir("/root/.qode/branches/main").
 		WithRubric(rubric).
 		WithTargetScore(25).
 		WithMinPassScore(10.0).
@@ -58,7 +54,6 @@ func TestTemplateDataBuilder_AllSetters(t *testing.T) {
 	}{
 		{"IDE", data.IDE, "claude"},
 		{"OutputPath", data.OutputPath, "/tmp/out.md"},
-		{"BranchDir", data.BranchDir, "/root/.qode/branches/main"},
 		{"Ticket", data.Ticket, "ticket content"},
 		{"Analysis", data.Analysis, "analysis content"},
 		{"Spec", data.Spec, "spec content"},

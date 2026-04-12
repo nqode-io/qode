@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/config"
+	"github.com/nqode/qode/internal/qodecontext"
 )
 
 func TestRunWorkflow(t *testing.T) {
@@ -22,7 +22,7 @@ func TestRunWorkflow(t *testing.T) {
 }
 
 func TestBuildStatusLines_AllEmpty(t *testing.T) {
-	ctx := &branchcontext.Context{}
+	ctx := &qodecontext.Context{}
 	cfgVal := config.DefaultConfig()
 	cfg := &cfgVal
 
@@ -59,7 +59,7 @@ func TestBuildStatusLines_AllEmpty(t *testing.T) {
 }
 
 func TestBuildStatusLines_TicketOnly(t *testing.T) {
-	ctx := &branchcontext.Context{Ticket: "JIRA-123"}
+	ctx := &qodecontext.Context{Ticket: "JIRA-123"}
 	cfgVal := config.DefaultConfig()
 	cfg := &cfgVal
 
@@ -86,12 +86,12 @@ func TestBuildStatusLines_FullyComplete(t *testing.T) {
 		}
 	}
 
-	ctx := &branchcontext.Context{
+	ctx := &qodecontext.Context{
 		Ticket:          "JIRA-123",
 		RefinedAnalysis: "analysis",
 		Spec:            "spec content",
 		ContextDir:      ctxDir,
-		Iterations: []branchcontext.Iteration{
+		Iterations: []qodecontext.Iteration{
 			{Number: 1, Score: 25},
 		},
 	}
@@ -125,39 +125,39 @@ func TestRefineStatus_Table(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		ctx      *branchcontext.Context
+		ctx      *qodecontext.Context
 		wantSub  string
 		wantNext string
 	}{
 		{
 			name:     "no analysis",
-			ctx:      &branchcontext.Context{},
+			ctx:      &qodecontext.Context{},
 			wantSub:  "Not started",
 			wantNext: "refine",
 		},
 		{
 			name: "unscored",
-			ctx: &branchcontext.Context{
+			ctx: &qodecontext.Context{
 				RefinedAnalysis: "content",
-				Iterations:      []branchcontext.Iteration{{Number: 1, Score: 0}},
+				Iterations:      []qodecontext.Iteration{{Number: 1, Score: 0}},
 			},
 			wantSub:  "unscored",
 			wantNext: "judge",
 		},
 		{
 			name: "below minimum",
-			ctx: &branchcontext.Context{
+			ctx: &qodecontext.Context{
 				RefinedAnalysis: "content",
-				Iterations:      []branchcontext.Iteration{{Number: 1, Score: 10}},
+				Iterations:      []qodecontext.Iteration{{Number: 1, Score: 10}},
 			},
 			wantSub:  "below minimum",
 			wantNext: "below minimum",
 		},
 		{
 			name: "passing",
-			ctx: &branchcontext.Context{
+			ctx: &qodecontext.Context{
 				RefinedAnalysis: "content",
-				Iterations:      []branchcontext.Iteration{{Number: 1, Score: 25}},
+				Iterations:      []qodecontext.Iteration{{Number: 1, Score: 25}},
 			},
 			wantSub:  "latest score: 25/",
 			wantNext: "",

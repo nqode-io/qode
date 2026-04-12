@@ -22,7 +22,7 @@ func newStartCmd() *cobra.Command {
 		Long: `Reads spec.md and knowledge base, then generates an implementation prompt.
 
 The prompt is written to stdout for the LLM to execute directly.
-Use --to-file to write the prompt to .qode/branches/<branch>/.start-prompt.md for debugging.`,
+Use --to-file to write the prompt to .qode/contexts/current/.start-prompt.md for debugging.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runStart(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), toFile, force)
 		},

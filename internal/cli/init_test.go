@@ -46,7 +46,7 @@ func TestRunInitExisting_CreatesDirs(t *testing.T) {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
-	for _, sub := range []string{"branches", "knowledge", "prompts"} {
+	for _, sub := range []string{"contexts", "knowledge", "prompts"} {
 		path := filepath.Join(dir, ".qode", sub)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Errorf(".qode/%s/ not created", sub)
@@ -141,9 +141,6 @@ func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 	// Sanity-check that the writer received expected content.
 	if !strings.Contains(out, "Generated:") {
 		t.Errorf("expected 'Generated:' in output, got: %s", out)
-	}
-	if !strings.Contains(out, "Next steps:") {
-		t.Errorf("expected 'Next steps:' in output, got: %s", out)
 	}
 }
 
