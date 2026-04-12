@@ -15,3 +15,27 @@ Then:
 3. Rewrite refined-analysis.md replacing the first line with: <!-- qode:iteration=N score=S/M -->
 4. Write a copy to: .qode/contexts/current/refined-analysis-N-score-S.md
 5. Report the score to the user. If S >= T, suggest running /qode-plan-spec. Otherwise suggest re-running /qode-plan-refine.
+
+## Post Step to Ticket (Optional)
+
+1. Read `.qode/contexts/current/ticket.md`. If absent or no line matching `**URL:** <url>` is found, notify the user "No ticket URL found — skipping ticket comment." and skip the remaining steps.
+2. Extract the URL and select the MCP comment tool:
+   - `https://github.com/*/issues/*` → GitHub MCP tool whose name contains `add_comment` or `create_comment`
+   - `https://*.atlassian.net/browse/*` → Jira MCP tool whose name contains `add_comment` or `create_comment`
+   - `https://linear.app/*/issue/*` → Linear MCP tool whose name contains `add_comment` or `create_comment`
+   - `https://dev.azure.com/*/_workitems/*` → Azure DevOps MCP tool whose name contains `add_comment` or `create_comment`
+   - `https://www.notion.so/*` → Notion MCP tool whose name contains `add_comment` or `create_comment`
+   - Unrecognised URL → skip silently
+3. If the required MCP tool is not available in your tool list, skip silently.
+4. Read `.qode/contexts/current/.ctx-name.md` for the context name.
+5. Repeat until the user answers "No":
+   Use `AskUserQuestion` to ask: "Post `.qode/contexts/current/refined-analysis.md` as a new ticket comment? (Yes / No)"
+   - **Yes**: post via the selected MCP tool with body:
+     ```
+     **qode: plan-refine** | context: `<context-name>`
+
+     <full contents of .qode/contexts/current/refined-analysis.md>
+     ```
+     Note: the comment will be publicly visible on the ticket. On failure, report the error and offer retry or skip, then ask again.
+   - **Free text**: execute as next prompt, then return to step 5.
+   - **No**: end.
