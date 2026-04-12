@@ -18,12 +18,7 @@ const GitignoreMarker = "# qode temp files"
 // GitignoreRules lists the gitignore patterns that qode adds to .gitignore.
 // Callers must not modify this slice.
 var GitignoreRules = []string{
-	".qode/branches/*/.*.md",
-	".qode/branches/*/context/ticket.md",
-	".qode/branches/*/context/ticket-comments.md",
-	".qode/branches/*/context/ticket-links.md",
-	".qode/branches/*/refined-analysis-*-score-*.md",
-	".qode/branches/*/diff.md",
+	".qode/contexts/*",
 	".qode/prompts/scaffold/",
 }
 

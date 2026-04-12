@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/nqode/qode/internal/config"
-	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/prompt"
+	"github.com/nqode/qode/internal/qodecontext"
 )
 
 func TestBuildCodePrompt_OmitsDiffAndSpec(t *testing.T) {
@@ -19,10 +19,10 @@ func TestBuildCodePrompt_OmitsDiffAndSpec(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &branchcontext.Context{
-		Branch:     "test-branch",
-		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
-		Spec:       "spec sentinel content here",
+	ctx := &qodecontext.Context{
+		ContextName: "test-context",
+		ContextDir:  filepath.Join(root, ".qode", "contexts", "test-context"),
+		Spec:        "spec sentinel content here",
 	}
 
 	got, err := BuildCodePrompt(engine, &config.Config{}, ctx, "")
@@ -64,9 +64,9 @@ func TestBuildCodePrompt_PctConstraints(t *testing.T) {
 		},
 	}
 
-	ctx := &branchcontext.Context{
-		Branch:     "test-branch",
-		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	ctx := &qodecontext.Context{
+		ContextName: "test-context",
+		ContextDir:  filepath.Join(root, ".qode", "contexts", "test-context"),
 	}
 
 	got, err := BuildCodePrompt(engine, cfg, ctx, "")
@@ -92,9 +92,9 @@ func TestBuildSecurityPrompt_OmitsDiff(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &branchcontext.Context{
-		Branch:     "test-branch",
-		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	ctx := &qodecontext.Context{
+		ContextName: "test-context",
+		ContextDir:  filepath.Join(root, ".qode", "contexts", "test-context"),
 	}
 
 	got, err := BuildSecurityPrompt(engine, &config.Config{}, ctx, "")
@@ -120,9 +120,9 @@ func TestBuildCodePrompt_ContainsProjectName(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &branchcontext.Context{
-		Branch:     "test-branch",
-		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	ctx := &qodecontext.Context{
+		ContextName: "test-context",
+		ContextDir:  filepath.Join(root, ".qode", "contexts", "test-context"),
 	}
 
 	got, err := BuildCodePrompt(engine, &config.Config{}, ctx, "")
@@ -148,9 +148,9 @@ func TestBuildSecurityPrompt_ContainsProjectName(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &branchcontext.Context{
-		Branch:     "test-branch",
-		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	ctx := &qodecontext.Context{
+		ContextName: "test-context",
+		ContextDir:  filepath.Join(root, ".qode", "contexts", "test-context"),
 	}
 
 	got, err := BuildSecurityPrompt(engine, &config.Config{}, ctx, "")

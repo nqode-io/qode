@@ -21,7 +21,7 @@ cmd/qode/          Entry point (main.go)
 internal/
   cli/             Cobra command definitions — the only fan-out package
   config/          Loads, validates, and normalizes qode.yaml
-  branchcontext/   Per-branch state from .qode/branches/<branch>/
+  qodecontext/     Per-context state from .qode/contexts/<name>/
   prompt/          Template engine with go:embed + local-override resolution
   plan/            Builds refine, spec, and start prompts
   review/          Builds code-review and security-review prompts
@@ -29,7 +29,6 @@ internal/
   workflow/        Step-ordering guards (pure, no I/O)
   knowledge/       Project lessons-learned markdown loader
   scaffold/        IDE configuration generator (qode init)
-  git/             Thin wrappers around git CLI
   env/             .env file loader
   iokit/           File I/O utilities, atomic writes
   log/             Structured logging (slog)
@@ -40,10 +39,10 @@ tools/             Release scripts
 
 ### Data flow
 
-Config (`config`) -> Branch context (`branchcontext`) -> Prompt engine (`prompt`) -> Domain builders (`plan`, `review`) -> CLI commands (`cli`) -> Output
+Config (`config`) -> Context (`qodecontext`) -> Prompt engine (`prompt`) -> Domain builders (`plan`, `review`) -> CLI commands (`cli`) -> Output
 
-- **Config** loads `qode.yaml`; normalizes shorthand (`stack:`) and multi-layer (`layers:[]`) into `[]LayerConfig`
-- **Branch context** reads per-branch state from `.qode/branches/<branch>/` (ticket, analysis, spec, reviews)
+- **Config** loads `qode.yaml`; provides scoring rubrics, review thresholds, diff command, and IDE settings
+- **Context** reads per-context state from `.qode/contexts/<name>/` via the `current` symlink (ticket, analysis, spec, reviews)
 - **Prompt engine** resolves templates local-override-first: `.qode/prompts/` before `go:embed` fallback. `TemplateData` is the single struct for all templates
 - **Workflow guards** (`workflow`) enforce step ordering — e.g. spec requires minimum refine score
 
@@ -58,7 +57,7 @@ Reviews use a worker/judge split to eliminate self-scoring bias:
 
 ```
 Leaf packages (zero internal deps):
-  git, env, iokit, log, version
+  env, iokit, log, version
 
 Mid-level:
   config      -> iokit
@@ -66,15 +65,15 @@ Mid-level:
   knowledge   -> config, iokit
 
 Domain:
-  branchcontext -> config, git, iokit, scoring
-  prompt        -> config, scoring
-  workflow      -> branchcontext, config, scoring
-  plan          -> branchcontext, config, git, iokit, prompt, scoring
-  review        -> branchcontext, config, prompt, scoring
-  scaffold      -> config, iokit, prompt
+  qodecontext -> config, iokit
+  prompt      -> config, scoring
+  workflow    -> qodecontext, config, scoring
+  plan        -> qodecontext, config, iokit, prompt, scoring
+  review      -> qodecontext, config, prompt, scoring
+  scaffold    -> config, iokit, prompt
 
 Top-level (fan-out):
-  cli           -> ALL packages
+  cli         -> ALL packages
 ```
 
 **Rule: Only `cli` fans out to all packages. Never introduce circular deps or upward imports.**
@@ -110,7 +109,7 @@ Only three direct dependencies: `cobra`, `yaml.v3`, `godotenv`. Stdlib is strong
 ## Gotchas
 
 - IMPORTANT: Never change `CLAUDE.md` file
-- If asked to add something to `notes` or `notes.md`, always append to `.qode/branches/$(git branch --show-current | sed 's|/|--|g')/context/notes.md`
+- If asked to add something to `notes` or `notes.md`, always append to `.qode/contexts/current/notes.md`
 - The `.qode/`, `.claude/`, `.cursor/`, `.cursorrules/` directories and `qode.yaml` are configuration — only read them when testing changes that affect these files, never modify directly (use `qode init` instead)
 
 ---

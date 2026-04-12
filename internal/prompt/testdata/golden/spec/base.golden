@@ -5,11 +5,10 @@ You are a senior software engineer writing a detailed technical specification.
 ## Project Context
 
 **Project:** test-project
-**Branch:** feat-login
 
 ## Refined Analysis
 
-Read the refined analysis from `/refined-analysis.md` before generating the spec.
+Read the refined analysis from `.qode/contexts/current/refined-analysis.md` before generating the spec.
 
 ## Your Task
 

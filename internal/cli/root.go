@@ -33,18 +33,6 @@ func init() {
 It standardises how developers use AI coding assistants across client projects
 with varied tech stacks — Next.js+React, .NET+React, Angular+Java, and more.
 
-Workflow:
-  1. qode branch create <name>                  # Create feature branch
-  2. /qode-ticket-fetch <url>    (in IDE)       # Fetch ticket
-  3. /qode-plan-refine           (in IDE)       # Refine requirements (3-5x, until pass threshold)
-  4. /qode-plan-spec             (in IDE)       # Generate tech spec
-  5. /qode-start                 (in IDE)       # Run implementation prompt
-  6. /qode-check                 (in IDE)       # Run quality gates (tests + lint)
-  7. /qode-review-code           (in IDE)       # Code review
-  8. /qode-review-security       (in IDE)       # Security review
-  9. /qode-knowledge-add-context (in IDE)       # Capture lessons learned
- 10. qode branch remove <name>                  # Cleanup
-
 See 'qode workflow' for the full diagram.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -63,7 +51,7 @@ See 'qode workflow' for the full diagram.`,
 		newPlanCmd(),
 		newStartCmd(),
 		newReviewCmd(),
-		newBranchCmd(),
+		newContextCmd(),
 		newKnowledgeCmd(),
 		newWorkflowCmd(),
 	)

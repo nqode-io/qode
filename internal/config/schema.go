@@ -2,12 +2,12 @@ package config
 
 // Config is the root configuration loaded from qode.yaml.
 type Config struct {
-	QodeVersion string       `yaml:"qode_version,omitempty"`
-	Review      ReviewConfig `yaml:"review,omitempty"`
-	Scoring      ScoringConfig      `yaml:"scoring,omitempty"`
-	IDE          IDEConfig          `yaml:"ide,omitempty"`
-	Knowledge    KnowledgeConfig    `yaml:"knowledge,omitempty"`
-	Branch       BranchConfig       `yaml:"branch,omitempty"`
+	QodeVersion string        `yaml:"qode_version,omitempty"`
+	Review      ReviewConfig  `yaml:"review,omitempty"`
+	Scoring     ScoringConfig `yaml:"scoring,omitempty"`
+	IDE         IDEConfig     `yaml:"ide,omitempty"`
+	Knowledge   KnowledgeConfig `yaml:"knowledge,omitempty"`
+	Diff        DiffConfig    `yaml:"diff,omitempty"`
 }
 
 // ReviewConfig sets thresholds for code and security reviews.
@@ -57,9 +57,9 @@ type KnowledgeConfig struct {
 	Path string `yaml:"path,omitempty"`
 }
 
-// BranchConfig controls branch lifecycle behaviour.
-type BranchConfig struct {
-	KeepBranchContext bool `yaml:"keep_branch_context,omitempty"`
+// DiffConfig controls how the diff is generated for review prompts.
+type DiffConfig struct {
+	Command string `yaml:"command,omitempty"`
 }
 
 // ScoringFileConfig is written to and read from .qode/scoring.yaml.

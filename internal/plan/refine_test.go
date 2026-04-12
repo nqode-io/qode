@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nqode/qode/internal/branchcontext"
 	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/prompt"
+	"github.com/nqode/qode/internal/qodecontext"
 )
 
 func TestBuildSpecPromptWithOutput_OmitsAnalysis(t *testing.T) {
@@ -19,9 +19,9 @@ func TestBuildSpecPromptWithOutput_OmitsAnalysis(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &branchcontext.Context{
-		Branch:          "test-branch",
-		ContextDir:      filepath.Join(root, ".qode", "branches", "test-branch"),
+	ctx := &qodecontext.Context{
+		ContextName:     "test-context",
+		ContextDir:      filepath.Join(root, ".qode", "contexts", "test-context"),
 		RefinedAnalysis: "full refined analysis sentinel text",
 	}
 
@@ -46,10 +46,10 @@ func TestBuildStartPrompt_OmitsSpec(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &branchcontext.Context{
-		Branch:     "test-branch",
-		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
-		Spec:       "spec sentinel content here",
+	ctx := &qodecontext.Context{
+		ContextName: "test-context",
+		ContextDir:  filepath.Join(root, ".qode", "contexts", "test-context"),
+		Spec:        "spec sentinel content here",
 	}
 
 	got, err := BuildStartPrompt(engine, &config.Config{}, ctx, "")
@@ -73,21 +73,20 @@ func TestBuildJudgePrompt_ReferencesRefinedAnalysis(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	branchDir := filepath.Join(root, ".qode", "branches", "test-branch")
-	ctx := &branchcontext.Context{
-		Branch:     "test-branch",
-		ContextDir: branchDir,
+	ctx := &qodecontext.Context{
+		ContextName: "test-context",
+		ContextDir:  filepath.Join(root, ".qode", "contexts", "test-context"),
 	}
 
 	got, err := BuildJudgePrompt(engine, &config.Config{}, ctx)
 	if err != nil {
 		t.Fatalf("BuildJudgePrompt: %v", err)
 	}
-	if !strings.Contains(got, branchDir) {
-		t.Errorf("judge prompt must reference branch dir %q, got:\n%s", branchDir, got)
-	}
 	if !strings.Contains(got, "refined-analysis.md") {
 		t.Error("judge prompt must reference refined-analysis.md")
+	}
+	if !strings.Contains(got, ".qode/contexts/current/") {
+		t.Errorf("judge prompt must reference fixed context path, got:\n%s", got)
 	}
 }
 
@@ -112,8 +111,10 @@ func TestBuildJudgePrompt_CustomRubric(t *testing.T) {
 		},
 	}
 
-	branchDir := filepath.Join(root, ".qode", "branches", "test-branch")
-	ctx := &branchcontext.Context{Branch: "test-branch", ContextDir: branchDir}
+	ctx := &qodecontext.Context{
+		ContextName: "test-context",
+		ContextDir:  filepath.Join(root, ".qode", "contexts", "test-context"),
+	}
 
 	got, err := BuildJudgePrompt(engine, cfg, ctx)
 	if err != nil {
@@ -131,7 +132,6 @@ func TestBuildJudgePrompt_CustomRubric(t *testing.T) {
 	if !strings.Contains(got, "= 10 maximum") {
 		t.Error("judge prompt must show total '= 10 maximum' for two 5-weight dimensions")
 	}
-	// Ensure no raw Go template action syntax leaked through
 	if strings.Contains(got, ".Rubric.Total") {
 		t.Error("judge prompt must not contain unrendered '.Rubric.Total'")
 	}
@@ -145,9 +145,9 @@ func TestBuildRefinePromptWithOutput_OmitsAnalysisAndTicket(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &branchcontext.Context{
-		Branch:          "test-branch",
-		ContextDir:      filepath.Join(root, ".qode", "branches", "test-branch"),
+	ctx := &qodecontext.Context{
+		ContextName:     "test-context",
+		ContextDir:      filepath.Join(root, ".qode", "contexts", "test-context"),
 		RefinedAnalysis: "previous iteration analysis sentinel",
 		Ticket:          "ticket sentinel text",
 	}
@@ -173,9 +173,9 @@ func TestBuildStartPrompt_WithKB(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &branchcontext.Context{
-		Branch:     "test-branch",
-		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	ctx := &qodecontext.Context{
+		ContextName: "test-context",
+		ContextDir:  filepath.Join(root, ".qode", "contexts", "test-context"),
 	}
 
 	kb := "- lessons/error-handling.md\n- lessons/naming.md"
@@ -196,9 +196,9 @@ func TestBuildRefinePromptWithOutput_WithOutputPath(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &branchcontext.Context{
-		Branch:     "test-branch",
-		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	ctx := &qodecontext.Context{
+		ContextName: "test-context",
+		ContextDir:  filepath.Join(root, ".qode", "contexts", "test-context"),
 	}
 
 	out, err := BuildRefinePromptWithOutput(engine, &config.Config{}, ctx, "", 1, "/tmp/output.md")
@@ -210,29 +210,6 @@ func TestBuildRefinePromptWithOutput_WithOutputPath(t *testing.T) {
 	}
 }
 
-func TestBuildRefinePromptWithOutput_WithExtra(t *testing.T) {
-	t.Parallel()
-	root := t.TempDir()
-	engine, err := prompt.NewEngine(root)
-	if err != nil {
-		t.Fatalf("NewEngine: %v", err)
-	}
-
-	ctx := &branchcontext.Context{
-		Branch:     "test-branch",
-		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
-		Extra:      []string{"review feedback sentinel"},
-	}
-
-	out, err := BuildRefinePromptWithOutput(engine, &config.Config{}, ctx, "", 1, "")
-	if err != nil {
-		t.Fatalf("BuildRefinePromptWithOutput: %v", err)
-	}
-	if !strings.Contains(out.WorkerPrompt, "review feedback sentinel") {
-		t.Error("prompt must contain extra context when provided")
-	}
-}
-
 func TestBuildRefinePromptWithOutput_AutoIteration(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
@@ -241,10 +218,10 @@ func TestBuildRefinePromptWithOutput_AutoIteration(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &branchcontext.Context{
-		Branch:     "test-branch",
-		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
-		Iterations: []branchcontext.Iteration{{Number: 2, Score: 15}},
+	ctx := &qodecontext.Context{
+		ContextName: "test-context",
+		ContextDir:  filepath.Join(root, ".qode", "contexts", "test-context"),
+		Iterations:  []qodecontext.Iteration{{Number: 2, Score: 15}},
 	}
 
 	// iteration=0 should trigger auto-increment via ctx.NextIteration().
@@ -270,9 +247,9 @@ func TestBuildRefinePromptWithOutput_ContainsProjectName(t *testing.T) {
 		t.Fatalf("NewEngine: %v", err)
 	}
 
-	ctx := &branchcontext.Context{
-		Branch:     "test-branch",
-		ContextDir: filepath.Join(root, ".qode", "branches", "test-branch"),
+	ctx := &qodecontext.Context{
+		ContextName: "test-context",
+		ContextDir:  filepath.Join(root, ".qode", "contexts", "test-context"),
 	}
 
 	out, err := BuildRefinePromptWithOutput(engine, &config.Config{}, ctx, "", 1, "")

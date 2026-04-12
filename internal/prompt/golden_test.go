@@ -27,31 +27,30 @@ func TestGolden_Templates(t *testing.T) {
 	}{
 		{
 			name: "refine/base",
-			data: NewTemplateData("test-project", "feat-login").
+			data: NewTemplateData("test-project").
 				WithTicket("# Login Feature\nUsers need a login page.").
 				WithOutputPath("/tmp/refined-analysis.md").
-				WithBranchDir("/tmp/.qode/branches/feat-login").
 				WithRubric(rubric).
 				WithTargetScore(rubric.Total()).
 				Build(),
 		},
 		{
 			name: "spec/base",
-			data: NewTemplateData("test-project", "feat-login").
+			data: NewTemplateData("test-project").
 				WithAnalysis("# Analysis\nWell-structured analysis.").
 				WithOutputPath("/tmp/spec.md").
 				Build(),
 		},
 		{
 			name: "start/base",
-			data: NewTemplateData("test-project", "feat-login").
+			data: NewTemplateData("test-project").
 				WithSpec("# Spec\nImplementation specification.").
 				WithKB("- docs/architecture.md").
 				Build(),
 		},
 		{
 			name: "review/code",
-			data: NewTemplateData("test-project", "feat-login").
+			data: NewTemplateData("test-project").
 				WithDiff("diff --git a/main.go b/main.go\n+package main").
 				WithSpec("# Spec\nImplementation specification.").
 				WithOutputPath("/tmp/code-review.md").
@@ -61,7 +60,7 @@ func TestGolden_Templates(t *testing.T) {
 		},
 		{
 			name: "review/security",
-			data: NewTemplateData("test-project", "feat-login").
+			data: NewTemplateData("test-project").
 				WithDiff("diff --git a/main.go b/main.go\n+package main").
 				WithSpec("# Spec\nImplementation specification.").
 				WithOutputPath("/tmp/security-review.md").
@@ -71,7 +70,7 @@ func TestGolden_Templates(t *testing.T) {
 		},
 		{
 			name: "scoring/judge_refine",
-			data: NewTemplateData("test-project", "feat-login").
+			data: NewTemplateData("test-project").
 				WithAnalysis("# Analysis\nDetailed analysis content.").
 				WithRubric(rubric).
 				WithTargetScore(rubric.Total()).

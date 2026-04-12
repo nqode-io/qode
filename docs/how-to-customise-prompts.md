@@ -21,11 +21,11 @@ To preview the rendered output after editing, use the `--to-file` flag:
 
 ```bash
 qode plan refine --to-file
-# → saves to .qode/branches/<branch>/.refine-prompt.md
+# → saves to .qode/contexts/current/.refine-prompt.md
 
 qode plan judge --to-file
-# → saves to .qode/branches/<branch>/.refine-judge-prompt.md
-# requires refined-analysis.md to exist in the branch directory
+# → saves to .qode/contexts/current/.refine-judge-prompt.md
+# requires refined-analysis.md to exist in the context directory
 ```
 
 ## Template files
@@ -40,8 +40,7 @@ All templates are located under `.qode/prompts/`:
 | Implementation | `.qode/prompts/start/base.md.tmpl` |
 | Code review | `.qode/prompts/review/code.md.tmpl` |
 | Security review | `.qode/prompts/review/security.md.tmpl` |
-| Lessons from branch | `.qode/prompts/knowledge/add-branch.md.tmpl` |
-| Lessons from session | `.qode/prompts/knowledge/add-context.md.tmpl` |
+| Lessons from context | `.qode/prompts/knowledge/add-context-artifacts.md.tmpl` |
 
 ## Template variables
 
@@ -50,16 +49,14 @@ Templates use Go's `text/template` syntax. The following fields are available on
 | Field | Type | Description |
 | --- | --- | --- |
 | `Project.Name` | `string` | Project name derived from the working directory (`filepath.Base` of the project root) |
-| `Branch` | `string` | Current git branch name |
-| `BranchDir` | `string` | Absolute path to `.qode/branches/<branch>/` — use this to reference context files |
 | `OutputPath` | `string` | When set, templates should append file-write instructions so the AI saves its output directly |
 | `KB` | `string` | Knowledge base file references (set for `start` only) |
-| `Extra` | `string` | Assembled extra context such as code reviews (set for `refine` and `knowledge/add-branch`) |
-| `Lessons` | `string` | Existing lesson summaries for deduplication (set for `knowledge/add-branch` only) |
-| `Ticket` | `string` | Ticket content inlined (set for `knowledge/add-branch` only) |
-| `Analysis` | `string` | Refined analysis inlined (set for `knowledge/add-branch` only) |
-| `Spec` | `string` | Spec content inlined (set for `knowledge/add-branch` only) |
-| `Diff` | `string` | Git diff inlined (set for `knowledge/add-branch` only) |
+| `Extra` | `string` | Assembled extra context such as code reviews (set for `knowledge/add-context`) |
+| `Lessons` | `string` | Existing lesson summaries for deduplication (set for `knowledge/add-context` only) |
+| `Ticket` | `string` | Ticket content inlined (set for `knowledge/add-context` only) |
+| `Analysis` | `string` | Refined analysis inlined (set for `knowledge/add-context` only) |
+| `Spec` | `string` | Spec content inlined (set for `knowledge/add-context` only) |
+| `Diff` | `string` | Diff inlined (set for `knowledge/add-context` only) |
 | `Rubric` | `scoring.Rubric` | Active scoring rubric with `.Dimensions` and `.Total` — set for `scoring/judge_refine`, `review/code`, and `review/security`; reflects any rubric override from `.qode/scoring.yaml` |
 | `TargetScore` | `int` | Pass threshold for the refine judge — defaults to `Rubric.Total()`, overridden by `scoring.target_score` in `qode.yaml` |
 | `MinPassScore` | `float64` | Minimum score to pass review — sourced from `review.min_code_score` (code) or `review.min_security_score` (security) in `qode.yaml` |
@@ -76,14 +73,14 @@ The following functions are available inside templates in addition to Go's built
 
 ### Referencing context files
 
-For the main workflow templates (`refine`, `spec`, `start`, `review`) the AI reads context files directly rather than having content inlined. Use `BranchDir` to construct paths:
+For the main workflow templates (`refine`, `spec`, `start`, `review`) the AI reads context files directly rather than having content inlined. All context files live under the fixed path `.qode/contexts/current/`:
 
 ```text
-Read the ticket from `{{.BranchDir}}/context/ticket.md`.
-Read the notes from `{{.BranchDir}}/context/notes.md` (if the file exists).
-Read the refined analysis from `{{.BranchDir}}/refined-analysis.md`.
-Read the spec from `{{.BranchDir}}/spec.md`.
-Read the diff from `{{.BranchDir}}/diff.md`.
+Read the ticket from `.qode/contexts/current/ticket.md`.
+Read the notes from `.qode/contexts/current/notes.md` (if the file exists).
+Read the refined analysis from `.qode/contexts/current/refined-analysis.md`.
+Read the spec from `.qode/contexts/current/spec.md`.
+Read the diff from `.qode/contexts/current/diff.md`.
 ```
 
 ## Committing overrides

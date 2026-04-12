@@ -80,16 +80,16 @@ func TestSave_Load(t *testing.T) {
 	}
 }
 
-func TestDefaultConfig_BranchKeepBranchContext(t *testing.T) {
+func TestDefaultConfig_DiffCommand(t *testing.T) {
 	cfg := DefaultConfig()
-	if cfg.Branch.KeepBranchContext != false {
-		t.Error("expected Branch.KeepBranchContext false by default")
+	if cfg.Diff.Command == "" {
+		t.Error("expected non-empty default Diff.Command")
 	}
 }
 
-func TestBranchConfig_YAMLRoundTrip(t *testing.T) {
+func TestDiffConfig_YAMLRoundTrip(t *testing.T) {
 	cfg := DefaultConfig()
-	cfg.Branch.KeepBranchContext = true
+	cfg.Diff.Command = "git diff HEAD"
 
 	data, err := yaml.Marshal(&cfg)
 	if err != nil {
@@ -100,8 +100,8 @@ func TestBranchConfig_YAMLRoundTrip(t *testing.T) {
 	if err := yaml.Unmarshal(data, &loaded); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if !loaded.Branch.KeepBranchContext {
-		t.Error("expected Branch.KeepBranchContext true after round-trip")
+	if loaded.Diff.Command != "git diff HEAD" {
+		t.Errorf("Diff.Command: got %q, want %q", loaded.Diff.Command, "git diff HEAD")
 	}
 	if loaded.Review.MinCodeScore != cfg.Review.MinCodeScore {
 		t.Errorf("MinCodeScore: got %.1f, want %.1f", loaded.Review.MinCodeScore, cfg.Review.MinCodeScore)
@@ -114,15 +114,15 @@ func TestBranchConfig_YAMLRoundTrip(t *testing.T) {
 	}
 }
 
-func TestBranchConfig_OmitEmpty(t *testing.T) {
+func TestDiffConfig_OmitEmpty(t *testing.T) {
 	cfg := DefaultConfig()
-	// KeepBranchContext is false — field is omitempty, so it should not appear in YAML.
+	cfg.Diff.Command = ""
 	data, err := yaml.Marshal(&cfg)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	if strings.Contains(string(data), "keep_branch_context") {
-		t.Error("expected keep_branch_context to be omitted when false")
+	if strings.Contains(string(data), "command:") && !strings.Contains(string(data), "diff:") {
+		t.Error("unexpected command key when empty")
 	}
 }
 

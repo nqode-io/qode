@@ -73,5 +73,5 @@ Default shape: **table-driven** with `t.Run(tc.name, ...)` and `t.Parallel()` on
 ## Gotchas
 
 - IMPORTANT: Never change `CLAUDE.md` file
-- If asked to add something to `notes` or `notes.md`, always append to `.qode/branches/$(git branch --show-current | sed 's|/|--|g')/context/notes.md`
+- If asked to add something to `notes` or `notes.md`, always append to `.qode/contexts/current/notes.md`
 - `.qode/`, `.claude/`, `.cursor/`, `.cursorrules/` directories and `qode.yaml` are configuration — only read when testing changes to these files, never modify directly (use `qode init` instead)

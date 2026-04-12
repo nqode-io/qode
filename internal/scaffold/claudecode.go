@@ -18,7 +18,6 @@ var claudeCommands = []string{
 	"qode-start",
 	"qode-ticket-fetch",
 	"qode-knowledge-add-context",
-	"qode-knowledge-add-branch",
 }
 
 // SetupClaudeCode generates Claude Code configuration files.
@@ -33,7 +32,7 @@ func SetupClaudeCode(out io.Writer, root string) error {
 		return err
 	}
 
-	data := prompt.NewTemplateData(filepath.Base(root), "").
+	data := prompt.NewTemplateData(filepath.Base(root)).
 		WithIDE("claude").
 		Build()
 

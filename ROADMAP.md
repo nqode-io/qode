@@ -15,20 +15,17 @@ Planned features for qode, in recommended implementation order. Items marked wit
 - [x] [#29](https://github.com/nqode-io/qode/issues/29) — **Rethink qode init** — Simplify setup; let the AI read project configs instead of hardcoding test/lint/build commands
 - [x] [#27](https://github.com/nqode-io/qode/issues/27) — **Replace ticket fetch with MCP** — Use MCP servers instead of built-in HTTP clients; support comments, attachments, linked resources
 - [x] [#41](https://github.com/nqode-io/qode/issues/41) — **`qode init`: append gitignore rules** — Add qode-specific `.gitignore` entries (temp prompt files, ticket snapshots, scored iteration copies) during init
+- [x] [#33](https://github.com/nqode-io/qode/issues/33) — **VCS-agnostic contexts** — Replace git-coupled `qode branch` with `qode context` command tree; contexts live in `.qode/contexts/<name>/` independent of VCS; `current` symlink selects the active context; `diff_command` in `qode.yaml` makes diff generation configurable
 
 ## In Progress
 
 - [x] [#36](https://github.com/nqode-io/qode/issues/36) — **Add qode pr create command** — Generate PR/MR with AI-written title and description from branch context; store PR URL for subsequent steps *(requires #27)*
 
-## Up Next (parallel — start after #24)
-
-- [ ] [#33](https://github.com/nqode-io/qode/issues/33) — **Worktree support** — Config flag `branch.use_worktrees` to create git worktrees via worktrunk, phantom, or `git worktree`; enables parallel task development
-- [ ] [#34](https://github.com/nqode-io/qode/issues/34) — **Add Codex IDE support** — Slash commands, IDE setup, templates, and documentation for OpenAI Codex, following the same convention as Cursor and Claude Code
-
 ## After Dependencies
 
 - [ ] [#28](https://github.com/nqode-io/qode/issues/28) — **Post step outputs as ticket comments** — Publish analysis, spec, and review outputs to the original ticket via MCP *(requires #27)*
 - [ ] [#31](https://github.com/nqode-io/qode/issues/31) — **PR/MR review comments step** — Read and address PR review comments using MCP *(requires #27, #36)*
+- [ ] [#34](https://github.com/nqode-io/qode/issues/34) — **Add Codex IDE support** — Slash commands, IDE setup, templates, and documentation for OpenAI Codex, following the same convention as Cursor and Claude Code
 
 ## Release Preparation (after all features above)
 
@@ -50,7 +47,7 @@ Planned features for qode, in recommended implementation order. Items marked wit
  └── #41 qode init: append gitignore rules ✅
 
 Independent (can run in parallel with any of the above):
- #33 Worktree support
+ #33 VCS-agnostic contexts  ✅
  #34 Codex IDE support
  #45 Replace qode check with /qode-check  ✅
 

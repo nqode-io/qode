@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/nqode/qode/internal/branchcontext"
-	"github.com/nqode/qode/internal/git"
 	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/review"
 	"github.com/spf13/cobra"
@@ -62,10 +60,7 @@ func runReview(ctx context.Context, out, errOut io.Writer, kind string, toFile, 
 		sess.Config.Scoring.Strict = true
 	}
 
-	diff, err := git.DiffFromBaseCtx(ctx, sess.Root, "")
-	if err != nil {
-		return fmt.Errorf("getting diff: %w", err)
-	}
+	diff := runDiffCommandCtx(ctx, sess.Root, sess.Config.Diff.Command)
 	if diff == "" && !force {
 		if sess.Config.Scoring.Strict {
 			return ErrNoChanges
@@ -74,22 +69,15 @@ func runReview(ctx context.Context, out, errOut io.Writer, kind string, toFile, 
 		return nil
 	}
 
-	branchDir := sess.Context.ContextDir
+	ctxDir := sess.Context.ContextDir
 
-	// Ensure context/ exists so the user can populate ticket.md etc.
-	// Load() no longer creates this directory as a side effect, so review is
-	// the natural first command that needs it when 'branch create' was skipped.
-	if err := branchcontext.EnsureContextDir(sess.Root, sess.Branch); err != nil {
-		return fmt.Errorf("creating context directory: %w", err)
-	}
-
-	diffPath := filepath.Join(branchDir, "diff.md")
+	diffPath := filepath.Join(ctxDir, "diff.md")
 	if err := iokit.WriteFile(diffPath, []byte(diff), 0600); err != nil {
 		return fmt.Errorf("saving diff snapshot: %w", err)
 	}
 
-	outputPath := filepath.Join(branchDir, fmt.Sprintf("%s-review.md", kind))
-	promptPath := filepath.Join(branchDir, fmt.Sprintf(".%s-review-prompt.md", kind))
+	outputPath := filepath.Join(ctxDir, fmt.Sprintf("%s-review.md", kind))
+	promptPath := filepath.Join(ctxDir, fmt.Sprintf(".%s-review-prompt.md", kind))
 
 	var p string
 	switch kind {

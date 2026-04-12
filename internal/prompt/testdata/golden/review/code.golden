@@ -17,15 +17,14 @@ Before scoring, interrogate each file:
 ## Project Context
 
 **Project:** test-project
-**Branch:** feat-login
 
 ## Spec Summary
 
-Read the technical specification from `/spec.md`.
+Read the technical specification from `.qode/contexts/current/spec.md`.
 
 ## Changes to Review
 
-Read the diff from `/diff.md`.
+Read the diff from `.qode/contexts/current/diff.md`.
 
 ## Review Criteria
 
