@@ -12,4 +12,4 @@ ide:
 knowledge:
     path: .qode/knowledge
 diff:
-    command: git diff HEAD -- :(exclude).qode/
+    command: git diff --merge-base origin/HEAD -- :(exclude).qode/
