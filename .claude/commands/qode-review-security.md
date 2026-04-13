@@ -22,7 +22,7 @@ After completing the review:
    - Unrecognised URL → skip silently
 3. If the required MCP tool is not available in your tool list, skip silently.
 4. Read `.qode/contexts/current/.ctx-name.md` for the context name.
-5. Use `AskUserQuestion` to ask: "Post `.qode/contexts/current/security-review.md` as a new ticket comment? (Yes / No) Note: publicly visible."
+5. Use `AskUserQuestion` to ask: "Post `.qode/contexts/current/security-review.md` as a new ticket comment? (Yes / No) NOTE: THIS MIGHT BE PUBLICLY VISIBLE."
    - **Yes**: post via the selected MCP tool with body:
      ```
      **qode: review-security** | context: `<context-name>`
