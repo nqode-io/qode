@@ -1,4 +1,14 @@
 {
-  "configurations": null,
+  "configurations": [
+    {
+      "name": "Debug Qode",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/qode/main.go",
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ],
   "version": "0.2.0"
 }
