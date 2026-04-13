@@ -19,7 +19,7 @@ func DefaultConfig() Config {
 			Path: ".qode/knowledge",
 		},
 		Diff: DiffConfig{
-			Command: "git diff HEAD -- :(exclude).qode/",
+			Command: "git diff --merge-base origin/HEAD -- :(exclude).qode/",
 		},
 	}
 }

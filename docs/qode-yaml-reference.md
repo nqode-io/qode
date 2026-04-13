@@ -21,7 +21,7 @@ ide:
 knowledge:
   path: .qode/knowledge
 diff:
-  command: "git diff HEAD -- :(exclude).qode/"
+  command: "git diff --merge-base origin/HEAD -- :(exclude).qode/"
 ```
 
 > **Re-running `qode init` regenerates `qode.yaml` with these defaults.** Any customisations you have made to `qode.yaml` (score thresholds, `scoring.strict`, etc.) will be reset. Re-add them after running `qode init`, or run it only when you want a clean reset.
@@ -50,7 +50,7 @@ knowledge:
   path: .qode/knowledge
 
 diff:
-  command: "git diff HEAD -- :(exclude).qode/"   # shell command whose stdout is the diff
+  command: "git diff --merge-base origin/HEAD -- :(exclude).qode/"   # shell command whose stdout is the diff
 ```
 
 ## Field descriptions
@@ -84,8 +84,8 @@ When `true`, guarded commands exit with a non-zero status code and print an erro
 |---|---|
 | `qode plan spec` / `/qode-plan-spec` | `refined-analysis.md` exists and score ≥ `target_score` |
 | `qode start` / `/qode-start` | `spec.md` exists |
-| `qode review code` / `/qode-review-code` | Uncommitted diff is non-empty (strict only) |
-| `qode review security` / `/qode-review-security` | Uncommitted diff is non-empty (strict only) |
+| `qode review code` / `/qode-review-code` | Branch diff is non-empty (strict only) |
+| `qode review security` / `/qode-review-security` | Branch diff is non-empty (strict only) |
 
 All guarded commands accept `--force` to bypass score and completeness gates. Absent-file errors (e.g. no `refined-analysis.md` at all) are always hard errors regardless of `--force` or `strict` mode.
 
@@ -105,7 +105,7 @@ Rubric dimensions are **not configured in `qode.yaml`**. They live in `.qode/sco
 
 Shell command whose stdout is used as the diff for `qode review code`, `qode review security`, and `qode workflow status`. qode runs the command via `exec.Command` (not a shell), captures stdout, and saves it to `diff.md` in the active context directory.
 
-Default: `"git diff HEAD -- :(exclude).qode/"`.
+Default: `"git diff --merge-base origin/HEAD -- :(exclude).qode/"`.
 
 When the command is empty or exits non-zero, the diff is treated as empty (best-effort). Use `--force` on review commands to bypass the empty-diff guard.
 

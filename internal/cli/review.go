@@ -65,7 +65,7 @@ func runReview(ctx context.Context, out, errOut io.Writer, kind string, toFile, 
 		if sess.Config.Scoring.Strict {
 			return ErrNoChanges
 		}
-		_, _ = fmt.Fprintln(errOut, "No changes detected. Commit some code first.")
+		_, _ = fmt.Fprintln(errOut, "No changes detected on this branch.")
 		return nil
 	}
 
