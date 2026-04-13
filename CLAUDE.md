@@ -5,14 +5,14 @@ Go CLI that generates structured AI prompts for a standardized developer workflo
 ## Commands
 
 ```bash
-go build ./...                                          # Build
-go test ./...                                           # Unit tests (<2s)
-go test -race ./...                                     # Unit tests + race detection
-go test -tags integration ./...                         # Integration tests (separate)
-go test ./internal/<pkg>/... -run TestName              # Single test
-go test -update ./...                                   # Regenerate golden files
-golangci-lint run                                       # Lint
-go install ./cmd/qode/                                  # Install locally
+go build ./...                                                           # Build
+go test ./...                                                            # Unit tests (<2s)
+go test -race ./...                                                      # Unit tests + race detection
+go test -tags integration ./...                                          # Integration tests (separate)
+go test ./internal/<pkg>/... -run TestName                               # Single test
+go test -run TestGolden_Templates ./internal/prompt/ -args -update 2>&1  # Regenerate golden files
+golangci-lint run                                                        # Lint
+go install ./cmd/qode/                                                   # Install locally
 ```
 
 CI enforces **minimum 70% coverage** with race detection.

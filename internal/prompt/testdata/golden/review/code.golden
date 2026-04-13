@@ -25,7 +25,7 @@ Read the notes from `.qode/contexts/current/notes.md`.
 
 ## Changes to Review
 
-Read the diff from `.qode/contexts/current/diff.md`.
+Read the diff from `.qode/contexts/current/diff.md`. If the file is empty or absent, there are no changes to review — stop and inform the user.
 
 ## Review Criteria
 
