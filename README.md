@@ -45,8 +45,9 @@ Before beginning, create a new branch for your work.
 6. /qode-check                   (in IDE)    Run quality gates (tests + lint)
 7. /qode-review-code             (in IDE)    Code review
 8. /qode-review-security         (in IDE)    Security review
-9. /qode-knowledge-add-context   (in IDE)    (Recommended) Extract lessons learned
-10. qode context remove                      Cleanup
+9. /qode-pr-create               (in IDE)    Create pull request via MCP
+10. /qode-knowledge-add-context  (in IDE)    (Recommended) Extract lessons learned
+11. qode context remove                      Cleanup
 ```
 
 Run `qode workflow` for the full diagram.

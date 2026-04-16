@@ -20,6 +20,7 @@ var cursorCommands = []string{
 	"qode-start",
 	"qode-ticket-fetch",
 	"qode-knowledge-add-context",
+	"qode-pr-create",
 }
 
 // SetupCursor generates Cursor IDE configuration files.
