@@ -115,8 +115,11 @@ func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string)
 	// Step 8: Reviews.
 	lines = append(lines, reviewStatus(ctx, cfg, &upNext)...)
 
-	// Step 9: Lessons learned — always optional.
-	lines = append(lines, step(9, "Capture lessons learned", "Always optional — run /qode-knowledge-add-context."))
+	// Step 9: Create pull request — always manual.
+	lines = append(lines, step(9, "Create pull request", "Always done by the user — run /qode-pr-create."))
+
+	// Step 10: Lessons learned — always optional.
+	lines = append(lines, step(10, "Capture lessons learned", "Always optional — run /qode-knowledge-add-context."))
 
 	return lines, upNext
 }
@@ -210,11 +213,11 @@ const workflowList = `qode Workflow
     /qode-review-code
     /qode-review-security
 
-9.  Capture lessons learned
-    /qode-knowledge-add-context  (optional)
+9.  Create pull request
+    /qode-pr-create
 
-10. Ship
-    git push && gh pr create
+10. Capture lessons learned
+    /qode-knowledge-add-context  (optional)
 
 11. Cleanup
     qode context remove
