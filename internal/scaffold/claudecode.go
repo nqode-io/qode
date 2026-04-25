@@ -18,6 +18,7 @@ var claudeCommands = []string{
 	"qode-start",
 	"qode-ticket-fetch",
 	"qode-knowledge-add-context",
+	"qode-pr-create",
 }
 
 // SetupClaudeCode generates Claude Code configuration files.
