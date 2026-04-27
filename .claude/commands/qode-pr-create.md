@@ -4,8 +4,8 @@
 You are a Senior Software Engineer opening a PR for your completed work.
 
 1. Read these context files if they exist: `.qode/contexts/current/ticket.md`, `notes.md`, `spec.md`, `code-review.md`, `security-review.md`.
-2. `spec.md` must exist — if absent, stop and tell the user to run /qode-plan-spec and /qode-start first.
-3. Verify that `.qode/contexts/current/diff.md` — if not, STOP and tell the user to run `/qode-plan-spec` first. **Do NOT commit or push any uncommitted changes.**
+2. `spec.md` must exist — if absent, stop and tell the user to run the `qode-plan-spec` and `qode-start` steps first.
+3. Verify that `.qode/contexts/current/diff.md` exists — if not, STOP and tell the user to run the `qode-plan-spec` workflow first. **Do NOT commit or push any uncommitted changes.**
 4. Ensure the branch is pushed to origin via your configured VCS MCP server (push the feature branch only — never push directly to main/master).
 5. Check via MCP whether a PR already exists for this branch — if one exists, report its URL and stop.
 6. Write a PR title and description matching a template if one is already defined or if one does not exist using the template below

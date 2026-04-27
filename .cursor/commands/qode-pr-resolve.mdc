@@ -8,7 +8,7 @@ The assumption is that the engineer has already discussed and agreed on the chan
 Your job is to implement what is in the comments — not to evaluate whether they should be done.
 
 1. Use your configured VCS MCP server to find the open PR for the current branch.
-   If no open PR is found, stop and tell the user to run `/qode-pr-create` first.
+   If no open PR is found, stop and tell the user to run the `qode-pr-create` step first.
 
 2. Fetch all open review comments and threads from that PR via MCP.
    If no open comments are found, report "No open review comments found." and stop.
