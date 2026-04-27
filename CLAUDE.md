@@ -75,3 +75,4 @@ Default shape: **table-driven** with `t.Run(tc.name, ...)` and `t.Parallel()` on
 - IMPORTANT: Never change `CLAUDE.md` file
 - If asked to add something to `notes` or `notes.md`, always append to `.qode/contexts/current/notes.md`
 - `.qode/`, `.claude/`, `.cursor/`, `.cursorrules/` directories and `qode.yaml` are configuration — only read when testing changes to these files, never modify directly (use `qode init` instead)
+- At the end of every `/qode-start` implementation, append a summary of the change to `CHANGELOG.md` under `[Unreleased]`. Group entries under `Added` / `Changed` / `Fixed` / `Removed` (Keep a Changelog format). Skip only when the change is purely internal (test-only, refactor with no user-visible effect, context-only edits under `.qode/contexts/`).

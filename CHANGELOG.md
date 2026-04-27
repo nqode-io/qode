@@ -9,14 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `CHANGELOG.md` (this file)
-- `CODE_OF_CONDUCT.md`
-- README trust badges (CI, Release, Latest Release, Go Report Card, License)
+- `CHANGELOG.md` (this file) — Keep a Changelog 1.1.0 format
+- `CODE_OF_CONDUCT.md` — Contributor Covenant 2.1
+- `docs/tutorial.md` — end-to-end walkthrough covering branch + multi-context workflow, `notes.md` usage, mid-run course-correction, worktrees, and per-IDE best practices
+- README trust badges row (CI, Release, Latest Release, Go Report Card, License)
+- `docs/qode-yaml-reference.md` field descriptions for `ide.cursor.enabled`, `ide.claude_code.enabled`, and `knowledge.path` so every key in `internal/config/schema.go` is documented
+- Code of Conduct link in `README.md` `## Contributing` and at the top of `CONTRIBUTING.md`
 
 ### Changed
 
-- README "The Workflow" block now mirrors `qode workflow` CLI output (12 canonical steps)
-- README "IDE Support" rewritten as canonical matrix (Cursor + Claude Code)
+- `README.md` `## The Workflow` rewritten to mirror `qode workflow` CLI output (12 canonical steps in `internal/cli/help.go:191-232`)
+- `README.md` `## IDE Support` rewritten as canonical matrix — Cursor + Claude Code, with the slash-command catalog inline
+- `CONTRIBUTING.md` development-workflow snippet reconciled to the canonical 12-step list (added `Test locally`, `/qode-pr-create`, `/qode-pr-resolve`)
+- `CLAUDE.md` package references updated from the obsolete `branchcontext` to `qodecontext` (renamed in [#33](https://github.com/nqode-io/qode/issues/33)); minimum security-review score aligned with the documented default
+- `.github/workflows/ci.yml` now also runs on `push: branches: [main]` so the new CI badge has a status to display on the default branch
+
+### Fixed
+
+- `docs/versioning.md` — corrected the snapshot-version description: snapshots derive the version from the most recent `v*` Git tag plus the GitHub Actions run number, not a hardcoded `0.1.0-alpha+<run>`
 
 ## [0.2.1-beta] - 2026-04-27
 
