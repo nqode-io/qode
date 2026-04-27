@@ -2,12 +2,12 @@ package config
 
 // Config is the root configuration loaded from qode.yaml.
 type Config struct {
-	QodeVersion string        `yaml:"qode_version,omitempty"`
-	Review      ReviewConfig  `yaml:"review,omitempty"`
-	Scoring     ScoringConfig `yaml:"scoring,omitempty"`
-	IDE         IDEConfig     `yaml:"ide,omitempty"`
+	QodeVersion string          `yaml:"qode_version,omitempty"`
+	Review      ReviewConfig    `yaml:"review,omitempty"`
+	Scoring     ScoringConfig   `yaml:"scoring,omitempty"`
+	IDE         IDEConfig       `yaml:"ide,omitempty"`
 	Knowledge   KnowledgeConfig `yaml:"knowledge,omitempty"`
-	Diff        DiffConfig    `yaml:"diff,omitempty"`
+	Diff        DiffConfig      `yaml:"diff,omitempty"`
 }
 
 // ReviewConfig sets thresholds for code and security reviews.

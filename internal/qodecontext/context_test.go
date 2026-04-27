@@ -47,10 +47,10 @@ func TestLoad_AfterInitAndSwitch(t *testing.T) {
 	t.Parallel()
 	root := setupContextsDir(t)
 
-	if err := Init(context.Background(), root,"my-feature"); err != nil {
+	if err := Init(context.Background(), root, "my-feature"); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	if err := Switch(context.Background(), root,"my-feature"); err != nil {
+	if err := Switch(context.Background(), root, "my-feature"); err != nil {
 		t.Fatalf("Switch: %v", err)
 	}
 
@@ -68,7 +68,7 @@ func TestInit_CreatesStubFiles(t *testing.T) {
 	t.Parallel()
 	root := setupContextsDir(t)
 
-	if err := Init(context.Background(), root,"feat-login"); err != nil {
+	if err := Init(context.Background(), root, "feat-login"); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
 
@@ -91,10 +91,10 @@ func TestInit_AlreadyExists(t *testing.T) {
 	t.Parallel()
 	root := setupContextsDir(t)
 
-	if err := Init(context.Background(), root,"dup"); err != nil {
+	if err := Init(context.Background(), root, "dup"); err != nil {
 		t.Fatalf("first Init: %v", err)
 	}
-	err := Init(context.Background(), root,"dup")
+	err := Init(context.Background(), root, "dup")
 	if err == nil {
 		t.Fatal("expected error for duplicate context")
 	}
@@ -108,13 +108,13 @@ func TestSwitch_ReplacesExistingSymlink(t *testing.T) {
 	t.Parallel()
 	root := setupContextsDir(t)
 
-	if err := Init(context.Background(), root,"feat-a"); err != nil {
+	if err := Init(context.Background(), root, "feat-a"); err != nil {
 		t.Fatalf("Init feat-a: %v", err)
 	}
-	if err := Init(context.Background(), root,"feat-b"); err != nil {
+	if err := Init(context.Background(), root, "feat-b"); err != nil {
 		t.Fatalf("Init feat-b: %v", err)
 	}
-	if err := Switch(context.Background(), root,"feat-a"); err != nil {
+	if err := Switch(context.Background(), root, "feat-a"); err != nil {
 		t.Fatalf("Switch feat-a: %v", err)
 	}
 
@@ -126,7 +126,7 @@ func TestSwitch_ReplacesExistingSymlink(t *testing.T) {
 		t.Errorf("want feat-a, got %q", name)
 	}
 
-	if err := Switch(context.Background(), root,"feat-b"); err != nil {
+	if err := Switch(context.Background(), root, "feat-b"); err != nil {
 		t.Fatalf("Switch feat-b: %v", err)
 	}
 
@@ -144,7 +144,7 @@ func TestSwitch_NonExistentContext(t *testing.T) {
 	t.Parallel()
 	root := setupContextsDir(t)
 
-	err := Switch(context.Background(), root,"does-not-exist")
+	err := Switch(context.Background(), root, "does-not-exist")
 	if err == nil {
 		t.Fatal("expected error for non-existent context")
 	}
@@ -155,7 +155,7 @@ func TestClear_PreservesCtxNameFile(t *testing.T) {
 	t.Parallel()
 	root := setupContextsDir(t)
 
-	if err := Init(context.Background(), root,"clear-test"); err != nil {
+	if err := Init(context.Background(), root, "clear-test"); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
 
@@ -163,7 +163,7 @@ func TestClear_PreservesCtxNameFile(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "spec.md"), "# Spec")
 	writeFile(t, filepath.Join(dir, "refined-analysis.md"), "# Analysis")
 
-	if err := Clear(context.Background(), root,"clear-test"); err != nil {
+	if err := Clear(context.Background(), root, "clear-test"); err != nil {
 		t.Fatalf("Clear: %v", err)
 	}
 
@@ -199,7 +199,7 @@ func TestClear_InvalidName(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			err := Clear(context.Background(), root,tc.name)
+			err := Clear(context.Background(), root, tc.name)
 			if err == nil {
 				t.Fatalf("expected error for name %q", tc.name)
 			}
@@ -226,7 +226,7 @@ func TestRemove_InvalidName(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			err := Remove(context.Background(), root,tc.name)
+			err := Remove(context.Background(), root, tc.name)
 			if err == nil {
 				t.Fatalf("expected error for name %q", tc.name)
 			}
@@ -243,14 +243,14 @@ func TestRemove_DeletesDirAndSymlink(t *testing.T) {
 	t.Parallel()
 	root := setupContextsDir(t)
 
-	if err := Init(context.Background(), root,"rm-test"); err != nil {
+	if err := Init(context.Background(), root, "rm-test"); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	if err := Switch(context.Background(), root,"rm-test"); err != nil {
+	if err := Switch(context.Background(), root, "rm-test"); err != nil {
 		t.Fatalf("Switch: %v", err)
 	}
 
-	if err := Remove(context.Background(), root,"rm-test"); err != nil {
+	if err := Remove(context.Background(), root, "rm-test"); err != nil {
 		t.Fatalf("Remove: %v", err)
 	}
 
@@ -270,17 +270,17 @@ func TestRemove_PreservesSymlinkWhenPointingElsewhere(t *testing.T) {
 	t.Parallel()
 	root := setupContextsDir(t)
 
-	if err := Init(context.Background(), root,"keep"); err != nil {
+	if err := Init(context.Background(), root, "keep"); err != nil {
 		t.Fatalf("Init keep: %v", err)
 	}
-	if err := Init(context.Background(), root,"gone"); err != nil {
+	if err := Init(context.Background(), root, "gone"); err != nil {
 		t.Fatalf("Init gone: %v", err)
 	}
-	if err := Switch(context.Background(), root,"keep"); err != nil {
+	if err := Switch(context.Background(), root, "keep"); err != nil {
 		t.Fatalf("Switch keep: %v", err)
 	}
 
-	if err := Remove(context.Background(), root,"gone"); err != nil {
+	if err := Remove(context.Background(), root, "gone"); err != nil {
 		t.Fatalf("Remove: %v", err)
 	}
 
@@ -299,10 +299,10 @@ func TestReset_RemovesSymlink(t *testing.T) {
 	t.Parallel()
 	root := setupContextsDir(t)
 
-	if err := Init(context.Background(), root,"resetme"); err != nil {
+	if err := Init(context.Background(), root, "resetme"); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	if err := Switch(context.Background(), root,"resetme"); err != nil {
+	if err := Switch(context.Background(), root, "resetme"); err != nil {
 		t.Fatalf("Switch: %v", err)
 	}
 
@@ -460,10 +460,10 @@ func TestLoad_ScanMockupFiles(t *testing.T) {
 	t.Parallel()
 	root := setupContextsDir(t)
 
-	if err := Init(context.Background(), root,"scan-test"); err != nil {
+	if err := Init(context.Background(), root, "scan-test"); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	if err := Switch(context.Background(), root,"scan-test"); err != nil {
+	if err := Switch(context.Background(), root, "scan-test"); err != nil {
 		t.Fatalf("Switch: %v", err)
 	}
 
@@ -485,10 +485,10 @@ func TestLoad_IterationParsing(t *testing.T) {
 	t.Parallel()
 	root := setupContextsDir(t)
 
-	if err := Init(context.Background(), root,"iter-test"); err != nil {
+	if err := Init(context.Background(), root, "iter-test"); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	if err := Switch(context.Background(), root,"iter-test"); err != nil {
+	if err := Switch(context.Background(), root, "iter-test"); err != nil {
 		t.Fatalf("Switch: %v", err)
 	}
 

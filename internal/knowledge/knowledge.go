@@ -214,4 +214,3 @@ func fileExists(path string) bool {
 func isLessonFile(path string) bool {
 	return strings.Contains(path, string(filepath.Separator)+"lessons"+string(filepath.Separator))
 }
-
