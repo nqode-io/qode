@@ -25,7 +25,7 @@ qode --version
 
 ### Pick an IDE
 
-qode currently ships slash commands for **Claude Code** (CLI / desktop / IDE plugin) and **Cursor**. **Codex** support is in active development and will land before the public beta release.
+qode ships slash commands for **Claude Code** (CLI / desktop / IDE plugin), **Cursor**, and **Codex**. Each IDE receives the same 10-command catalog; only the on-disk format and enable flag differ.
 
 ### Configure MCP servers
 
@@ -45,11 +45,11 @@ You get:
 - `qode.yaml` — review thresholds, scoring config, IDE toggles, diff command.
 - `.qode/scoring.yaml` — three rubrics: `refine` (for `/qode-plan-refine`), `review` (for `/qode-review-code`), `security` (for `/qode-review-security`). Each rubric has a `min_*_score` gate in `qode.yaml`. Strict mode (`scoring.strict`, default `false`) makes those gates blocking when flipped to `true`.
 - `.qode/prompts/` — local copies of every prompt template. Edit them to match your project's conventions; the embedded defaults stay as fallback.
-- `.cursor/commands/*.mdc` and `.claude/commands/*.md` — slash commands wired into your IDEs.
+- `.cursor/commands/*.mdc`, `.claude/commands/*.md`, and `.codex/commands/*.md` — slash commands wired into your IDEs.
 
-Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, and `.claude/` so the whole team works against the same rubrics, prompts, and commands.
+Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, and `.codex/` so the whole team works against the same rubrics, prompts, and commands.
 
-> **Pro tip — keep your AI's context fresh.** AI assistants degrade as their conversation history grows: more drift, more hallucination, more "I forgot what we were doing." **Start a new chat (or `/clear` in Claude Code, `New chat` in Cursor) between every workflow step.** Each qode slash command writes its output to disk under `.qode/contexts/current/`, so the next step always picks up exactly where the previous one left off — chat history is not load-bearing. This single habit moves output quality more than any other tweak.
+> **Pro tip — keep your AI's context fresh.** AI assistants degrade as their conversation history grows: more drift, more hallucination, more "I forgot what we were doing." **Start a new chat (`/clear` in Claude Code, `New chat` in Cursor, new chat in Codex) between every workflow step.** Each qode slash command writes its output to disk under `.qode/contexts/current/`, so the next step always picks up exactly where the previous one left off — chat history is not load-bearing. This single habit moves output quality more than any other tweak.
 
 ## Step 1 — create the branch and the first context
 

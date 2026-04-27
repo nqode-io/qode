@@ -18,6 +18,8 @@ ide:
     enabled: true
   claude_code:
     enabled: true
+  codex:
+    enabled: true
 knowledge:
   path: .qode/knowledge
 diff:
@@ -44,6 +46,8 @@ ide:
   cursor:
     enabled: true
   claude_code:
+    enabled: true
+  codex:
     enabled: true
 
 knowledge:
@@ -101,7 +105,7 @@ Override the pass threshold for `/qode-plan-refine`. When not set, the threshold
 
 Rubric dimensions are **not configured in `qode.yaml`**. They live in `.qode/scoring.yaml` so that re-running `qode init` never overwrites them. See [scoring-yaml-reference.md](scoring-yaml-reference.md) for the full rubric format and field reference.
 
-### `ide.cursor.enabled` / `ide.claude_code.enabled`
+### `ide.cursor.enabled` / `ide.claude_code.enabled` / `ide.codex.enabled`
 
 Toggle whether `qode init` generates IDE assets for each supported editor.
 
@@ -109,8 +113,9 @@ Toggle whether `qode init` generates IDE assets for each supported editor.
 |---|---|---|
 | `ide.cursor.enabled` | `.cursor/commands/*.mdc` | `true` |
 | `ide.claude_code.enabled` | `.claude/commands/*.md` | `true` |
+| `ide.codex.enabled` | `.codex/commands/*.md` | `true` |
 
-Set a value to `false` to skip generation for that IDE on the next `qode init`. Re-run `qode init` after changing the flag to bring the on-disk assets in sync. Cursor and Claude Code are the only IDEs supported in this release.
+Set a value to `false` to skip generation for that IDE on the next `qode init`. Re-run `qode init` after changing the flag to bring the on-disk assets in sync. Cursor, Claude Code, and Codex are the IDEs supported in this release.
 
 ### `knowledge.path`
 

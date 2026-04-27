@@ -19,10 +19,10 @@ Planned features for qode, in recommended implementation order. Items marked wit
 - [x] [#28](https://github.com/nqode-io/qode/issues/28) — **Post step outputs as ticket comments** — Publish analysis, spec, and review outputs to the original ticket via MCP *(requires #27)*
 - [x] [#36](https://github.com/nqode-io/qode/issues/36) — **Add qode pr create command** — Generate PR/MR with AI-written title and description from branch context; store PR URL for subsequent steps *(requires #27)*
 - [x] [#31](https://github.com/nqode-io/qode/issues/31) — **PR/MR review comments step** — Read and address PR review comments using MCP *(requires #27, #36)*
+- [x] [#34](https://github.com/nqode-io/qode/issues/34) — **Add Codex IDE support** — Slash commands, IDE setup, templates, and documentation for OpenAI Codex, following the same convention as Cursor and Claude Code
 
 ## In Progress
 
-- [x] [#34](https://github.com/nqode-io/qode/issues/34) — **Add Codex IDE support** — Slash commands, IDE setup, templates, and documentation for OpenAI Codex, following the same convention as Cursor and Claude Code
 - [x] [#37](https://github.com/nqode-io/qode/issues/37) — **Prepare qode for public beta release** — Documentation review, README badges, install script, binary signing, GitHub Pages site, GoReleaser setup, version bump to beta, automatic release notes
 
 ## Dependency Graph
@@ -42,7 +42,7 @@ Planned features for qode, in recommended implementation order. Items marked wit
 
 Independent (can run in parallel with any of the above):
  #33 VCS-agnostic contexts  ✅
- #34 Codex IDE support
+ #34 Codex IDE support  ✅
  #45 Replace qode check with /qode-check  ✅
 
 All of the above → #37 Prepare for public beta release
