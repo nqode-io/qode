@@ -14,6 +14,7 @@ func DefaultConfig() Config {
 		IDE: IDEConfig{
 			Cursor:     CursorIDEConfig{Enabled: true},
 			ClaudeCode: ClaudeCodeIDEConfig{Enabled: true},
+			Codex:      CodexIDEConfig{Enabled: true},
 		},
 		Knowledge: KnowledgeConfig{
 			Path: ".qode/knowledge",

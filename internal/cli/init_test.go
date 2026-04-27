@@ -103,6 +103,11 @@ func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
 	if _, err := os.Stat(cursorPath); os.IsNotExist(err) {
 		t.Error(".cursor/commands/qode-plan-refine.mdc not created")
 	}
+
+	codexPath := filepath.Join(dir, ".codex", "commands", "qode-plan-refine.md")
+	if _, err := os.Stat(codexPath); os.IsNotExist(err) {
+		t.Error(".codex/commands/qode-plan-refine.md not created")
+	}
 }
 
 func TestRunInitExisting_NoCursorRules(t *testing.T) {

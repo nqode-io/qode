@@ -40,6 +40,7 @@ type ScoringConfig struct {
 type IDEConfig struct {
 	Cursor     CursorIDEConfig     `yaml:"cursor,omitempty"`
 	ClaudeCode ClaudeCodeIDEConfig `yaml:"claude_code,omitempty"`
+	Codex      CodexIDEConfig      `yaml:"codex,omitempty"`
 }
 
 // CursorIDEConfig controls Cursor IDE integration.
@@ -49,6 +50,11 @@ type CursorIDEConfig struct {
 
 // ClaudeCodeIDEConfig controls Claude Code integration.
 type ClaudeCodeIDEConfig struct {
+	Enabled bool `yaml:"enabled,omitempty"`
+}
+
+// CodexIDEConfig controls Codex IDE integration.
+type CodexIDEConfig struct {
 	Enabled bool `yaml:"enabled,omitempty"`
 }
 
