@@ -39,3 +39,6 @@ go.work.sum
 # qode temp files
 .qode/contexts/*
 .qode/prompts/scaffold/
+
+# goreleaser output
+dist/

@@ -7,7 +7,7 @@ before:
     - go mod tidy
 
 snapshot:
-  version_template: "{{ .Version }}"
+  version_template: "{{ .Version }}-SNAPSHOT-{{ .ShortCommit }}"
 
 builds:
   - id: qode
@@ -27,13 +27,26 @@ builds:
 
 archives:
   - id: qode
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: '{{ .ProjectName }}_{{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ .Tag }}{{ end }}_{{ .Os }}_{{ .Arch }}'
     format_overrides:
       - goos: windows
         formats: [zip]
 
 checksum:
   name_template: "checksums.txt"
+
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sig"
+    certificate: "${artifact}.pem"
+    args:
+      - sign-blob
+      - "--yes"
+      - "--output-signature=${signature}"
+      - "--output-certificate=${certificate}"
+      - "${artifact}"
+    artifacts: checksum
+    output: true
 
 changelog:
   sort: asc
@@ -47,3 +60,20 @@ release:
   github:
     owner: nqode-io
     name: qode
+
+homebrew_casks:
+  - name: qode
+    binaries:
+      - qode
+    repository:
+      owner: nqode-io
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Casks
+    homepage: "https://github.com/nqode-io/qode"
+    description: "Generates structured AI prompts for a standardized developer workflow"
+    license: "MIT"
+    hooks:
+      post:
+        install: |
+          system_command "#{staged_path}/qode", args: ["--version"]

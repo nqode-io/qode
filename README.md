@@ -6,18 +6,60 @@ Standardises how developers use AI coding assistants across client projects with
 
 ## Installation
 
-Download the latest binary for your platform from [GitHub Releases](https://github.com/nqode-io/qode/releases), then extract and add it to your PATH.
-
-**Alternative — install from source** (requires Go 1.24+):
+### macOS
 
 ```bash
-go install github.com/nqode/qode/cmd/qode@latest
+brew install nqode-io/tap/qode
 ```
 
-Verify the installation:
+### Linux
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/nqode-io/qode/main/install.sh | sh
+```
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/nqode-io/qode/main/install.ps1 | iex
+```
+
+Windows SmartScreen may block the first run of `qode.exe`. Click **More info** → **Run anyway**.
+
+### Verify and self-update
 
 ```bash
 qode --version
+```
+
+Re-run the one-liner for your platform to upgrade to the latest release.
+
+### Alternative — install from source
+
+Requires Go 1.24+:
+
+```bash
+go install github.com/nqode-io/qode/cmd/qode@latest
+```
+
+### Advanced — supply-chain verification
+
+Tagged releases sign `checksums.txt` with [cosign](https://github.com/sigstore/cosign) keyless OIDC. To verify, download the checksums and signature artifacts from the release page, then run `cosign verify-blob` from the directory containing them:
+
+```bash
+# Replace with the tag you want to verify
+TAG=v0.1.0-beta
+BASE="https://github.com/nqode-io/qode/releases/download/${TAG}"
+curl -sSfLO "${BASE}/checksums.txt"
+curl -sSfLO "${BASE}/checksums.txt.sig"
+curl -sSfLO "${BASE}/checksums.txt.pem"
+
+cosign verify-blob \
+  --certificate-identity-regexp 'https://github.com/nqode-io/qode/\.github/workflows/release\.yml@refs/tags/v.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --signature checksums.txt.sig \
+  --certificate checksums.txt.pem \
+  checksums.txt
 ```
 
 ## Quick Start
