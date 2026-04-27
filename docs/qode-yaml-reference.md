@@ -86,10 +86,10 @@ When `true`, guarded commands exit with a non-zero status code and print an erro
 
 | Command | Prerequisite |
 |---|---|
-| `qode plan spec` / `/qode-plan-spec` | `refined-analysis.md` exists and score ≥ `target_score` |
-| `qode start` / `/qode-start` | `spec.md` exists |
-| `qode review code` / `/qode-review-code` | Branch diff is non-empty (strict only) |
-| `qode review security` / `/qode-review-security` | Branch diff is non-empty (strict only) |
+| `qode plan spec` / `qode-plan-spec` workflow | `refined-analysis.md` exists and score ≥ `target_score` |
+| `qode start` / `qode-start` workflow | `spec.md` exists |
+| `qode review code` / `qode-review-code` workflow | Branch diff is non-empty (strict only) |
+| `qode review security` / `qode-review-security` workflow | Branch diff is non-empty (strict only) |
 
 All guarded commands accept `--force` to bypass score and completeness gates. Absent-file errors (e.g. no `refined-analysis.md` at all) are always hard errors regardless of `--force` or `strict` mode.
 
@@ -113,7 +113,7 @@ Toggle whether `qode init` generates IDE assets for each supported editor.
 |---|---|---|
 | `ide.cursor.enabled` | `.cursor/commands/*.mdc` | `true` |
 | `ide.claude_code.enabled` | `.claude/commands/*.md` | `true` |
-| `ide.codex.enabled` | `.codex/commands/*.md` | `true` |
+| `ide.codex.enabled` | `.agents/skills/*/SKILL.md` | `true` |
 
 Set a value to `false` to skip generation for that IDE on the next `qode init`. Re-run `qode init` after changing the flag to bring the on-disk assets in sync. Cursor, Claude Code, and Codex are the IDEs supported in this release.
 

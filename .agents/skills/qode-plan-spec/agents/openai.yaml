@@ -1,0 +1,5 @@
+interface:
+  display_name: "qode-plan-spec"
+  short_description: "Generate the technical specification for the active qode context."
+policy:
+  allow_implicit_invocation: false

@@ -2,7 +2,7 @@
 
 qode uses IDE-native MCP (Model Context Protocol) servers to fetch ticket content. This gives the AI access to the full ticket — title, description, all comments with authors and timestamps, attachments, and linked resources (Figma designs, Google Docs, Confluence pages, etc.).
 
-Use the `/qode-ticket-fetch <url>` slash command in Cursor or Claude Code. The AI will call the appropriate MCP server and write structured output to the active context.
+Invoke `qode-ticket-fetch` in your IDE. Use `/qode-ticket-fetch <url>` in Cursor or Claude Code, or `$qode-ticket-fetch <url>` in Codex. The AI will call the appropriate MCP server and write structured output to the active context.
 
 ## Quick reference
 

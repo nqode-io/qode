@@ -1,3 +1,8 @@
+---
+name: "qode-plan-refine"
+description: "Refine requirements with a worker pass plus scoring pass."
+---
+
 # Refine Requirements — qode
 
 **Worker pass:** Run this command and use its stdout output as your worker prompt:
@@ -14,7 +19,7 @@ Then:
 2. Detect iteration number N from the "<!-- qode:iteration=N -->" header in refined-analysis.md (default: 1)
 3. Rewrite refined-analysis.md replacing the first line with: <!-- qode:iteration=N score=S/M -->
 4. Write a copy to: .qode/contexts/current/refined-analysis-N-score-S.md
-5. Report the score to the user. If S >= T, suggest running /qode-plan-spec. Otherwise suggest re-running /qode-plan-refine.
+5. Report the score to the user. If S >= T, suggest running the `qode-plan-spec` workflow. Otherwise suggest re-running `qode-plan-refine`.
 
 ## Post Step to Ticket (Optional)
 

@@ -25,7 +25,7 @@ qode --version
 
 ### Pick an IDE
 
-qode ships slash commands for **Claude Code** (CLI / desktop / IDE plugin), **Cursor**, and **Codex**. Each IDE receives the same 10-command catalog; only the on-disk format and enable flag differ.
+qode ships the same 10 workflow names for **Claude Code** (CLI / desktop / IDE plugin), **Cursor**, and **Codex**. Cursor and Claude Code receive slash commands; Codex receives skills generated under `.agents/skills/`.
 
 ### Configure MCP servers
 
@@ -45,9 +45,11 @@ You get:
 - `qode.yaml` — review thresholds, scoring config, IDE toggles, diff command.
 - `.qode/scoring.yaml` — three rubrics: `refine` (for `/qode-plan-refine`), `review` (for `/qode-review-code`), `security` (for `/qode-review-security`). Each rubric has a `min_*_score` gate in `qode.yaml`. Strict mode (`scoring.strict`, default `false`) makes those gates blocking when flipped to `true`.
 - `.qode/prompts/` — local copies of every prompt template. Edit them to match your project's conventions; the embedded defaults stay as fallback.
-- `.cursor/commands/*.mdc`, `.claude/commands/*.md`, and `.codex/commands/*.md` — slash commands wired into your IDEs.
+- `.cursor/commands/*.mdc`, `.claude/commands/*.md`, and `.agents/skills/*/SKILL.md` — generated IDE workflows wired into your IDEs.
 
-Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, and `.codex/` so the whole team works against the same rubrics, prompts, and commands.
+Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, and `.agents/skills/` so the whole team works against the same rubrics, prompts, and IDE workflows.
+
+> **Invocation syntax.** The examples below use slash-command syntax for brevity. In Codex, invoke the same workflow names as skills instead: `/qode-plan-refine` → `$qode-plan-refine`, `/qode-ticket-fetch` → `$qode-ticket-fetch`, and so on.
 
 > **Pro tip — keep your AI's context fresh.** AI assistants degrade as their conversation history grows: more drift, more hallucination, more "I forgot what we were doing." **Start a new chat (`/clear` in Claude Code, `New chat` in Cursor, new chat in Codex) between every workflow step.** Each qode slash command writes its output to disk under `.qode/contexts/current/`, so the next step always picks up exactly where the previous one left off — chat history is not load-bearing. This single habit moves output quality more than any other tweak.
 
@@ -97,7 +99,7 @@ When one ticket spans multiple subtasks, the ticket text itself does not say "in
 
 Every downstream qode command reads `notes.md` automatically, which is how you keep refinements and specs scoped to the current subtask.
 
-> **Combining commands in one prompt.** qode commands are slash commands — you can chain them with prose freely:
+> **Combining workflows in one prompt.** In Cursor and Claude Code, qode workflows are slash commands, so you can chain them with prose freely. In Codex, use the matching `$qode-*` skill names instead.
 >
 > - `add a note to notes.md saying we must keep the existing GET /users/:id response shape unchanged, then run /qode-plan-refine`
 > - `update notes.md to drop the rate-limiting requirement (out of scope for this iteration), then re-run /qode-plan-refine`
@@ -238,7 +240,7 @@ Then walk Steps 4 → 14 again for the frontend subtask. When both subtasks are 
 
 ## Per-IDE best practices
 
-| IDE | Start a new chat between steps | Combine prose + slash commands | Course-correct mid-run |
+| IDE | Start a new chat between steps | Combine prose + workflow invocation | Course-correct mid-run |
 | --- | --- | --- | --- |
 | Claude Code | `/clear` between steps; `/compact` if you want to keep context but trim tokens | Yes — chain prose and commands freely | Yes — follow-up messages queue and apply |
 | Cursor | New chat (`Cmd-N` / `Ctrl-N`) between steps | Yes — same as Claude | Model-dependent; verify before relying on it |

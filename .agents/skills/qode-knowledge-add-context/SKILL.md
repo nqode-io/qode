@@ -1,3 +1,8 @@
+---
+name: "qode-knowledge-add-context"
+description: "Extract durable lessons learned from the current qode context."
+---
+
 # Extract Lessons Learned — qode
 
 Reflect on the current session and extract actionable lessons learned.

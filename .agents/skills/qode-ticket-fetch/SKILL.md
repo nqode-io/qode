@@ -1,3 +1,8 @@
+---
+name: "qode-ticket-fetch"
+description: "Fetch a ticket into the current qode context via MCP."
+---
+
 # Fetch Ticket via MCP — qode
 
 Fetch the ticket at the URL or ID provided in $ARGUMENTS using your available MCP tools.

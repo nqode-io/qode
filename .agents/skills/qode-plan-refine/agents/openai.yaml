@@ -1,0 +1,5 @@
+interface:
+  display_name: "qode-plan-refine"
+  short_description: "Refine requirements with a worker pass plus scoring pass."
+policy:
+  allow_implicit_invocation: false

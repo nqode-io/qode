@@ -2,6 +2,8 @@
 
 Go CLI that generates structured AI prompts for a standardized developer workflow. It does **not** run AI — it assembles context and renders prompt templates for AI IDEs (Cursor, Claude Code, Codex, etc.).
 
+This file mirrors the project guidance in `CLAUDE.md` for tools that read `AGENTS.md`.
+
 ## Commands
 
 ```bash
@@ -72,7 +74,7 @@ Default shape: **table-driven** with `t.Run(tc.name, ...)` and `t.Parallel()` on
 
 ## Gotchas
 
-- Do not change `CLAUDE.md` unless the user explicitly asks for agent-instruction updates
+- Do not change `AGENTS.md` unless the user explicitly asks for agent-instruction updates
 - If asked to add something to `notes` or `notes.md`, always append to `.qode/contexts/current/notes.md`
-- `.qode/`, `.claude/`, `.cursor/`, `.agents/skills/`, `.cursorrules/` directories and `qode.yaml` are configuration — only read when testing changes to these files, never modify directly (use `qode init` instead)
-- At the end of every `/qode-start` implementation, append a summary of the change to `CHANGELOG.md` under `[Unreleased]`. Group entries under `Added` / `Changed` / `Fixed` / `Removed` (Keep a Changelog format). Skip only when the change is purely internal (test-only, refactor with no user-visible effect, context-only edits under `.qode/contexts/`).
+- `.qode/`, `.claude/`, `.cursor/`, `.agents/skills/`, and `qode.yaml` are configuration — only read when testing changes to these files, never modify directly (use `qode init` instead)
+- At the end of every `qode-start` implementation, append a summary of the change to `CHANGELOG.md` under `[Unreleased]`. Group entries under `Added` / `Changed` / `Fixed` / `Removed` (Keep a Changelog format). Skip only when the change is purely internal (test-only, refactor with no user-visible effect, context-only edits under `.qode/contexts/`).

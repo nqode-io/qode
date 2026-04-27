@@ -104,9 +104,12 @@ func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
 		t.Error(".cursor/commands/qode-plan-refine.mdc not created")
 	}
 
-	codexPath := filepath.Join(dir, ".codex", "commands", "qode-plan-refine.md")
+	codexPath := filepath.Join(dir, ".agents", "skills", "qode-plan-refine", "SKILL.md")
 	if _, err := os.Stat(codexPath); os.IsNotExist(err) {
-		t.Error(".codex/commands/qode-plan-refine.md not created")
+		t.Error(".agents/skills/qode-plan-refine/SKILL.md not created")
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".codex", "commands")); !os.IsNotExist(err) {
+		t.Error("legacy .codex/commands directory should not be created")
 	}
 }
 

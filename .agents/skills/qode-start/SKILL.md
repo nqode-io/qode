@@ -1,3 +1,8 @@
+---
+name: "qode-start"
+description: "Start the implementation session from the current qode spec."
+---
+
 # Start Implementation — qode
 
 Run this command and use its stdout output as your prompt:

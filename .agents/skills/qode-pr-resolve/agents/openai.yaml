@@ -1,0 +1,5 @@
+interface:
+  display_name: "qode-pr-resolve"
+  short_description: "Resolve open pull-request review comments via MCP."
+policy:
+  allow_implicit_invocation: false

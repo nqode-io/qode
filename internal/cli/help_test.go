@@ -118,7 +118,7 @@ func TestBuildStatusLines_FullyComplete(t *testing.T) {
 		t.Errorf("expected empty upNext for fully completed workflow, got: %q", upNext)
 	}
 
-	// Step 10 must reference /qode-pr-resolve.
+	// Step 10 must reference qode-pr-resolve.
 	found := false
 	for _, line := range lines {
 		if strings.Contains(line, "qode-pr-resolve") {
@@ -127,7 +127,7 @@ func TestBuildStatusLines_FullyComplete(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Error("expected a status line referencing /qode-pr-resolve")
+		t.Error("expected a status line referencing qode-pr-resolve")
 	}
 }
 
@@ -210,7 +210,7 @@ func TestReviewItemStatus_Table(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			upNext := ""
-			status := reviewItemStatus(tt.present, tt.score, tt.min, "/qode-review-code", tt.maxScore, &upNext)
+			status := reviewItemStatus(tt.present, tt.score, tt.min, "qode-review-code", tt.maxScore, &upNext)
 			if !strings.Contains(status, tt.wantSub) {
 				t.Errorf("status = %q, want substring %q", status, tt.wantSub)
 			}

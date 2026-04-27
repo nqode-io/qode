@@ -22,7 +22,7 @@ func newInitCmd() *cobra.Command {
 		Long: `Initialise qode in the current directory.
 
 Writes a minimal qode.yaml with defaults, creates the .qode/ directory
-structure, copies embedded prompt templates, and generates IDE slash commands
+structure, copies embedded prompt templates, and generates IDE workflow assets
 for Cursor, Claude Code, and Codex.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := resolveRoot()
@@ -88,7 +88,7 @@ func runInitExisting(out io.Writer, root string) error {
 		return err
 	}
 
-	// Generate IDE configs and slash commands using the loaded (or default) config.
+	// Generate IDE configs and workflow assets using the loaded (or default) config.
 	if err := scaffold.Setup(out, root, &cfg); err != nil {
 		return fmt.Errorf("setting up IDE configs: %w", err)
 	}
@@ -99,7 +99,7 @@ func runInitExisting(out io.Writer, root string) error {
 
 	// Remove scaffold prompt overrides: these templates are one-time scaffolding
 	// tools used only during init. Deleting them ensures future qode versions
-	// can update the generated commands without local overrides blocking the update.
+	// can update the generated workflow assets without local overrides blocking the update.
 	scaffoldPromptsDir := filepath.Join(root, config.QodeDir, "prompts", "scaffold")
 	if err := os.RemoveAll(scaffoldPromptsDir); err != nil {
 		return fmt.Errorf("removing scaffold prompts: %w", err)

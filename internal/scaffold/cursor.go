@@ -11,19 +11,6 @@ import (
 
 const cursorCommandsDir = ".cursor/commands"
 
-var cursorCommands = []string{
-	"qode-plan-refine",
-	"qode-plan-spec",
-	"qode-review-code",
-	"qode-review-security",
-	"qode-check",
-	"qode-start",
-	"qode-ticket-fetch",
-	"qode-knowledge-add-context",
-	"qode-pr-create",
-	"qode-pr-resolve",
-}
-
 // SetupCursor generates Cursor IDE configuration files.
 func SetupCursor(out io.Writer, root string) error {
 	if err := iokit.EnsureDir(filepath.Join(root, cursorCommandsDir)); err != nil {
@@ -39,17 +26,17 @@ func SetupCursor(out io.Writer, root string) error {
 		WithIDE("cursor").
 		Build()
 
-	for _, cmd := range cursorCommands {
-		content, err := engine.Render("scaffold/"+cmd, data)
+	for _, workflow := range qodeWorkflows {
+		content, err := engine.Render("scaffold/"+workflow.Name, data)
 		if err != nil {
-			return fmt.Errorf("render %s: %w", cmd, err)
+			return fmt.Errorf("render %s: %w", workflow.Name, err)
 		}
-		p := filepath.Join(root, cursorCommandsDir, cmd+".mdc")
+		p := filepath.Join(root, cursorCommandsDir, workflow.Name+".mdc")
 		if err := iokit.WriteFile(p, []byte(content), 0644); err != nil {
 			return err
 		}
 	}
 
-	_, _ = fmt.Fprintf(out, "  Cursor: .cursor/commands/ (%d commands)\n", len(cursorCommands))
+	_, _ = fmt.Fprintf(out, "  Cursor: .cursor/commands/ (%d commands)\n", len(qodeWorkflows))
 	return nil
 }

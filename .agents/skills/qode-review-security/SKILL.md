@@ -1,14 +1,19 @@
-# Code Review — qode
+---
+name: "qode-review-security"
+description: "Run the qode security review workflow."
+---
+
+# Security Review — qode
 
 Run this command and use its stdout output as your prompt:
-  qode review code
+  qode review security
 
-If the command produces no output (no uncommitted changes), inform the user to commit changes first. Use `qode review code --force` to bypass the uncommitted-diff check.
+If the command produces no output (no uncommitted changes), inform the user to commit changes first. Use `qode review security --force` to bypass the uncommitted-diff check.
 
 After completing the review:
-- Save to: .qode/contexts/current/code-review.md
-- List all Critical and High issues clearly
-- Provide specific, actionable fix suggestions
+- Save to: .qode/contexts/current/security-review.md
+- List all Critical and High vulnerabilities with OWASP categories
+- Provide specific remediation for each issue
 
 ## Post Step to Ticket (Optional)
 
@@ -22,12 +27,12 @@ After completing the review:
    - Unrecognised URL → skip silently
 3. If the required MCP tool is not available in your tool list, skip silently.
 4. Read `.qode/contexts/current/.ctx-name.md` for the context name.
-5. Ask: "Post `.qode/contexts/current/code-review.md` as a new ticket comment? Yes or No. (Note: publicly visible.)"
+5. Ask: "Post `.qode/contexts/current/security-review.md` as a new ticket comment? Yes or No. (NOTE: THIS MIGHT BE PUBLICLY VISIBLE)"
    - **Yes**: post via the selected MCP tool with body:
      ```
-     **qode: review-code** | context: `<context-name>`
+     **qode: review-security** | context: `<context-name>`
 
-     <full contents of .qode/contexts/current/code-review.md>
+     <full contents of .qode/contexts/current/security-review.md>
      ```
      If the call fails, report the error and stop.
    - **No**: end.

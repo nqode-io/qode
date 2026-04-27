@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CONTRIBUTING.md` development-workflow snippet reconciled to the canonical 12-step list (added `Test locally`, `/qode-pr-create`, `/qode-pr-resolve`)
 - `CLAUDE.md` package references updated from the obsolete `branchcontext` to `qodecontext` (renamed in [#33](https://github.com/nqode-io/qode/issues/33)); minimum security-review score aligned with the documented default
 - `.github/workflows/ci.yml` now also runs on `push: branches: [main]` so the new CI badge has a status to display on the default branch
+- Codex integration now generates explicit-invocation skills under `.agents/skills/` instead of legacy `.codex/commands/`, and the docs/help text now describe cross-IDE workflow invocation accordingly
 
 ### Fixed
 

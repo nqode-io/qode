@@ -1,3 +1,8 @@
+---
+name: "qode-check"
+description: "Run qode quality gates such as tests and lint checks."
+---
+
 # Quality Gates — qode
 
 Run quality gates interactively in two sequential phases.
@@ -43,7 +48,7 @@ Run quality gates interactively in two sequential phases.
    - On Accept: apply fixes, re-run Phase 2 (do not advance until lint is clean)
    - On Comment: incorporate the user's feedback before retrying; do not loop blindly
 4. **If no linter is found:** skip Phase 2, report success.
-5. **If lint is clean:** report that all quality gates passed and suggest running /qode-review-code.
+5. **If lint is clean:** report that all quality gates passed and suggest running the `qode-review-code` workflow.
 
 ## Unknown stack
 

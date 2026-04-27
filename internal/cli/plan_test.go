@@ -127,7 +127,7 @@ func TestRunPlanSpec_GuardBlocked_Unscored(t *testing.T) {
 		t.Fatal("expected error for unscored analysis in strict mode")
 	}
 	if !strings.Contains(err.Error(), "qode-plan-judge") {
-		t.Errorf("error should mention /qode-plan-judge, got: %v", err)
+		t.Errorf("error should mention qode-plan-judge, got: %v", err)
 	}
 }
 
@@ -145,7 +145,7 @@ func TestRunPlanSpec_Force_SkipsGuard(t *testing.T) {
 		t.Fatal("expected hard error for missing analysis file")
 	}
 	// Must be the hard-error, not the guard message.
-	if strings.Contains(err.Error(), "Run /qode-plan-refine") {
+	if strings.Contains(err.Error(), "Run the `qode-plan-refine` step") {
 		t.Errorf("force should bypass guard, but got guard message: %v", err)
 	}
 }

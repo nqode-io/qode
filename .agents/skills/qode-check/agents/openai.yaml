@@ -1,0 +1,5 @@
+interface:
+  display_name: "qode-check"
+  short_description: "Run qode quality gates such as tests and lint checks."
+policy:
+  allow_implicit_invocation: false

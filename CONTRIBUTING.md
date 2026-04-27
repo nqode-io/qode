@@ -28,11 +28,13 @@ go install ./cmd/qode/
 qode init                               # Once per checkout — generates qode.yaml, .qode/, .cursor/, .claude/
 ```
 
-Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, and `.claude/` so reviewers work against the same rubrics, prompts, and slash commands.
+Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, and `.agents/skills/` so reviewers work against the same rubrics, prompts, and IDE workflows.
 
 ## Development Workflow
 
 qode uses its own workflow for development. One feature branch can hold multiple subtask contexts (e.g. `backend-api` and `frontend-form` under `feat-user-profile-editing`). Once you have qode installed:
+
+Cursor and Claude Code invoke the IDE workflows below as `/qode-*`. Codex invokes the same workflow names as `$qode-*` skills.
 
 ```bash
 qode context init <name> --auto-switch  # Create a new work context (one per subtask) and switch to it
@@ -53,7 +55,7 @@ qode context remove <name>              # Cleanup per subtask
 
 See [docs/tutorial.md](docs/tutorial.md) for an end-to-end walkthrough, or the [README](README.md) for an overview.
 
-> **Start a new chat between every workflow step** (`/clear` in Claude Code, new chat in Cursor/Codex). Each command writes its output to `.qode/contexts/current/`, so the next step picks up from disk — chat history is not load-bearing, and stale context degrades AI output more than any other factor.
+> **Start a new chat between every workflow step** (`/clear` in Claude Code, new chat in Cursor/Codex). Each workflow writes its output to `.qode/contexts/current/`, so the next step picks up from disk — chat history is not load-bearing, and stale context degrades AI output more than any other factor.
 >
 > **Use the installed `qode` binary**, never `go run` from your checkout. Local source may be mid-edit; the installed binary is the contract you and your reviewers share.
 

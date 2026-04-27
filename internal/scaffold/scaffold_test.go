@@ -73,8 +73,8 @@ func TestSetupClaudeCode_WritesAllCommands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading commands dir: %v", err)
 	}
-	if len(entries) != len(claudeCommands) {
-		t.Errorf("SetupClaudeCode: wrote %d commands, want %d", len(entries), len(claudeCommands))
+	if len(entries) != len(qodeWorkflows) {
+		t.Errorf("SetupClaudeCode: wrote %d commands, want %d", len(entries), len(qodeWorkflows))
 	}
 }
 
@@ -154,14 +154,14 @@ func TestSetupClaudeCode_CommandContent(t *testing.T) {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
-	for _, name := range claudeCommands {
-		content := readClaudeCommand(t, dir, name)
+	for _, workflow := range qodeWorkflows {
+		content := readClaudeCommand(t, dir, workflow.Name)
 		if strings.Contains(content, "--prompt-only") {
-			t.Errorf("%s.md contains --prompt-only", name)
+			t.Errorf("%s.md contains --prompt-only", workflow.Name)
 		}
 		// Each command must render a non-trivial prompt body.
 		if len(content) < 50 {
-			t.Errorf("%s.md too short (%d bytes), expected rendered command content", name, len(content))
+			t.Errorf("%s.md too short (%d bytes), expected rendered command content", workflow.Name, len(content))
 		}
 	}
 }
@@ -210,8 +210,8 @@ func TestSetupCursor_WritesAllCommands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading cursor commands dir: %v", err)
 	}
-	if len(entries) != len(cursorCommands) {
-		t.Errorf("SetupCursor: wrote %d commands, want %d", len(entries), len(cursorCommands))
+	if len(entries) != len(qodeWorkflows) {
+		t.Errorf("SetupCursor: wrote %d commands, want %d", len(entries), len(qodeWorkflows))
 	}
 }
 
@@ -258,13 +258,13 @@ func TestSetupCursor_CommandContent(t *testing.T) {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
-	for _, name := range cursorCommands {
-		content := readCursorCommand(t, dir, name)
+	for _, workflow := range qodeWorkflows {
+		content := readCursorCommand(t, dir, workflow.Name)
 		if strings.Contains(content, "--prompt-only") {
-			t.Errorf("%s.mdc contains --prompt-only", name)
+			t.Errorf("%s.mdc contains --prompt-only", workflow.Name)
 		}
 		if len(content) < 50 {
-			t.Errorf("%s.mdc too short (%d bytes), expected rendered command content", name, len(content))
+			t.Errorf("%s.mdc too short (%d bytes), expected rendered command content", workflow.Name, len(content))
 		}
 	}
 }
@@ -386,7 +386,7 @@ func TestSetup_AllThreeIDEs(t *testing.T) {
 	for _, dir := range []string{
 		filepath.Join(dir, ".cursor", "commands"),
 		filepath.Join(dir, ".claude", "commands"),
-		filepath.Join(dir, ".codex", "commands"),
+		filepath.Join(dir, ".agents", "skills"),
 	} {
 		if _, err := os.Stat(dir); err != nil {
 			t.Errorf("expected %s to exist: %v", dir, err)
@@ -414,8 +414,11 @@ func TestSetup_OnlyCodex(t *testing.T) {
 		t.Fatalf("Setup: %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, ".codex", "commands")); err != nil {
-		t.Errorf("expected .codex/commands dir: %v", err)
+	if _, err := os.Stat(filepath.Join(dir, ".agents", "skills")); err != nil {
+		t.Errorf("expected .agents/skills dir: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".codex", "commands")); !os.IsNotExist(err) {
+		t.Error("expected legacy .codex/commands to be absent after Codex setup")
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".claude", "commands")); !os.IsNotExist(err) {
 		t.Error("expected .claude/commands to not exist when ClaudeCode is disabled")
@@ -485,35 +488,47 @@ func TestSetupCursor_Idempotent(t *testing.T) {
 	}
 }
 
-// readCodexCommand reads a single Codex command file from <root>/.codex/commands/<name>.md.
-func readCodexCommand(t *testing.T, root, name string) string {
+// readCodexSkill reads a single Codex skill file from <root>/.agents/skills/<name>/SKILL.md.
+func readCodexSkill(t *testing.T, root, name string) string {
 	t.Helper()
-	path := filepath.Join(root, ".codex", "commands", name+".md")
+	path := filepath.Join(root, ".agents", "skills", name, "SKILL.md")
 	data, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("reading %s.md: %v", name, err)
+		t.Fatalf("reading %s SKILL.md: %v", name, err)
+	}
+	return string(data)
+}
+
+func readCodexSkillMetadata(t *testing.T, root, name string) string {
+	t.Helper()
+	path := filepath.Join(root, ".agents", "skills", name, "agents", "openai.yaml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s openai.yaml: %v", name, err)
 	}
 	return string(data)
 }
 
 // --- SetupCodex ---
 
-func TestSetupCodex_WritesAllCommands(t *testing.T) {
+func TestSetupCodex_WritesAllSkills(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	if err := SetupCodex(io.Discard, dir); err != nil {
 		t.Fatalf("SetupCodex: %v", err)
 	}
 
-	entries, err := os.ReadDir(filepath.Join(dir, ".codex", "commands"))
+	entries, err := os.ReadDir(filepath.Join(dir, ".agents", "skills"))
 	if err != nil {
-		t.Fatalf("reading commands dir: %v", err)
+		t.Fatalf("reading skills dir: %v", err)
 	}
-	if len(entries) != len(codexCommands) {
-		t.Errorf("SetupCodex: wrote %d commands, want %d", len(entries), len(codexCommands))
+	if len(entries) != len(qodeWorkflows) {
+		t.Errorf("SetupCodex: wrote %d skills, want %d", len(entries), len(qodeWorkflows))
 	}
-	if len(codexCommands) != len(claudeCommands) {
-		t.Errorf("codexCommands and claudeCommands out of sync: %d vs %d", len(codexCommands), len(claudeCommands))
+	for _, workflow := range qodeWorkflows {
+		if _, err := os.Stat(filepath.Join(dir, ".agents", "skills", workflow.Name, "SKILL.md")); err != nil {
+			t.Errorf("missing SKILL.md for %s: %v", workflow.Name, err)
+		}
 	}
 }
 
@@ -524,19 +539,31 @@ func TestSetupCodex_CommandContent(t *testing.T) {
 		t.Fatalf("SetupCodex: %v", err)
 	}
 
-	for _, name := range codexCommands {
-		name := name
-		t.Run(name, func(t *testing.T) {
+	for _, workflow := range qodeWorkflows {
+		workflow := workflow
+		t.Run(workflow.Name, func(t *testing.T) {
 			t.Parallel()
-			content := readCodexCommand(t, dir, name)
+			content := readCodexSkill(t, dir, workflow.Name)
 			if len(content) < 50 {
-				t.Errorf("%s.md too short (%d bytes)", name, len(content))
+				t.Errorf("%s SKILL.md too short (%d bytes)", workflow.Name, len(content))
 			}
 			if strings.Contains(content, "--prompt-only") {
-				t.Errorf("%s.md contains --prompt-only", name)
+				t.Errorf("%s SKILL.md contains --prompt-only", workflow.Name)
 			}
 			if strings.Contains(content, "AskUserQuestion") {
-				t.Errorf("%s.md contains AskUserQuestion (not supported by Codex)", name)
+				t.Errorf("%s SKILL.md contains AskUserQuestion (not supported by Codex)", workflow.Name)
+			}
+			for _, want := range []string{
+				`name: "` + workflow.Name + `"`,
+				`description: "`,
+			} {
+				if !strings.Contains(content, want) {
+					t.Errorf("%s SKILL.md missing %q", workflow.Name, want)
+				}
+			}
+			metadata := readCodexSkillMetadata(t, dir, workflow.Name)
+			if !strings.Contains(metadata, "allow_implicit_invocation: false") {
+				t.Errorf("%s openai.yaml must disable implicit invocation", workflow.Name)
 			}
 		})
 	}
@@ -549,12 +576,12 @@ func TestSetupCodex_Idempotent(t *testing.T) {
 	if err := SetupCodex(io.Discard, dir); err != nil {
 		t.Fatalf("first SetupCodex: %v", err)
 	}
-	firstContents := readAllCommands(t, filepath.Join(dir, ".codex", "commands"))
+	firstContents := readAllFilesRecursive(t, filepath.Join(dir, ".agents", "skills"))
 
 	if err := SetupCodex(io.Discard, dir); err != nil {
 		t.Fatalf("second SetupCodex: %v", err)
 	}
-	secondContents := readAllCommands(t, filepath.Join(dir, ".codex", "commands"))
+	secondContents := readAllFilesRecursive(t, filepath.Join(dir, ".agents", "skills"))
 
 	if len(firstContents) != len(secondContents) {
 		t.Fatalf("file count changed: %d → %d", len(firstContents), len(secondContents))
@@ -568,6 +595,25 @@ func TestSetupCodex_Idempotent(t *testing.T) {
 		if first != second {
 			t.Errorf("file %q content changed after second run", name)
 		}
+	}
+}
+
+func TestSetupCodex_RemovesLegacyCommandsDir(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	legacyPath := filepath.Join(dir, ".codex", "commands", "qode-plan-refine.md")
+	if err := os.MkdirAll(filepath.Dir(legacyPath), 0755); err != nil {
+		t.Fatalf("MkdirAll legacy dir: %v", err)
+	}
+	if err := os.WriteFile(legacyPath, []byte("legacy"), 0644); err != nil {
+		t.Fatalf("WriteFile legacy command: %v", err)
+	}
+
+	if err := SetupCodex(io.Discard, dir); err != nil {
+		t.Fatalf("SetupCodex: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".codex", "commands")); !os.IsNotExist(err) {
+		t.Errorf("expected legacy .codex/commands to be removed, got err=%v", err)
 	}
 }
 
@@ -588,6 +634,33 @@ func readAllCommands(t *testing.T, dir string) map[string]string {
 			t.Fatalf("ReadFile %s: %v", e.Name(), err)
 		}
 		result[e.Name()] = string(data)
+	}
+	return result
+}
+
+func readAllFilesRecursive(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	result := map[string]string{}
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		data, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
+		}
+		rel, relErr := filepath.Rel(dir, path)
+		if relErr != nil {
+			return relErr
+		}
+		result[rel] = string(data)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Walk %s: %v", dir, err)
 	}
 	return result
 }

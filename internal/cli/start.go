@@ -53,7 +53,7 @@ func runStart(ctx context.Context, out, errOut io.Writer, toFile, force bool) er
 
 	if !sess.Context.HasSpec() {
 		_, _ = fmt.Fprintln(errOut, "No spec.md found.")
-		_, _ = fmt.Fprintf(errOut, "Run /qode-plan-spec first and save the output to:\n  %s/spec.md\n", sess.Context.ContextDir)
+		_, _ = fmt.Fprintf(errOut, "Run the `qode-plan-spec` workflow first and save the output to:\n  %s/spec.md\n", sess.Context.ContextDir)
 		return ErrNoSpec
 	}
 

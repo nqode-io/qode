@@ -81,7 +81,7 @@ func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string)
 	} else {
 		lines = append(lines, step(2, "Add context", "Not started."))
 		if upNext == "" {
-			upNext = "Fetch the ticket with /qode-ticket-fetch <url>."
+			upNext = "Run the `qode-ticket-fetch` workflow with the ticket URL."
 		}
 	}
 
@@ -94,7 +94,7 @@ func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string)
 	} else {
 		lines = append(lines, step(4, "Generate spec", "Not started."))
 		if upNext == "" {
-			upNext = "Run /qode-plan-spec."
+			upNext = "Run the `qode-plan-spec` workflow."
 		}
 	}
 
@@ -104,7 +104,7 @@ func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string)
 	} else {
 		lines = append(lines, step(5, "Implement", "Not started."))
 		if upNext == "" {
-			upNext = "Run /qode-start to generate the implementation prompt."
+			upNext = "Run the `qode-start` workflow to generate the implementation prompt."
 		}
 	}
 
@@ -116,13 +116,13 @@ func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string)
 	lines = append(lines, reviewStatus(ctx, cfg, &upNext)...)
 
 	// Step 9: Create pull request — always manual.
-	lines = append(lines, step(9, "Create pull request", "Always done by the user — run /qode-pr-create."))
+	lines = append(lines, step(9, "Create pull request", "Always done by the user — run the `qode-pr-create` workflow."))
 
 	// Step 10: Resolve PR review comments — always manual.
-	lines = append(lines, step(10, "Resolve PR review comments", "Always done by the user — run /qode-pr-resolve."))
+	lines = append(lines, step(10, "Resolve PR review comments", "Always done by the user — run the `qode-pr-resolve` workflow."))
 
 	// Step 11: Lessons learned — always optional.
-	lines = append(lines, step(11, "Capture lessons learned", "Always optional — run /qode-knowledge-add-context."))
+	lines = append(lines, step(11, "Capture lessons learned", "Always optional — run the `qode-knowledge-add-context` workflow."))
 
 	return lines, upNext
 }
@@ -130,7 +130,7 @@ func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string)
 func refineStatus(ctx *qodecontext.Context, cfg *config.Config, upNext *string) string {
 	if !ctx.HasRefinedAnalysis() {
 		if *upNext == "" {
-			*upNext = "Run /qode-plan-refine."
+			*upNext = "Run the `qode-plan-refine` workflow."
 		}
 		return "Not started."
 	}
@@ -138,15 +138,15 @@ func refineStatus(ctx *qodecontext.Context, cfg *config.Config, upNext *string) 
 	score := ctx.LatestScore()
 	if score == 0 {
 		if *upNext == "" {
-			*upNext = "Run /qode-plan-judge to score the analysis."
+			*upNext = "Run the `qode-plan-judge` workflow to score the analysis."
 		}
-		return fmt.Sprintf("%d iteration(s), unscored — run /qode-plan-judge.", n)
+		return fmt.Sprintf("%d iteration(s), unscored — run the `qode-plan-judge` workflow.", n)
 	}
 	maxScore := workflow.RefineMaxScore(cfg)
 	minScore := workflow.RefineMinScore(cfg)
 	if score < minScore {
 		if *upNext == "" {
-			*upNext = fmt.Sprintf("Score %d/%d is below minimum %d. Run /qode-plan-refine to improve.", score, maxScore, minScore)
+			*upNext = fmt.Sprintf("Score %d/%d is below minimum %d. Run the `qode-plan-refine` workflow to improve it.", score, maxScore, minScore)
 		}
 		return fmt.Sprintf("%d iteration(s), latest score: %d/%d (below minimum %d).", n, score, maxScore, minScore)
 	}
@@ -159,11 +159,11 @@ func reviewStatus(ctx *qodecontext.Context, cfg *config.Config, upNext *string) 
 	secMax := scoring.BuildRubric(scoring.RubricSecurity, cfg).Total()
 	codeStatus := reviewItemStatus(
 		ctx.HasCodeReview(), ctx.CodeReviewScore(), cfg.Review.MinCodeScore,
-		"/qode-review-code", codeMax, upNext,
+		"qode-review-code", codeMax, upNext,
 	)
 	secStatus := reviewItemStatus(
 		ctx.HasSecurityReview(), ctx.SecurityReviewScore(), cfg.Review.MinSecurityScore,
-		"/qode-review-security", secMax, upNext,
+		"qode-review-security", secMax, upNext,
 	)
 	lines = append(lines,
 		fmt.Sprintf("8. Review - Code review: %s", codeStatus),
@@ -175,13 +175,13 @@ func reviewStatus(ctx *qodecontext.Context, cfg *config.Config, upNext *string) 
 func reviewItemStatus(present bool, score, min float64, cmd string, maxScore int, upNext *string) string {
 	if !present {
 		if *upNext == "" {
-			*upNext = fmt.Sprintf("Run %s.", cmd)
+			*upNext = fmt.Sprintf("Run the `%s` workflow.", cmd)
 		}
 		return "Not started."
 	}
 	if score < min {
 		if *upNext == "" {
-			*upNext = fmt.Sprintf("Score %.1f/%d is below minimum %.1f. Consider fixing issues and re-running %s.", score, maxScore, min, cmd)
+			*upNext = fmt.Sprintf("Score %.1f/%d is below minimum %.1f. Consider fixing issues and re-running the `%s` workflow.", score, maxScore, min, cmd)
 		}
 		return fmt.Sprintf("Score %.1f/%d (below minimum %.1f).", score, maxScore, min)
 	}
@@ -191,39 +191,43 @@ func reviewItemStatus(present bool, score, min float64, cmd string, maxScore int
 const workflowList = `qode Workflow
 =============
 
+IDE invocation surface:
+  Cursor / Claude Code: /qode-*
+  Codex:                $qode-*  (skills generated under .agents/skills/)
+
 1.  Manually create a branch, then initialise the qode context
     qode context init <name>
 
 2.  Add context
-    /qode-ticket-fetch <url>  (in Cursor/Claude Code)
+    qode-ticket-fetch <url>  (in IDE)
 
 3.  Refine requirements  (iterate until pass threshold)
-    /qode-plan-refine   — worker and scoring pass
+    qode-plan-refine   — worker and scoring pass
 
 4.  Generate spec
-    /qode-plan-spec
+    qode-plan-spec
 
 5.  Implement
-    /qode-start
+    qode-start
 
 6.  Test locally
     (manual)
 
 7.  Quality gates
-    /qode-check
+    qode-check
 
 8.  Review
-    /qode-review-code
-    /qode-review-security
+    qode-review-code
+    qode-review-security
 
 9.  Create pull request
-    /qode-pr-create
+    qode-pr-create
 
 10. Resolve PR review comments
-    /qode-pr-resolve
+    qode-pr-resolve
 
 11. Capture lessons learned
-    /qode-knowledge-add-context  (optional)
+    qode-knowledge-add-context  (optional)
 
 12. Cleanup
     qode context remove

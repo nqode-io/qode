@@ -1,0 +1,5 @@
+interface:
+  display_name: "qode-ticket-fetch"
+  short_description: "Fetch a ticket into the current qode context via MCP."
+policy:
+  allow_implicit_invocation: false
