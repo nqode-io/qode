@@ -25,6 +25,9 @@ func TestDefaultConfig(t *testing.T) {
 	if !cfg.IDE.ClaudeCode.Enabled {
 		t.Error("expected ClaudeCode enabled by default")
 	}
+	if !cfg.IDE.Codex.Enabled {
+		t.Error("expected Codex enabled by default")
+	}
 	wantRubrics := DefaultRubricConfigs()
 	if len(cfg.Scoring.Rubrics) != len(wantRubrics) {
 		t.Errorf("expected %d default rubrics, got %d", len(wantRubrics), len(cfg.Scoring.Rubrics))
