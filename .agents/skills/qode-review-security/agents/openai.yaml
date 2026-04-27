@@ -1,0 +1,5 @@
+interface:
+  display_name: "qode-review-security"
+  short_description: "Run the qode security review workflow."
+policy:
+  allow_implicit_invocation: false

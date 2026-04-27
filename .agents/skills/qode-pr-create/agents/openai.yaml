@@ -1,0 +1,5 @@
+interface:
+  display_name: "qode-pr-create"
+  short_description: "Create a pull request for the current qode workflow via MCP."
+policy:
+  allow_implicit_invocation: false

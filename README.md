@@ -2,6 +2,12 @@
 
 AI-assisted developer workflow CLI by nQode.
 
+[![CI](https://github.com/nqode-io/qode/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nqode-io/qode/actions/workflows/ci.yml)
+[![Release](https://github.com/nqode-io/qode/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/nqode-io/qode/actions/workflows/release.yml)
+[![Latest Release](https://img.shields.io/github/v/release/nqode-io/qode?include_prereleases&sort=semver)](https://github.com/nqode-io/qode/releases)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nqode-io/qode)](https://goreportcard.com/report/github.com/nqode-io/qode)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Standardises how developers use AI coding assistants across client projects with varied tech stacks — Next.js+React, .NET+React, Angular+Java, and more.
 
 ## Installation
@@ -71,29 +77,37 @@ qode init
 
 # Start a feature
 qode context init feat-user-dashboard --auto-switch
-# Then use /qode-ticket-fetch <url> in your IDE to fetch the ticket via MCP
+# Then invoke qode-ticket-fetch in your IDE to fetch the ticket via MCP
+# Cursor / Claude Code: /qode-ticket-fetch <url>
+# Codex: $qode-ticket-fetch <url>
 ```
 
 ## The Workflow
 
-Before beginning, create a new branch for your work.
+Before beginning, manually create a new branch for your work.
 
 ```markdown
-1. qode context init <name> [--auto-switch]   Create a named work context
-2. /qode-ticket-fetch <url>      (in IDE)    Fetch ticket via MCP into context
-3. /qode-plan-refine             (in IDE)    Refine requirements — iterate to 25/25
-4. /qode-plan-spec               (in IDE)    Generate tech spec
-5. /qode-start                   (in IDE)    Run implementation prompt
-6. /qode-check                   (in IDE)    Run quality gates (tests + lint)
-7. /qode-review-code             (in IDE)    Code review
-8. /qode-review-security         (in IDE)    Security review
-9. /qode-pr-create               (in IDE)    Create pull request via MCP
-10. /qode-pr-resolve             (in IDE)    Resolve PR review comments via MCP
-11. /qode-knowledge-add-context  (in IDE)    (Recommended) Extract lessons learned
+1.  qode context init <name>                 Create a named work context
+2.  qode-ticket-fetch <url>       (in IDE)   Fetch ticket via MCP into context
+    Optional helper: qode-note-add (in IDE)  Follow with free-form notes to record scope, constraints, or course corrections
+3.  qode-plan-refine              (in IDE)   Refine requirements — worker + scoring pass
+4.  qode-plan-spec                (in IDE)   Generate tech spec
+5.  qode-start                    (in IDE)   Run implementation prompt
+6.  Test locally                  (manual)   Verify the change behaves as expected
+7.  qode-check                    (in IDE)   Run quality gates (tests + lint)
+8.  qode-review-code              (in IDE)   Code review
+    qode-review-security          (in IDE)   Security review
+9.  qode-pr-create                (in IDE)   Create pull request via MCP
+10. qode-pr-resolve               (in IDE)   Resolve PR review comments via MCP
+11. qode-knowledge-add-context    (in IDE)   Capture lessons learned (optional)
 12. qode context remove                      Cleanup
 ```
 
-Run `qode workflow` for the full diagram.
+Cursor and Claude Code invoke these workflows as slash commands (`/qode-*`). Codex invokes the same workflow names as skills (`$qode-*`).
+
+`qode-note-add` is intentionally an optional helper, not a numbered workflow step. Follow the invocation with free-form note text; single-line and multi-paragraph notes both work.
+
+Run `qode workflow` for the full diagram. `qode workflow status` shows live completion status for the active context.
 
 ## Scoring
 
@@ -136,15 +150,33 @@ Both prompts can be customised via `.qode/prompts/review/` local overrides.
 
 ## IDE Support
 
-| IDE | What's generated |
-| --- | --- |
-| **Cursor** | `.cursor/commands/*.mdc` slash commands |
-| **Claude Code** | `.claude/commands/*.md` slash commands |
-| **Codex** | `.codex/commands/*.md` slash commands |
+qode supports three IDEs out of the box. Cursor and Claude Code receive slash commands; Codex receives skills that surface the same workflow names in its picker.
 
-Slash commands available in all IDEs: `/qode-ticket-fetch`, `/qode-plan-refine`, `/qode-plan-spec`, `/qode-start`, `/qode-review-code`, `/qode-review-security`, `/qode-check`, `/qode-knowledge-add-context`
+|                       | Cursor                           | Claude Code                       | Codex                            |
+| --------------------- | -------------------------------- | --------------------------------- | -------------------------------- |
+| Generated assets      | `.cursor/commands/*.mdc`         | `.claude/commands/*.md`           | `.agents/skills/*/SKILL.md`      |
+| Enable in `qode.yaml` | `ide.cursor.enabled: true`       | `ide.claude_code.enabled: true`   | `ide.codex.enabled: true`        |
+| Regenerate            | Run `qode init` after toggling   | Run `qode init` after toggling    | Run `qode init` after toggling   |
 
-IDE configs are generated by `qode init`. Re-run `qode init` to regenerate them after updating `qode.yaml`.
+Workflow names available in all IDEs:
+
+- `qode-ticket-fetch <url>` — fetch ticket via MCP
+- `qode-note-add` — append concise technical notes to `.qode/contexts/current/notes.md` from free-form trailing text
+- `qode-plan-refine` — refine requirements (worker + scoring pass)
+- `qode-plan-spec` — generate tech spec
+- `qode-start` — run implementation prompt
+- `qode-check` — quality gates (tests + lint)
+- `qode-review-code` — code review
+- `qode-review-security` — security review
+- `qode-pr-create` — create pull request via MCP
+- `qode-pr-resolve` — resolve PR review comments via MCP
+- `qode-knowledge-add-context` — capture lessons learned
+
+Invocation syntax:
+- Cursor / Claude Code: `/qode-*`
+- Codex: `$qode-*` skills generated under `.agents/skills/`
+
+Run `qode init` after toggling enablement in `qode.yaml` to regenerate the IDE assets.
 
 ## Commands
 
@@ -161,17 +193,17 @@ qode plan refine                                               Generate worker r
 qode plan refine --to-file                                     Save worker prompt to file for debugging
 qode plan judge                                                Generate judge scoring prompt to stdout (requires refined-analysis.md)
 qode plan judge --to-file                                      Save judge prompt to file for debugging
-qode plan spec                                                 Generate tech spec prompt to stdout (use in IDE via /qode-plan-spec)
+qode plan spec                                                 Generate tech spec prompt to stdout (use in IDE via the qode-plan-spec workflow)
 qode plan spec --force                                         Bypass score gate (prerequisite check still applies)
 qode plan spec --to-file                                       Save spec prompt to file for debugging
 
-qode start                                                     Generate implementation prompt to stdout (use in IDE via /qode-start)
+qode start                                                     Generate implementation prompt to stdout (use in IDE via the qode-start workflow)
 qode start --force                                             Bypass spec prerequisite gate
 qode start --to-file                                           Save implementation prompt to file for debugging
 
-qode review code                                               Generate code review prompt to stdout (use in IDE via /qode-review-code)
+qode review code                                               Generate code review prompt to stdout (use in IDE via the qode-review-code workflow)
 qode review code --force                                       Bypass uncommitted-diff check
-qode review security                                           Generate security review prompt to stdout (use in IDE via /qode-review-security)
+qode review security                                           Generate security review prompt to stdout (use in IDE via the qode-review-security workflow)
 qode review security --force                                   Bypass uncommitted-diff check
 
 qode knowledge add <path>                                      Add file to knowledge base
@@ -198,17 +230,21 @@ cd my-project && qode init
 
 ## Ticket Fetch via MCP
 
-Ticket fetching uses IDE-native MCP servers — no API keys in qode itself. Configure the MCP server for your ticketing system (Jira, Linear, GitHub, Azure DevOps, Notion) and linked-resource services (Figma, Google Docs, Confluence, etc.) in your IDE, then use `/qode-ticket-fetch <url>` in Cursor, Claude Code, or Codex.
+Ticket fetching uses IDE-native MCP servers — no API keys in qode itself. Configure the MCP server for your ticketing system (Jira, Linear, GitHub, Azure DevOps, Notion) and linked-resource services (Figma, Google Docs, Confluence, etc.) in your IDE, then invoke `qode-ticket-fetch` in your IDE (`/qode-ticket-fetch <url>` in Cursor/Claude Code, `$qode-ticket-fetch <url>` in Codex).
 
 See [docs/how-to-use-ticket-fetch.md](docs/how-to-use-ticket-fetch.md) for full MCP setup instructions per service.
 
 ## Further Reading
 
+- [docs/tutorial.md](docs/tutorial.md) — End-to-end walkthrough: one ticket, one branch, two subtasks, every workflow step
 - [docs/versioning.md](docs/versioning.md) — Versioning strategy and release process
 - [docs/how-to-use-ticket-fetch.md](docs/how-to-use-ticket-fetch.md) — Ticket system setup and token scopes
 - [docs/qode-yaml-reference.md](docs/qode-yaml-reference.md) — Full `qode.yaml` configuration reference
 - [docs/how-to-customise-prompts.md](docs/how-to-customise-prompts.md) — Override built-in prompt templates per project
+- [CHANGELOG.md](CHANGELOG.md) — Release history
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to abide by its terms.

@@ -12,7 +12,7 @@ import (
 // CheckResult is the output of CheckStep.
 type CheckResult struct {
 	Blocked bool
-	Message string // actionable message including the slash command to run next
+	Message string // actionable message including the next IDE step to run
 }
 
 // CheckStep returns a CheckResult indicating whether the prerequisites for step
@@ -35,13 +35,13 @@ func checkSpec(ctx *qodecontext.Context, cfg *config.Config) CheckResult {
 	if !ctx.HasRefinedAnalysis() {
 		return CheckResult{
 			Blocked: true,
-			Message: "No refined-analysis.md found. Run /qode-plan-refine first.",
+			Message: "No refined-analysis.md found. Run the `qode-plan-refine` step first.",
 		}
 	}
 	if ctx.LatestScore() == 0 {
 		return CheckResult{
 			Blocked: true,
-			Message: "refined-analysis.md is unscored. Run /qode-plan-judge first.",
+			Message: "refined-analysis.md is unscored. Run the `qode-plan-judge` step first.",
 		}
 	}
 	min := RefineMinScore(cfg)
@@ -50,7 +50,7 @@ func checkSpec(ctx *qodecontext.Context, cfg *config.Config) CheckResult {
 		return CheckResult{
 			Blocked: true,
 			Message: fmt.Sprintf(
-				"Refine score is %d/%d, minimum required is %d. Run /qode-plan-refine to improve.",
+				"Refine score is %d/%d, minimum required is %d. Run the `qode-plan-refine` step to improve it.",
 				score, maxScore, min,
 			),
 		}
@@ -62,7 +62,7 @@ func checkStart(ctx *qodecontext.Context) CheckResult {
 	if !ctx.HasSpec() {
 		return CheckResult{
 			Blocked: true,
-			Message: "No spec.md found. Run /qode-plan-spec first.",
+			Message: "No spec.md found. Run the `qode-plan-spec` step first.",
 		}
 	}
 	return CheckResult{}

@@ -39,7 +39,7 @@ func TestCheckStep(t *testing.T) {
 			},
 			cfg:         &defaultCfg,
 			wantBlocked: true,
-			wantMsg:     "/qode-plan-judge",
+			wantMsg:     "qode-plan-judge",
 		},
 		{
 			name: "spec/below-default-min",
@@ -50,7 +50,7 @@ func TestCheckStep(t *testing.T) {
 			},
 			cfg:         &defaultCfg,
 			wantBlocked: true,
-			wantMsg:     "/qode-plan-refine",
+			wantMsg:     "qode-plan-refine",
 		},
 		{
 			name: "spec/meets-default-min",
@@ -81,7 +81,7 @@ func TestCheckStep(t *testing.T) {
 			},
 			cfg:         &customCfg,
 			wantBlocked: true,
-			wantMsg:     "/qode-plan-refine",
+			wantMsg:     "qode-plan-refine",
 		},
 		{
 			name:        "start/no-spec",
@@ -92,10 +92,10 @@ func TestCheckStep(t *testing.T) {
 			wantMsg:     "spec.md",
 		},
 		{
-			name: "start/spec-present",
-			step: "start",
-			ctx:  &qodecontext.Context{Spec: "spec content"},
-			cfg:  &defaultCfg,
+			name:        "start/spec-present",
+			step:        "start",
+			ctx:         &qodecontext.Context{Spec: "spec content"},
+			cfg:         &defaultCfg,
 			wantBlocked: false,
 		},
 		{

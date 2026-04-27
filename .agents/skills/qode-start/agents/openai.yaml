@@ -1,0 +1,5 @@
+interface:
+  display_name: "qode-start"
+  short_description: "Start the implementation session from the current qode spec."
+policy:
+  allow_implicit_invocation: false

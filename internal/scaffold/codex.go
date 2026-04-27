@@ -9,24 +9,15 @@ import (
 	"github.com/nqode/qode/internal/prompt"
 )
 
-var codexCommands = []string{
-	"qode-plan-refine",
-	"qode-plan-spec",
-	"qode-review-code",
-	"qode-review-security",
-	"qode-check",
-	"qode-start",
-	"qode-ticket-fetch",
-	"qode-knowledge-add-context",
-	"qode-pr-create",
-	"qode-pr-resolve",
-}
+const (
+	codexSkillsDir = ".agents/skills"
+)
 
-// SetupCodex generates Codex slash command files under <root>/.codex/commands/.
-// It writes one .md file per command and reports the count to out.
+// SetupCodex generates Codex skills under <root>/.agents/skills/.
+// It writes one SKILL.md file per workflow plus minimal OpenAI skill metadata.
 func SetupCodex(out io.Writer, root string) error {
-	commandsDir := filepath.Join(root, ".codex", "commands")
-	if err := iokit.EnsureDir(commandsDir); err != nil {
+	skillsDir := filepath.Join(root, codexSkillsDir)
+	if err := iokit.EnsureDir(skillsDir); err != nil {
 		return fmt.Errorf("codex setup: %w", err)
 	}
 
@@ -39,16 +30,39 @@ func SetupCodex(out io.Writer, root string) error {
 		WithIDE("codex").
 		Build()
 
-	for _, cmd := range codexCommands {
-		content, err := engine.Render("scaffold/"+cmd, data)
+	for _, workflow := range qodeWorkflows {
+		content, err := engine.Render("scaffold/"+workflow.Name, data)
 		if err != nil {
-			return fmt.Errorf("render %s: %w", cmd, err)
+			return fmt.Errorf("render %s: %w", workflow.Name, err)
 		}
-		if err := iokit.WriteFile(filepath.Join(commandsDir, cmd+".md"), []byte(content), 0644); err != nil {
+		skillDir := filepath.Join(skillsDir, workflow.Name)
+		skillPath := filepath.Join(skillDir, "SKILL.md")
+		if err := iokit.WriteFile(skillPath, []byte(renderCodexSkill(workflow, content)), 0644); err != nil {
+			return err
+		}
+		metadataPath := filepath.Join(skillDir, "agents", "openai.yaml")
+		if err := iokit.WriteFile(metadataPath, []byte(renderCodexSkillMetadata(workflow)), 0644); err != nil {
 			return err
 		}
 	}
 
-	_, _ = fmt.Fprintf(out, "  Codex: %d slash commands\n", len(codexCommands))
+	_, _ = fmt.Fprintf(out, "  Codex: .agents/skills/ (%d skills)\n", len(qodeWorkflows))
 	return nil
+}
+
+func renderCodexSkill(workflow workflowDefinition, content string) string {
+	return fmt.Sprintf(
+		"---\nname: %q\ndescription: %q\n---\n\n%s",
+		workflow.Name,
+		workflow.Description,
+		content,
+	)
+}
+
+func renderCodexSkillMetadata(workflow workflowDefinition) string {
+	return fmt.Sprintf(
+		"interface:\n  display_name: %q\n  short_description: %q\npolicy:\n  allow_implicit_invocation: false\n",
+		workflow.Name,
+		workflow.Description,
+	)
 }

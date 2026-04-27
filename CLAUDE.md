@@ -1,6 +1,6 @@
 # qode
 
-Go CLI that generates structured AI prompts for a standardized developer workflow. It does **not** run AI — it assembles context and renders prompt templates for AI IDEs (Cursor, Claude Code, etc.).
+Go CLI that generates structured AI prompts for a standardized developer workflow. It does **not** run AI — it assembles context and renders prompt templates for AI IDEs (Cursor, Claude Code, Codex, etc.).
 
 ## Commands
 
@@ -19,14 +19,14 @@ CI enforces **minimum 70% coverage** with race detection.
 
 ## Architecture
 
-Config (`config`) → Branch context (`branchcontext`) → Prompt engine (`prompt`) → Domain builders (`plan`, `review`) → CLI commands (`cli`) → Output
+Config (`config`) → Named context (`qodecontext`) → Prompt engine (`prompt`) → Domain builders (`plan`, `review`) → CLI commands (`cli`) → Output
 
 ### Dependency layering — MUST preserve
 
 ```text
 Leaf (zero internal deps): git, env, iokit, log, version
 Mid-level:                 config → iokit; scoring → config; knowledge → config, iokit
-Domain:                    branchcontext, prompt, workflow, plan, review, scaffold
+Domain:                    qodecontext, prompt, workflow, plan, review, scaffold
 Top-level (fan-out):       cli → ALL packages
 ```
 
@@ -72,6 +72,7 @@ Default shape: **table-driven** with `t.Run(tc.name, ...)` and `t.Parallel()` on
 
 ## Gotchas
 
-- IMPORTANT: Never change `CLAUDE.md` file
+- Do not change `CLAUDE.md` unless the user explicitly asks for agent-instruction updates
 - If asked to add something to `notes` or `notes.md`, always append to `.qode/contexts/current/notes.md`
-- `.qode/`, `.claude/`, `.cursor/`, `.cursorrules/` directories and `qode.yaml` are configuration — only read when testing changes to these files, never modify directly (use `qode init` instead)
+- `.qode/`, `.claude/`, `.cursor/`, `.agents/skills/`, `.cursorrules/` directories and `qode.yaml` are configuration — only read when testing changes to these files, never modify directly (use `qode init` instead)
+- At the end of every `/qode-start` implementation, append a summary of the change to `CHANGELOG.md` under `[Unreleased]`. Group entries under `Added` / `Changed` / `Fixed` / `Removed` (Keep a Changelog format). Skip only when the change is purely internal (test-only, refactor with no user-visible effect, context-only edits under `.qode/contexts/`).

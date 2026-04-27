@@ -27,7 +27,7 @@ const (
 	contextsDir   = "contexts"
 	currentLink   = "current"
 	ctxNameFile   = ".ctx-name.md"
-	ticketStub    = "# Ticket\n\nPaste ticket content here, or use /qode-ticket-fetch <url> in your IDE.\n"
+	ticketStub    = "# Ticket\n\nPaste ticket content here, or run the `qode-ticket-fetch` step in your IDE.\n"
 	notesStub     = "# Notes\n\nAdd any additional context, decisions, or open questions here.\n"
 	maxNameLength = 255
 )

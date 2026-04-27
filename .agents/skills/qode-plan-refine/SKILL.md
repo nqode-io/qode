@@ -1,0 +1,45 @@
+---
+name: "qode-plan-refine"
+description: "Refine requirements with a worker pass plus scoring pass."
+---
+
+# Refine Requirements — qode
+
+**Worker pass:** Run this command and use its stdout output as your worker prompt:
+  qode plan refine
+
+Save the worker output to:
+  .qode/contexts/current/refined-analysis.md
+
+**Judge pass (scoring):** Run this command and use its stdout output as your prompt:
+  qode plan judge
+
+Then:
+1. Parse the "**Total Score:** S/M" line and the "**Pass threshold:** T/M" line from the judge output to get score S, max M, and pass threshold T
+2. Detect iteration number N from the "<!-- qode:iteration=N -->" header in refined-analysis.md (default: 1)
+3. Rewrite refined-analysis.md replacing the first line with: <!-- qode:iteration=N score=S/M -->
+4. Write a copy to: .qode/contexts/current/refined-analysis-N-score-S.md
+5. Report the score to the user. If S >= T, suggest running the `qode-plan-spec` step. Otherwise suggest re-running `qode-plan-refine`.
+
+## Post Step to Ticket (Optional)
+
+1. Read `.qode/contexts/current/ticket.md`. If absent or no line matching `**URL:** <url>` is found, notify the user "No ticket URL found — skipping ticket comment." and skip the remaining steps.
+2. Extract the URL and select the MCP comment tool:
+   - `https://github.com/*/issues/*` → use tool `mcp__github__add_issue_comment`
+   - `https://*.atlassian.net/browse/*` → use tool `addCommentToJiraIssue`
+   - `https://linear.app/*/issue/*` → use tool `create_comment`
+   - `https://dev.azure.com/*/_workitems/*` → use tool `mcp_ado_wit_add_work_item_comment`
+   - `https://www.notion.so/*` → use tool `create-a-comment`
+   - Unrecognised URL → skip silently
+3. If the required MCP tool is not available in your tool list, skip silently.
+4. Read `.qode/contexts/current/.ctx-name.md` for the context name.
+5. Ask: "Post `.qode/contexts/current/refined-analysis.md` as a new ticket comment? Yes or No. (Note: publicly visible.)"
+   - **Yes**: post via the selected MCP tool with body:
+     ```
+     **qode: plan-refine** | context: `<context-name>`
+
+     <full contents of .qode/contexts/current/refined-analysis.md>
+     ```
+     If the call fails, report the error and stop.
+   - **No**: end.
+   - **Other (free text)**: execute as next prompt, then end.

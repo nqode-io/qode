@@ -2,6 +2,8 @@
 
 Thanks for your interest in contributing to qode! This project is MIT-licensed and we welcome contributions of all kinds — bug fixes, new features, documentation improvements, and more.
 
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to abide by its terms.
+
 ## Getting Started
 
 ### Prerequisites
@@ -23,26 +25,39 @@ git clone https://github.com/nqode-io/qode.git
 cd qode
 go test ./...
 go install ./cmd/qode/
+qode init                               # Once per checkout — generates qode.yaml, .qode/, .cursor/, .claude/
 ```
+
+Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, and `.agents/skills/` so reviewers work against the same rubrics, prompts, and IDE workflows.
 
 ## Development Workflow
 
-qode uses its own workflow for development. Once you have qode installed:
+qode uses its own workflow for development. One feature branch can hold multiple subtask contexts (e.g. `backend-api` and `frontend-form` under `feat-user-profile-editing`). Once you have qode installed:
+
+Cursor and Claude Code invoke the IDE workflows below as `/qode-*`. Codex invokes the same workflow names as `$qode-*` skills.
 
 ```bash
-qode context init <name> --auto-switch  # Create a new work context and switch to it
+qode context init <name> --auto-switch  # Create a new work context (one per subtask) and switch to it
 /qode-ticket-fetch <url> (in IDE)       # Fetch ticket into context
-/qode-plan-refine (in IDE)              # Refine requirements—iterate to 25/25
+/qode-note-add (in IDE)                 # Follow with free-form notes to record scope, constraints, course corrections
+/qode-plan-refine (in IDE)              # Refine requirements — worker + scoring pass
 /qode-plan-spec (in IDE)                # Generate tech spec
 /qode-start (in IDE)                    # Run implementation prompt
+# Test locally (manual)
 /qode-check (in IDE)                    # Run quality gates (tests + lint)
 /qode-review-code (in IDE)              # Code review
 /qode-review-security (in IDE)          # Security review
-/qode-knowledge-add-context (in IDE)    # (Recommended) Extract lessons learned
-qode context remove                     # Cleanup
+/qode-pr-create (in IDE)                # Create pull request via MCP
+/qode-pr-resolve (in IDE)               # Resolve PR review comments via MCP
+/qode-knowledge-add-context (in IDE)    # Capture lessons learned (optional)
+qode context remove <name>              # Cleanup per subtask
 ```
 
-See the [README](README.md) for the full workflow.
+See [docs/tutorial.md](docs/tutorial.md) for an end-to-end walkthrough, or the [README](README.md) for an overview.
+
+> **Start a new chat between every workflow step** (`/clear` in Claude Code, new chat in Cursor/Codex). Each workflow writes its output to `.qode/contexts/current/`, so the next step picks up from disk — chat history is not load-bearing, and stale context degrades AI output more than any other factor.
+>
+> **Use the installed `qode` binary**, never `go run` from your checkout. Local source may be mid-edit; the installed binary is the contract you and your reviewers share.
 
 ## Quality Gates
 
@@ -66,10 +81,11 @@ Run `/qode-check` (in IDE) to execute all gates interactively.
 ## Submitting Changes
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feat-description`) and initialise a context (`qode context init feat-description --auto-switch`)
-3. Make your changes
-4. Ensure all quality gates pass (`/qode-check` in IDE)
-5. Open a pull request against `main`
+2. Create a feature branch (`git checkout -b feat-description`)
+3. Initialise one context per subtask under that branch (`qode context init <subtask> --auto-switch`) — split the work if it spans, e.g. backend and frontend
+4. Make your changes, committing between workflow steps to keep `git diff main` clean for the review prompt
+5. Ensure all quality gates pass (`/qode-check` in IDE)
+6. Open a pull request against `main` (`/qode-pr-create` in IDE)
 
 ## Reporting Issues
 

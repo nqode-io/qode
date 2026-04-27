@@ -1,0 +1,5 @@
+interface:
+  display_name: "qode-review-code"
+  short_description: "Run the qode code review workflow."
+policy:
+  allow_implicit_invocation: false
