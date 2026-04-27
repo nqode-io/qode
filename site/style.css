@@ -1,0 +1,164 @@
+/* nQode / qode design tokens
+   Brand: dark terminal aesthetic with vivid green accent.
+   Derived from nQode wordmark + green spiral mark.
+*/
+
+:root {
+  /* ===== Colors ===== */
+  /* Surfaces — true-dark terminal */
+  --bg-0: #000000;            /* page */
+  --bg-1: #0a0f0d;            /* primary surface */
+  --bg-2: #0f1714;            /* raised surface / cards */
+  --bg-3: #16201c;            /* elevated / inputs */
+  --bg-4: #1d2925;            /* tooltip / menus */
+
+  /* Foreground (terminal text scale) */
+  --fg-0: #e8fff3;            /* highest emphasis */
+  --fg-1: #b8d4c5;            /* body */
+  --fg-2: #7a9389;            /* secondary / dim */
+  --fg-3: #4a5a54;            /* tertiary / subtle */
+  --fg-4: #2a3631;            /* hairline / disabled */
+
+  /* nQode brand greens */
+  --green-50:  #d6fff0;
+  --green-100: #a7f8d8;
+  --green-200: #6deeb9;
+  --green-300: #2adf94;
+  --green-400: #00c97d;       /* phosphor — primary terminal text */
+  --green-500: #00a878;       /* nQode brand green (logo) */
+  --green-600: #008a63;
+  --green-700: #006b4d;
+  --green-800: #014734;
+  --green-900: #042a20;
+
+  --brand: var(--green-500);
+  --brand-glow: #00ff9c;      /* CRT glow accent (sparingly) */
+  --accent: var(--green-400);
+
+  /* Semantic */
+  --fg: var(--fg-1);
+  --fg-strong: var(--fg-0);
+  --fg-muted: var(--fg-2);
+  --fg-dim: var(--fg-3);
+  --bg: var(--bg-0);
+  --surface: var(--bg-1);
+  --surface-raised: var(--bg-2);
+  --border: #1a2520;
+  --border-strong: #2a3a34;
+  --border-brand: rgba(0, 168, 120, 0.4);
+
+  --link: var(--green-300);
+  --link-hover: var(--green-200);
+
+  --success: var(--green-400);
+  --warn: #ffcc4d;
+  --error: #ff5d5d;
+  --info: #5dc0ff;
+
+  /* Code / token colors (terminal palette) */
+  --tok-comment: #4a5a54;
+  --tok-keyword: var(--green-300);
+  --tok-string:  #ffcc4d;
+  --tok-number:  #ff9966;
+  --tok-fn:      var(--green-100);
+  --tok-prompt:  var(--green-400);
+
+  /* ===== Type ===== */
+  --font-sans: "Space Grotesk", "Inter", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-display: "Space Grotesk", system-ui, sans-serif; /* nQode wordmark vibe — geometric, slightly futuristic */
+
+  /* Sizes */
+  --fs-xs:   12px;
+  --fs-sm:   14px;
+  --fs-base: 16px;
+  --fs-md:   18px;
+  --fs-lg:   20px;
+  --fs-xl:   24px;
+  --fs-2xl:  32px;
+  --fs-3xl:  44px;
+  --fs-4xl:  64px;
+  --fs-5xl:  88px;
+
+  --lh-tight: 1.05;
+  --lh-snug:  1.25;
+  --lh-base:  1.55;
+  --lh-loose: 1.75;
+
+  --tracking-tight: -0.02em;
+  --tracking-base:  0;
+  --tracking-wide:  0.06em;
+  --tracking-mega:  0.18em; /* "SOFTWARE COMPANY" subscript */
+
+  /* ===== Spacing ===== */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+  --s-10: 128px;
+
+  /* ===== Radii ===== */
+  --r-0: 0px;
+  --r-1: 2px;     /* terminal — sharp */
+  --r-2: 4px;
+  --r-3: 6px;
+  --r-4: 10px;
+  --r-pill: 999px;
+
+  /* ===== Shadows / Glow ===== */
+  --shadow-sm: 0 1px 0 rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg: 0 18px 48px rgba(0,0,0,0.7);
+
+  /* CRT phosphor glow — used on accents, never on body */
+  --glow-sm: 0 0 8px rgba(0, 201, 125, 0.35);
+  --glow-md: 0 0 18px rgba(0, 201, 125, 0.45), 0 0 4px rgba(0,201,125,0.6);
+  --glow-lg: 0 0 36px rgba(0, 255, 156, 0.45), 0 0 12px rgba(0,255,156,0.6);
+
+  /* Inset border (for input fields, terminal frames) */
+  --inset-hairline: inset 0 0 0 1px var(--border);
+  --inset-strong:   inset 0 0 0 1px var(--border-strong);
+  --inset-brand:    inset 0 0 0 1px var(--border-brand);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in:  cubic-bezier(0.6, 0, 0.8, 0.2);
+  --ease-std: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --dur-4: 600ms;
+}
+
+/* ===== Element defaults ===== */
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: var(--green-700); color: var(--fg-0); }
+
+/* Semantic typography classes */
+.h1, h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(40px, 6vw, var(--fs-5xl)); line-height: var(--lh-tight); letter-spacing: var(--tracking-tight); color: var(--fg-0); margin: 0; }
+.h2, h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 3.4vw, var(--fs-3xl)); line-height: 1.1; letter-spacing: var(--tracking-tight); color: var(--fg-0); margin: 0; }
+.h3, h3 { font-family: var(--font-display); font-weight: 500; font-size: var(--fs-xl); line-height: var(--lh-snug); color: var(--fg-0); margin: 0; }
+.h4, h4 { font-family: var(--font-sans);   font-weight: 500; font-size: var(--fs-md); line-height: var(--lh-snug); color: var(--fg-0); margin: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--tracking-mega); text-transform: uppercase; color: var(--green-400); }
+.lede { font-size: var(--fs-md); line-height: var(--lh-loose); color: var(--fg-1); }
+.p, p { font-size: var(--fs-base); line-height: var(--lh-base); color: var(--fg-1); margin: 0; }
+.small { font-size: var(--fs-sm); color: var(--fg-2); }
+code, kbd, samp, pre, .mono { font-family: var(--font-mono); font-feature-settings: "calt" 0; }
+code { font-size: 0.92em; color: var(--green-200); }
+.prompt::before { content: "$ "; color: var(--green-400); }
+a { color: var(--link); text-decoration: none; border-bottom: 1px solid color-mix(in oklab, var(--link) 35%, transparent); transition: color var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out); }
+a:hover { color: var(--link-hover); border-bottom-color: var(--link-hover); }

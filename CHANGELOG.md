@@ -5,6 +5,12 @@ All notable changes to qode are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2-beta] - 2026-04-27
+
+### Added
+
+- Pages deploy workflow (`.github/workflows/pages.yml`) publishing `site/` to <https://nqode-io.github.io/qode> on release publication and on pushes to `main` that touch `site/`
+
 ## [0.3.1-beta] - 2026-04-27
 
 ### Changed

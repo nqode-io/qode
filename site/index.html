@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>qode — AI-assisted developer workflow CLI</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Background — terminal grid + subtle vignette */
+    .bg-fx {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0, 168, 120, 0.10), transparent 60%),
+        radial-gradient(ellipse 60% 50% at 100% 100%, rgba(0, 168, 120, 0.06), transparent 60%),
+        linear-gradient(to bottom, #000 0%, #04080a 100%);
+    }
+
+    .bg-fx::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(0, 168, 120, 0.045) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 168, 120, 0.045) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 80%);
+    }
+
+    /* Faint scanlines for CRT vibe */
+    .bg-fx::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0) 2px, rgba(0, 0, 0, 0.18) 3px, rgba(0, 0, 0, 0) 4px);
+      opacity: 0.4;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* ===== Nav ===== */
+    nav.top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 28px;
+      max-width: 1180px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    nav.top .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    nav.top .brand-row .word {
+      color: var(--fg-0);
+      font-family: var(--font-display);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    nav.top .by {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--fg-3);
+      letter-spacing: var(--tracking-wide);
+    }
+
+    nav.top .by a {
+      color: var(--fg-2);
+      border: none;
+    }
+
+    nav.top .by a:hover {
+      color: var(--green-300);
+    }
+
+    nav.top ul {
+      display: flex;
+      gap: 28px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    nav.top ul a {
+      color: var(--fg-2);
+      font-size: 14px;
+      font-family: var(--font-mono);
+      border: none;
+    }
+
+    nav.top ul a:hover {
+      color: var(--green-300);
+    }
+
+    .gh-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-2);
+      color: var(--fg-0);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: var(--bg-2);
+      transition: all var(--dur-2) var(--ease-out);
+    }
+
+    .gh-btn:hover {
+      border-color: var(--green-500);
+      color: var(--green-200);
+      box-shadow: var(--glow-sm);
+    }
+
+    /* ===== Hero ===== */
+    .hero {
+      padding: 60px 0 80px;
+      position: relative;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 56px;
+      align-items: center;
+    }
+
+    @media (max-width: 900px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+        gap: 36px;
+      }
+    }
+
+    .hero .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .hero .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green-400);
+      box-shadow: var(--glow-sm);
+      animation: blink 1.6s var(--ease-std) infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      60% {
+        opacity: 1;
+      }
+
+      70%,
+      100% {
+        opacity: 0.25;
+      }
+    }
+
+    /* /qode logomark in hero */
+    .qode-mark {
+      display: inline-flex;
+      align-items: baseline;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: clamp(56px, 8vw, 112px);
+      line-height: 1;
+      letter-spacing: -0.04em;
+      margin: 0 0 12px;
+    }
+
+    .qode-mark .slash {
+      color: var(--green-400);
+      text-shadow: var(--glow-md);
+      margin-right: 2px;
+    }
+
+    .qode-mark .word {
+      color: var(--fg-0);
+    }
+
+    .qode-mark .caret {
+      display: inline-block;
+      width: 0.55ch;
+      height: 0.85em;
+      background: var(--green-400);
+      margin-left: 8px;
+      box-shadow: var(--glow-sm);
+      animation: caret 1.05s steps(1, end) infinite;
+      transform: translateY(0.05em);
+    }
+
+    @keyframes caret {
+      50% {
+        opacity: 0;
+      }
+    }
+
+    .hero h1 {
+      margin-bottom: 20px;
+      max-width: 16ch;
+    }
+
+    .hero .lede {
+      max-width: 50ch;
+      color: var(--fg-1);
+      margin-bottom: 32px;
+    }
+
+    .hero .lede em {
+      color: var(--green-200);
+      font-style: normal;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 22px;
+      border-radius: var(--r-2);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      border: 1px solid transparent;
+      transition: all var(--dur-2) var(--ease-out);
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--green-500);
+      color: #001a12;
+      box-shadow: var(--glow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-primary:hover {
+      background: var(--green-400);
+      box-shadow: var(--glow-md);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--fg-0);
+      border-color: var(--border-strong);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--green-500);
+      color: var(--green-200);
+      background: rgba(0, 168, 120, 0.06);
+    }
+
+    .meta-pills {
+      display: flex;
+      gap: 8px;
+      margin-top: 28px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-pill);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--fg-2);
+      background: var(--bg-2);
+    }
+
+    .pill .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green-500);
+    }
+
+    /* ===== Terminal window ===== */
+    .terminal {
+      background: var(--bg-1);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-3);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg), 0 0 0 1px rgba(0, 168, 120, 0.08), 0 0 80px -20px rgba(0, 168, 120, 0.25);
+      font-family: var(--font-mono);
+      font-size: 13.5px;
+      line-height: 1.65;
+    }
+
+    .term-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--bg-2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .term-bar .dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .term-bar .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--bg-4);
+      border: 1px solid var(--border-strong);
+    }
+
+    .term-bar .title {
+      font-size: 12px;
+      color: var(--fg-3);
+      margin-left: 8px;
+      letter-spacing: 0.04em;
+    }
+
+    .term-body {
+      padding: 18px 20px;
+      min-height: 320px;
+      color: var(--green-200);
+    }
+
+    .term-body .ln {
+      display: block;
+    }
+
+    .term-body .ln+.ln {
+      margin-top: 2px;
+    }
+
+    .term-body .pmt {
+      color: var(--green-400);
+      margin-right: 10px;
+    }
+
+    .term-body .cmd {
+      color: var(--fg-0);
+    }
+
+    .term-body .arg {
+      color: var(--green-200);
+    }
+
+    .term-body .flag {
+      color: var(--tok-string);
+    }
+
+    .term-body .out {
+      color: var(--fg-2);
+    }
+
+    .term-body .ok {
+      color: var(--green-300);
+    }
+
+    .term-body .warn {
+      color: var(--warn);
+    }
+
+    .term-body .dim {
+      color: var(--fg-3);
+    }
+
+    .term-body .step {
+      color: var(--green-100);
+    }
+
+    .term-body .hl {
+      color: var(--green-400);
+      text-shadow: var(--glow-sm);
+    }
+
+    .blinker {
+      display: inline-block;
+      width: 0.6ch;
+      height: 1em;
+      background: var(--green-400);
+      transform: translateY(0.18em);
+      margin-left: 2px;
+      animation: caret 1s steps(1) infinite;
+      box-shadow: var(--glow-sm);
+    }
+
+    /* ===== Sections ===== */
+    section {
+      padding: 80px 0;
+      position: relative;
+    }
+
+    .section-head {
+      margin-bottom: 48px;
+      max-width: 720px;
+    }
+
+    .section-head .eyebrow {
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .section-head h2 {
+      margin-bottom: 14px;
+    }
+
+    .section-head p {
+      color: var(--fg-2);
+      font-size: var(--fs-md);
+      line-height: var(--lh-loose);
+    }
+
+    /* Workflow */
+    .workflow {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(0, 168, 120, 0.02), transparent 30%);
+    }
+
+    .wf-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--r-3);
+      overflow: hidden;
+    }
+
+    @media (max-width: 900px) {
+      .wf-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 540px) {
+      .wf-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .wf-step {
+      padding: 22px 22px 24px;
+      background: var(--bg-1);
+      transition: background var(--dur-2) var(--ease-out);
+      cursor: default;
+    }
+
+    .wf-step:hover {
+      background: var(--bg-2);
+    }
+
+    .wf-step .num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--green-500);
+      letter-spacing: var(--tracking-wide);
+      margin-bottom: 10px;
+    }
+
+    .wf-step .cmd {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--fg-0);
+      margin-bottom: 6px;
+      word-break: break-word;
+    }
+
+    .wf-step .cmd .op {
+      color: var(--green-400);
+    }
+
+    .wf-step .desc {
+      font-size: 13px;
+      color: var(--fg-2);
+      line-height: 1.5;
+    }
+
+    .wf-step.optional {
+      opacity: 0.7;
+    }
+
+    .wf-step.optional .num {
+      color: var(--fg-3);
+    }
+
+    /* Features */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .features {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feature {
+      padding: 28px 26px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-3);
+      background: var(--bg-1);
+      transition: all var(--dur-2) var(--ease-out);
+    }
+
+    .feature:hover {
+      border-color: var(--border-brand);
+      background: var(--bg-2);
+      transform: translateY(-2px);
+    }
+
+    .feature .icon {
+      width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-brand);
+      border-radius: var(--r-2);
+      margin-bottom: 18px;
+      color: var(--green-400);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      box-shadow: inset 0 0 0 1px rgba(0, 168, 120, 0.15), var(--glow-sm);
+      background: rgba(0, 168, 120, 0.05);
+    }
+
+    .feature h3 {
+      margin-bottom: 10px;
+    }
+
+    .feature p {
+      color: var(--fg-2);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    /* Install */
+    .install-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: 8px 14px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--r-2);
+      color: var(--fg-2);
+      cursor: pointer;
+      transition: all var(--dur-1) var(--ease-out);
+    }
+
+    .tab:hover {
+      color: var(--fg-0);
+      border-color: var(--border-strong);
+    }
+
+    .tab.active {
+      background: var(--bg-2);
+      border-color: var(--green-500);
+      color: var(--green-200);
+    }
+
+    .install-block {
+      background: var(--bg-1);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-3);
+      overflow: hidden;
+    }
+
+    .install-cmd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--fg-0);
+    }
+
+    .install-cmd .pre {
+      color: var(--green-400);
+      margin-right: 10px;
+    }
+
+    .install-cmd[hidden] {
+      display: none;
+    }
+
+    .install-cmd .copy {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--fg-2);
+      padding: 6px 10px;
+      border-radius: var(--r-2);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+      letter-spacing: var(--tracking-wide);
+      transition: all var(--dur-1) var(--ease-out);
+    }
+
+    .install-cmd .copy:hover {
+      color: var(--green-300);
+      border-color: var(--green-700);
+    }
+
+    .install-cmd .copy.copied {
+      color: var(--green-300);
+      border-color: var(--green-500);
+    }
+
+    .install-note {
+      font-size: 13px;
+      color: var(--fg-3);
+      margin-top: 14px;
+      font-family: var(--font-mono);
+    }
+
+    /* Two-column: Scoring & Reviews */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+    }
+
+    @media (max-width: 900px) {
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: var(--r-3);
+      background: var(--bg-1);
+      padding: 32px;
+    }
+
+    .panel h3 {
+      margin-bottom: 14px;
+    }
+
+    .panel .small {
+      display: block;
+      margin-bottom: 22px;
+      color: var(--fg-2);
+    }
+
+    .rubric {
+      display: grid;
+      gap: 8px;
+    }
+
+    .rubric .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px dashed var(--border);
+      border-radius: var(--r-2);
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+
+    .rubric .row .label {
+      color: var(--fg-1);
+    }
+
+    .rubric .row .pts {
+      color: var(--green-400);
+    }
+
+    .rubric .total {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: rgba(0, 168, 120, 0.06);
+      border: 1px solid var(--border-brand);
+      border-radius: var(--r-2);
+      font-family: var(--font-mono);
+      font-size: 14px;
+    }
+
+    .rubric .total .v {
+      color: var(--green-300);
+      font-weight: 600;
+    }
+
+    .checks {
+      display: grid;
+      gap: 10px;
+    }
+
+    .check {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 12px;
+      align-items: start;
+      font-size: 14px;
+      color: var(--fg-1);
+      line-height: 1.55;
+    }
+
+    .check .mk {
+      color: var(--green-400);
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    /* IDE matrix */
+    .ide-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--border);
+      border-radius: var(--r-3);
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+
+    .ide-table th,
+    .ide-table td {
+      padding: 14px 18px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ide-table thead th {
+      background: var(--bg-2);
+      color: var(--fg-0);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .ide-table tbody th {
+      color: var(--fg-2);
+      font-weight: 400;
+      background: var(--bg-1);
+    }
+
+    .ide-table tbody td {
+      color: var(--fg-1);
+      background: var(--bg-1);
+    }
+
+    .ide-table tbody tr:last-child th,
+    .ide-table tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .ide-table code {
+      color: var(--green-300);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 48px 0 56px;
+      margin-top: 40px;
+      background: var(--bg-1);
+    }
+
+    .foot-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 40px;
+    }
+
+    @media (max-width: 760px) {
+      .foot-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    footer h4 {
+      color: var(--fg-2);
+      font-size: 12px;
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      margin: 0 0 14px;
+      font-family: var(--font-mono);
+      font-weight: 500;
+    }
+
+    footer ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    footer ul a {
+      color: var(--fg-1);
+      font-size: 14px;
+      border: none;
+    }
+
+    footer ul a:hover {
+      color: var(--green-300);
+    }
+
+    footer .legal {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--fg-3);
+      font-size: 13px;
+      font-family: var(--font-mono);
+    }
+
+    /* nQode wordmark in footer — uses the white logo svg */
+    .nq-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nq-mark svg {
+      height: 22px;
+      width: auto;
+    }
+
+    /* Slash mark — small reusable */
+    .slash-mark {
+      display: inline-flex;
+      align-items: baseline;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: -0.04em;
+    }
+
+    .slash-mark .slash {
+      color: var(--green-400);
+      text-shadow: var(--glow-sm);
+    }
+
+    .slash-mark .word {
+      color: var(--fg-0);
+    }
+
+    /* Visually-hidden */
+    .sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-fx" aria-hidden="true"></div>
+
+  <nav class="top">
+    <div class="brand-row">
+      <span class="slash-mark"><span class="slash">/</span><span class="word">qode</span></span>
+      <span class="by">by <a href="#nqode">nQode</a></span>
+    </div>
+    <ul>
+      <li><a href="#workflow">Workflow</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#scoring">Scoring</a></li>
+      <li><a href="#ide">IDEs</a></li>
+      <li><a href="#docs">Docs</a></li>
+    </ul>
+    <a class="gh-btn" href="https://github.com/nqode-io/qode">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path
+          d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+      </svg>
+      GitHub
+    </a>
+  </nav>
+
+  <header class="hero wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow">v0.3.1-beta · MIT licensed · Go 1.24+</span>
+        <div class="qode-mark"><span class="slash">/</span><span class="word">qode</span><span class="caret"></span>
+        </div>
+        <h1>One workflow for AI-assisted coding across every stack.</h1>
+        <p class="lede">qode is a CLI that <em>standardises how developers use AI coding assistants</em> — refining
+          tickets, generating specs, running implementation prompts, and gating reviews — across Next.js+React,
+          .NET+React, Angular+Java, and whatever's next.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#install">
+            <span>$</span> Install qode
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/nqode-io/qode">
+            View on GitHub →
+          </a>
+        </div>
+        <div class="meta-pills">
+          <span class="pill"><span class="dot"></span> Cursor</span>
+          <span class="pill"><span class="dot"></span> Claude Code</span>
+          <span class="pill"><span class="dot"></span> Codex</span>
+          <span class="pill">MCP-native</span>
+          <span class="pill">No API keys</span>
+        </div>
+      </div>
+
+      <div class="terminal" aria-label="qode demo terminal">
+        <div class="term-bar">
+          <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <span class="title">~/projects/dashboard — zsh</span>
+        </div>
+        <div class="term-body">
+          <span class="ln"><span class="pmt">$</span><span class="cmd">qode</span> <span class="arg">context init</span>
+            <span class="hl">feat-user-dashboard</span> <span class="flag">--auto-switch</span></span>
+          <span class="ln out"> ✓ context created · auto-switched</span>
+          <span class="ln">&nbsp;</span>
+          <span class="ln dim"># in your IDE — Cursor / Claude Code:</span>
+          <span class="ln"><span class="step">/qode-ticket-fetch</span> <span
+              class="arg">https://linear.app/acme/UD-241</span></span>
+          <span class="ln out"> ✓ ticket fetched via MCP → context/ticket.md</span>
+          <span class="ln">&nbsp;</span>
+          <span class="ln"><span class="step">/qode-plan-refine</span></span>
+          <span class="ln out"> worker → analysis · judge → <span class="ok">25/25</span> · ready</span>
+          <span class="ln"><span class="step">/qode-plan-spec</span></span>
+          <span class="ln out"> spec → context/spec.md</span>
+          <span class="ln"><span class="step">/qode-start</span></span>
+          <span class="ln out"> implementation prompt loaded</span>
+          <span class="ln">&nbsp;</span>
+          <span class="ln"><span class="pmt">$</span><span class="cmd">qode</span> <span class="arg">workflow
+              status</span></span>
+          <span class="ln out"> <span class="ok">●</span> refine <span class="ok">●</span> spec <span
+              class="ok">●</span> start <span class="ok">●</span> check <span class="warn">○</span> review <span
+              class="dim">○</span> pr</span>
+          <span class="ln"><span class="pmt">$</span><span class="blinker"></span></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">// why qode</span>
+        <h2>Built for engineers who refuse to copy-paste prompts.</h2>
+        <p>qode replaces ad-hoc prompting with twelve standardised steps. Every project gets the same vocabulary, the
+          same gates, and the same hardened review pass — no matter the stack.</p>
+      </div>
+
+      <div class="features">
+        <div class="feature">
+          <div class="icon">/</div>
+          <h3>Slash-command native</h3>
+          <p>Cursor and Claude Code call workflows as <code>/qode-*</code>. Codex picks them up as <code>$qode-*</code>
+            skills. One CLI generates assets for all three.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">⊕</div>
+          <h3>Two-pass scoring</h3>
+          <p>Worker AI produces the analysis. A separate Judge AI scores against a 25-point rubric. No self-scoring, no
+            flattery — just a gate before code gets generated.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">⌧</div>
+          <h3>Hardened reviews</h3>
+          <p>Review prompts demand ≥3 documented findings per file. Score caps for criticals. ≥8.0 must cite verified
+            properties. 10.0 in security review is invalid by design.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">⇄</div>
+          <h3>MCP-native ticketing</h3>
+          <p>No API keys in qode. Jira, Linear, GitHub, Azure DevOps, Notion — fetched through your IDE's MCP server.
+            Linked Figma, Docs, Confluence too.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">▤</div>
+          <h3>Named work contexts</h3>
+          <p>Every feature gets a context directory with ticket, notes, refined-analysis, spec, and lessons. Switch
+            between three concurrent features without losing state.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">∎</div>
+          <h3>Single binary</h3>
+          <p>Static Go binary. Brew, curl, or PowerShell. Cosign-signed checksums for supply-chain verification. No
+            runtime, no daemon, no telemetry.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="workflow" class="workflow">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">// the workflow</span>
+        <h2>Twelve steps. One ticket to one merged PR.</h2>
+        <p>Numbered commands ensure nothing is skipped. Run <code>qode workflow status</code> at any point to see
+          exactly where you are.</p>
+      </div>
+
+      <div class="wf-grid">
+        <div class="wf-step">
+          <div class="num">01</div>
+          <div class="cmd">qode <span class="op">context init</span></div>
+          <div class="desc">Create a named work context.</div>
+        </div>
+        <div class="wf-step">
+          <div class="num">02</div>
+          <div class="cmd">/qode-<span class="op">ticket-fetch</span></div>
+          <div class="desc">Fetch ticket via MCP into context.</div>
+        </div>
+        <div class="wf-step optional">
+          <div class="num">+</div>
+          <div class="cmd">/qode-<span class="op">note-add</span></div>
+          <div class="desc">Optional. Append free-form notes — scope, constraints, course corrections.</div>
+        </div>
+        <div class="wf-step">
+          <div class="num">03</div>
+          <div class="cmd">/qode-<span class="op">plan-refine</span></div>
+          <div class="desc">Refine requirements: worker pass + judge scoring.</div>
+        </div>
+        <div class="wf-step">
+          <div class="num">04</div>
+          <div class="cmd">/qode-<span class="op">plan-spec</span></div>
+          <div class="desc">Generate the tech spec. Gated on 25/25.</div>
+        </div>
+        <div class="wf-step">
+          <div class="num">05</div>
+          <div class="cmd">/qode-<span class="op">start</span></div>
+          <div class="desc">Run the implementation prompt.</div>
+        </div>
+        <div class="wf-step">
+          <div class="num">06</div>
+          <div class="cmd">test locally</div>
+          <div class="desc">Verify the change behaves as expected.</div>
+        </div>
+        <div class="wf-step">
+          <div class="num">07</div>
+          <div class="cmd">/qode-<span class="op">check</span></div>
+          <div class="desc">Quality gates — tests + lint.</div>
+        </div>
+        <div class="wf-step">
+          <div class="num">08</div>
+          <div class="cmd">/qode-<span class="op">review-code</span></div>
+          <div class="desc">Code review with post-mortem mindset.</div>
+        </div>
+        <div class="wf-step">
+          <div class="num">08</div>
+          <div class="cmd">/qode-<span class="op">review-security</span></div>
+          <div class="desc">Security review — adversary simulation required.</div>
+        </div>
+        <div class="wf-step">
+          <div class="num">09</div>
+          <div class="cmd">/qode-<span class="op">pr-create</span></div>
+          <div class="desc">Create the pull request via MCP.</div>
+        </div>
+        <div class="wf-step">
+          <div class="num">10</div>
+          <div class="cmd">/qode-<span class="op">pr-resolve</span></div>
+          <div class="desc">Resolve PR review comments via MCP.</div>
+        </div>
+        <div class="wf-step optional">
+          <div class="num">11</div>
+          <div class="cmd">/qode-<span class="op">knowledge-add-context</span></div>
+          <div class="desc">Optional. Capture lessons for the knowledge base.</div>
+        </div>
+        <div class="wf-step">
+          <div class="num">12</div>
+          <div class="cmd">qode <span class="op">context remove</span></div>
+          <div class="desc">Cleanup. Onto the next ticket.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">// install</span>
+        <h2>One line. Any platform.</h2>
+        <p>Static binary. Pick your shell.</p>
+      </div>
+
+      <div class="install-tabs" role="tablist">
+        <button class="tab active" data-os="mac">macOS</button>
+        <button class="tab" data-os="linux">Linux</button>
+        <button class="tab" data-os="win">Windows</button>
+        <button class="tab" data-os="src">From source</button>
+      </div>
+
+      <div class="install-block">
+        <div class="install-cmd" data-os-block="mac">
+          <span><span class="pre">$</span>brew install nqode-io/tap/qode</span>
+          <button class="copy" data-copy="brew install nqode-io/tap/qode">Copy</button>
+        </div>
+        <div class="install-cmd" data-os-block="linux" hidden>
+          <span><span class="pre">$</span>curl -sSfL https://raw.githubusercontent.com/nqode-io/qode/main/install.sh |
+            sh</span>
+          <button class="copy"
+            data-copy="curl -sSfL https://raw.githubusercontent.com/nqode-io/qode/main/install.sh | sh">Copy</button>
+        </div>
+        <div class="install-cmd" data-os-block="win" hidden>
+          <span><span class="pre">&gt;</span>irm https://raw.githubusercontent.com/nqode-io/qode/main/install.ps1 |
+            iex</span>
+          <button class="copy"
+            data-copy="irm https://raw.githubusercontent.com/nqode-io/qode/main/install.ps1 | iex">Copy</button>
+        </div>
+        <div class="install-cmd" data-os-block="src" hidden>
+          <span><span class="pre">$</span>go install github.com/nqode-io/qode/cmd/qode@latest</span>
+          <button class="copy" data-copy="go install github.com/nqode-io/qode/cmd/qode@latest">Copy</button>
+        </div>
+      </div>
+      <p class="install-note">Then run <code>qode init</code> in your project root. <a
+          href="https://github.com/nqode-io/qode#advanced--supply-chain-verification">Cosign supply-chain verification
+          →</a></p>
+    </div>
+  </section>
+
+  <section id="scoring">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">// quality gates</span>
+        <h2>Scoring and reviews that don't flatter you.</h2>
+        <p>qode's prompts are designed to surface real problems. Self-scoring is eliminated. Findings drive the score,
+          not the other way around.</p>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <span class="eyebrow">Refinement rubric</span>
+          <h3 style="margin-top:8px">Two-pass scoring</h3>
+          <span class="small">Worker AI produces the analysis. Judge AI scores it independently. Target 25/25 before
+            <code>plan-spec</code>.</span>
+          <div class="rubric">
+            <div class="row"><span class="label">Problem Understanding</span><span class="pts">5 pts</span></div>
+            <div class="row"><span class="label">Technical Analysis</span><span class="pts">5 pts</span></div>
+            <div class="row"><span class="label">Risk &amp; Edge Cases</span><span class="pts">5 pts</span></div>
+            <div class="row"><span class="label">Completeness</span><span class="pts">5 pts</span></div>
+            <div class="row"><span class="label">Actionability</span><span class="pts">5 pts</span></div>
+            <div class="total"><span>Required to proceed</span><span class="v">25 / 25</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <span class="eyebrow">Hardened reviews</span>
+          <h3 style="margin-top:8px">Code &amp; Security</h3>
+          <span class="small">Both reviews enforce structural constraints — not vibes.</span>
+          <div class="checks">
+            <div class="check"><span class="mk">›</span><span>Reviewer reads the diff as if writing a
+                post-mortem.</span></div>
+            <div class="check"><span class="mk">›</span><span>Each file requires ≥3 documented items: defects, concerns,
+                or properties verified safe.</span></div>
+            <div class="check"><span class="mk">›</span><span>Critical finding → total ≤ 5.0. High finding → total ≤
+                7.5.</span></div>
+            <div class="check"><span class="mk">›</span><span>Scores ≥8.0 must cite specific properties verified — not
+                the absence of bugs.</span></div>
+            <div class="check"><span class="mk">›</span><span><strong style="color:var(--fg-0)">Security:</strong>
+                Adversary Simulation required. Three named exploit attempts, technique, target, outcome.</span></div>
+            <div class="check"><span class="mk">›</span><span><strong style="color:var(--fg-0)">Security:</strong> Score
+                10.0 is not valid — complete security is not provable.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ide">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">// IDE support</span>
+        <h2>Three IDEs. One vocabulary.</h2>
+        <p>Cursor and Claude Code receive slash commands. Codex receives skills that surface the same workflow names.
+          Toggle in <code>qode.yaml</code>; re-run <code>qode init</code>.</p>
+      </div>
+
+      <table class="ide-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Cursor</th>
+            <th>Claude Code</th>
+            <th>Codex</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>Generated assets</th>
+            <td><code>.cursor/commands/*.mdc</code></td>
+            <td><code>.claude/commands/*.md</code></td>
+            <td><code>.agents/skills/*/SKILL.md</code></td>
+          </tr>
+          <tr>
+            <th>Enable</th>
+            <td><code>ide.cursor.enabled: true</code></td>
+            <td><code>ide.claude_code.enabled: true</code></td>
+            <td><code>ide.codex.enabled: true</code></td>
+          </tr>
+          <tr>
+            <th>Invoke</th>
+            <td><code>/qode-*</code></td>
+            <td><code>/qode-*</code></td>
+            <td><code>$qode-*</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="docs">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">// further reading</span>
+        <h2>Docs and references.</h2>
+      </div>
+      <div class="features">
+        <a class="feature" href="https://github.com/nqode-io/qode/blob/main/docs/tutorial.md"
+          style="text-decoration:none;color:inherit;border-color:var(--border)">
+          <div class="icon">▸</div>
+          <h3>Tutorial</h3>
+          <p>End-to-end walkthrough — one ticket, one branch, two subtasks, every workflow step.</p>
+        </a>
+        <a class="feature" href="https://github.com/nqode-io/qode/blob/main/docs/qode-yaml-reference.md"
+          style="text-decoration:none;color:inherit;border-color:var(--border)">
+          <div class="icon">≡</div>
+          <h3>qode.yaml reference</h3>
+          <p>Full configuration reference — IDE toggles, prompt overrides, context defaults.</p>
+        </a>
+        <a class="feature" href="https://github.com/nqode-io/qode/blob/main/docs/how-to-use-ticket-fetch.md"
+          style="text-decoration:none;color:inherit;border-color:var(--border)">
+          <div class="icon">⇄</div>
+          <h3>Ticket fetch via MCP</h3>
+          <p>Per-service setup: Jira, Linear, GitHub, Azure DevOps, Notion. Token scopes and limits.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer id="nqode">
+    <div class="wrap">
+      <div class="foot-grid">
+        <div>
+          <span class="nq-mark">
+            <img src="assets/nqode-wordmark.svg" alt="nQode" style="height:24px;filter:brightness(0) invert(1)">
+          </span>
+          <p style="color:var(--fg-2);font-size:14px;margin-top:14px;max-width:36ch">qode is built and open-sourced by
+            nQode — a software company that ships standards-driven engineering for client teams.</p>
+        </div>
+        <div>
+          <h4>Project</h4>
+          <ul>
+            <li><a href="https://github.com/nqode-io/qode">GitHub</a></li>
+            <li><a href="https://github.com/nqode-io/qode/releases">Releases</a></li>
+            <li><a href="https://github.com/nqode-io/qode/blob/main/CHANGELOG.md">Changelog</a></li>
+            <li><a href="https://github.com/nqode-io/qode/blob/main/ROADMAP.md">Roadmap</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Docs</h4>
+          <ul>
+            <li><a href="https://github.com/nqode-io/qode/blob/main/docs/tutorial.md">Tutorial</a></li>
+            <li><a href="https://github.com/nqode-io/qode/blob/main/docs/qode-yaml-reference.md">qode.yaml</a></li>
+            <li><a href="https://github.com/nqode-io/qode/blob/main/docs/how-to-customise-prompts.md">Customise
+                prompts</a></li>
+            <li><a href="https://github.com/nqode-io/qode/blob/main/docs/versioning.md">Versioning</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Community</h4>
+          <ul>
+            <li><a href="https://github.com/nqode-io/qode/blob/main/CONTRIBUTING.md">Contributing</a></li>
+            <li><a href="https://github.com/nqode-io/qode/blob/main/CODE_OF_CONDUCT.md">Code of conduct</a></li>
+            <li><a href="https://github.com/nqode-io/qode/issues">Issues</a></li>
+            <li><a href="https://github.com/nqode-io/qode/blob/main/LICENSE">MIT licence</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="legal">
+        <span>© 2026 nQode Software Company. qode is MIT-licensed.</span>
+        <span>v0.3.1-beta</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Install tabs
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(t => t.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.querySelectorAll('[data-os-block]').forEach(b => b.hidden = b.dataset.osBlock !== t.dataset.os);
+    }));
+    // Copy buttons
+    document.querySelectorAll('.copy').forEach(btn => btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        const old = btn.textContent;
+        btn.textContent = '✓ Copied';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = old; btn.classList.remove('copied'); }, 1400);
+      } catch (e) { }
+    }));
+  </script>
+</body>
+
+</html>
