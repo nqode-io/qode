@@ -140,6 +140,7 @@ Both prompts can be customised via `.qode/prompts/review/` local overrides.
 | --- | --- |
 | **Cursor** | `.cursor/commands/*.mdc` slash commands |
 | **Claude Code** | `.claude/commands/*.md` slash commands |
+| **Codex** | `.codex/commands/*.md` slash commands |
 
 Slash commands available in all IDEs: `/qode-ticket-fetch`, `/qode-plan-refine`, `/qode-plan-spec`, `/qode-start`, `/qode-review-code`, `/qode-review-security`, `/qode-check`, `/qode-knowledge-add-context`
 
@@ -197,7 +198,7 @@ cd my-project && qode init
 
 ## Ticket Fetch via MCP
 
-Ticket fetching uses IDE-native MCP servers — no API keys in qode itself. Configure the MCP server for your ticketing system (Jira, Linear, GitHub, Azure DevOps, Notion) and linked-resource services (Figma, Google Docs, Confluence, etc.) in your IDE, then use `/qode-ticket-fetch <url>` in Cursor or Claude Code.
+Ticket fetching uses IDE-native MCP servers — no API keys in qode itself. Configure the MCP server for your ticketing system (Jira, Linear, GitHub, Azure DevOps, Notion) and linked-resource services (Figma, Google Docs, Confluence, etc.) in your IDE, then use `/qode-ticket-fetch <url>` in Cursor, Claude Code, or Codex.
 
 See [docs/how-to-use-ticket-fetch.md](docs/how-to-use-ticket-fetch.md) for full MCP setup instructions per service.
 

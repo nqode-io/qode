@@ -368,6 +368,63 @@ func TestSetup_NoIDEs(t *testing.T) {
 	}
 }
 
+func TestSetup_AllThreeIDEs(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cfg := &config.Config{
+		IDE: config.IDEConfig{
+			Cursor:     config.CursorIDEConfig{Enabled: true},
+			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: true},
+			Codex:      config.CodexIDEConfig{Enabled: true},
+		},
+	}
+	var buf bytes.Buffer
+	if err := Setup(&buf, dir, cfg); err != nil {
+		t.Fatalf("Setup: %v", err)
+	}
+
+	for _, dir := range []string{
+		filepath.Join(dir, ".cursor", "commands"),
+		filepath.Join(dir, ".claude", "commands"),
+		filepath.Join(dir, ".codex", "commands"),
+	} {
+		if _, err := os.Stat(dir); err != nil {
+			t.Errorf("expected %s to exist: %v", dir, err)
+		}
+	}
+	out := buf.String()
+	for _, ide := range []string{"Cursor", "Claude Code", "Codex"} {
+		if !strings.Contains(out, ide) {
+			t.Errorf("output should mention %q, got: %q", ide, out)
+		}
+	}
+}
+
+func TestSetup_OnlyCodex(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cfg := &config.Config{
+		IDE: config.IDEConfig{
+			Cursor:     config.CursorIDEConfig{Enabled: false},
+			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: false},
+			Codex:      config.CodexIDEConfig{Enabled: true},
+		},
+	}
+	if err := Setup(io.Discard, dir, cfg); err != nil {
+		t.Fatalf("Setup: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, ".codex", "commands")); err != nil {
+		t.Errorf("expected .codex/commands dir: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".claude", "commands")); !os.IsNotExist(err) {
+		t.Error("expected .claude/commands to not exist when ClaudeCode is disabled")
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".cursor", "commands")); !os.IsNotExist(err) {
+		t.Error("expected .cursor/commands to not exist when Cursor is disabled")
+	}
+}
+
 func TestSetupClaudeCode_Idempotent(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -412,6 +469,92 @@ func TestSetupCursor_Idempotent(t *testing.T) {
 		t.Fatalf("second SetupCursor: %v", err)
 	}
 	secondContents := readAllCommands(t, filepath.Join(dir, ".cursor", "commands"))
+
+	if len(firstContents) != len(secondContents) {
+		t.Fatalf("file count changed: %d → %d", len(firstContents), len(secondContents))
+	}
+	for name, first := range firstContents {
+		second, ok := secondContents[name]
+		if !ok {
+			t.Errorf("file %q missing after second run", name)
+			continue
+		}
+		if first != second {
+			t.Errorf("file %q content changed after second run", name)
+		}
+	}
+}
+
+// readCodexCommand reads a single Codex command file from <root>/.codex/commands/<name>.md.
+func readCodexCommand(t *testing.T, root, name string) string {
+	t.Helper()
+	path := filepath.Join(root, ".codex", "commands", name+".md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s.md: %v", name, err)
+	}
+	return string(data)
+}
+
+// --- SetupCodex ---
+
+func TestSetupCodex_WritesAllCommands(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupCodex(io.Discard, dir); err != nil {
+		t.Fatalf("SetupCodex: %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(dir, ".codex", "commands"))
+	if err != nil {
+		t.Fatalf("reading commands dir: %v", err)
+	}
+	if len(entries) != len(codexCommands) {
+		t.Errorf("SetupCodex: wrote %d commands, want %d", len(entries), len(codexCommands))
+	}
+	if len(codexCommands) != len(claudeCommands) {
+		t.Errorf("codexCommands and claudeCommands out of sync: %d vs %d", len(codexCommands), len(claudeCommands))
+	}
+}
+
+func TestSetupCodex_CommandContent(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupCodex(io.Discard, dir); err != nil {
+		t.Fatalf("SetupCodex: %v", err)
+	}
+
+	for _, name := range codexCommands {
+		name := name
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			content := readCodexCommand(t, dir, name)
+			if len(content) < 50 {
+				t.Errorf("%s.md too short (%d bytes)", name, len(content))
+			}
+			if strings.Contains(content, "--prompt-only") {
+				t.Errorf("%s.md contains --prompt-only", name)
+			}
+			if strings.Contains(content, "AskUserQuestion") {
+				t.Errorf("%s.md contains AskUserQuestion (not supported by Codex)", name)
+			}
+		})
+	}
+}
+
+func TestSetupCodex_Idempotent(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	if err := SetupCodex(io.Discard, dir); err != nil {
+		t.Fatalf("first SetupCodex: %v", err)
+	}
+	firstContents := readAllCommands(t, filepath.Join(dir, ".codex", "commands"))
+
+	if err := SetupCodex(io.Discard, dir); err != nil {
+		t.Fatalf("second SetupCodex: %v", err)
+	}
+	secondContents := readAllCommands(t, filepath.Join(dir, ".codex", "commands"))
 
 	if len(firstContents) != len(secondContents) {
 		t.Fatalf("file count changed: %d → %d", len(firstContents), len(secondContents))
