@@ -55,7 +55,7 @@ git push origin v1.0.0
 1. Tests run (`go test ./...`)
 2. Binaries built for all platforms via GoReleaser (snapshot mode, `--skip=sign`)
 3. A rolling `latest` pre-release on GitHub Releases is overwritten with fresh binaries
-4. Version: `0.1.0-alpha+<run_number>` (e.g., `0.1.0-alpha+42`)
+4. Version: `<last-tag-without-v>+<run_number>` — derived from the most recent `v*` Git tag, suffixed with the GitHub Actions run number (e.g., `0.2.1-beta+42`)
 
 Snapshot builds skip cosign signing and Homebrew tap publishing — neither artifact is consumed by anyone, and avoiding them keeps the snapshot path independent of `cosign` install and `HOMEBREW_TAP_TOKEN`. Validated locally: `env -u HOMEBREW_TAP_TOKEN goreleaser release --snapshot --clean --skip=publish,sign` succeeds without either prerequisite.
 

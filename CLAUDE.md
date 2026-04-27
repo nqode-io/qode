@@ -19,14 +19,14 @@ CI enforces **minimum 70% coverage** with race detection.
 
 ## Architecture
 
-Config (`config`) → Branch context (`branchcontext`) → Prompt engine (`prompt`) → Domain builders (`plan`, `review`) → CLI commands (`cli`) → Output
+Config (`config`) → Named context (`qodecontext`) → Prompt engine (`prompt`) → Domain builders (`plan`, `review`) → CLI commands (`cli`) → Output
 
 ### Dependency layering — MUST preserve
 
 ```text
 Leaf (zero internal deps): git, env, iokit, log, version
 Mid-level:                 config → iokit; scoring → config; knowledge → config, iokit
-Domain:                    branchcontext, prompt, workflow, plan, review, scaffold
+Domain:                    qodecontext, prompt, workflow, plan, review, scaffold
 Top-level (fan-out):       cli → ALL packages
 ```
 

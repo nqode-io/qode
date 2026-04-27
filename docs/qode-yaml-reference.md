@@ -101,6 +101,23 @@ Override the pass threshold for `/qode-plan-refine`. When not set, the threshold
 
 Rubric dimensions are **not configured in `qode.yaml`**. They live in `.qode/scoring.yaml` so that re-running `qode init` never overwrites them. See [scoring-yaml-reference.md](scoring-yaml-reference.md) for the full rubric format and field reference.
 
+### `ide.cursor.enabled` / `ide.claude_code.enabled`
+
+Toggle whether `qode init` generates IDE assets for each supported editor.
+
+| Key | Generated assets | Default |
+|---|---|---|
+| `ide.cursor.enabled` | `.cursor/commands/*.mdc` | `true` |
+| `ide.claude_code.enabled` | `.claude/commands/*.md` | `true` |
+
+Set a value to `false` to skip generation for that IDE on the next `qode init`. Re-run `qode init` after changing the flag to bring the on-disk assets in sync. Cursor and Claude Code are the only IDEs supported in this release.
+
+### `knowledge.path`
+
+Directory used by `qode knowledge` (`add`, `list`, `search`) to store and look up knowledge-base entries. Relative paths resolve against the project root.
+
+Default: `.qode/knowledge`.
+
 ### `diff.command`
 
 Shell command whose stdout is used as the diff for `qode review code`, `qode review security`, and `qode workflow status`. qode runs the command via `exec.Command` (not a shell), captures stdout, and saves it to `diff.md` in the active context directory.

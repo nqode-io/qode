@@ -2,6 +2,8 @@
 
 Thanks for your interest in contributing to qode! This project is MIT-licensed and we welcome contributions of all kinds — bug fixes, new features, documentation improvements, and more.
 
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to abide by its terms.
+
 ## Getting Started
 
 ### Prerequisites
@@ -32,13 +34,16 @@ qode uses its own workflow for development. Once you have qode installed:
 ```bash
 qode context init <name> --auto-switch  # Create a new work context and switch to it
 /qode-ticket-fetch <url> (in IDE)       # Fetch ticket into context
-/qode-plan-refine (in IDE)              # Refine requirements—iterate to 25/25
+/qode-plan-refine (in IDE)              # Refine requirements — worker + scoring pass
 /qode-plan-spec (in IDE)                # Generate tech spec
 /qode-start (in IDE)                    # Run implementation prompt
+# Test locally (manual)
 /qode-check (in IDE)                    # Run quality gates (tests + lint)
 /qode-review-code (in IDE)              # Code review
 /qode-review-security (in IDE)          # Security review
-/qode-knowledge-add-context (in IDE)    # (Recommended) Extract lessons learned
+/qode-pr-create (in IDE)                # Create pull request via MCP
+/qode-pr-resolve (in IDE)               # Resolve PR review comments via MCP
+/qode-knowledge-add-context (in IDE)    # Capture lessons learned (optional)
 qode context remove                     # Cleanup
 ```
 
