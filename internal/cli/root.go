@@ -30,8 +30,8 @@ func init() {
 		PersistentPreRunE: checkVersion,
 		Long: `qode is a general-purpose AI developer workflow tool by nQode.
 
-It standardises how developers use AI coding assistants across client projects
-with varied tech stacks — Next.js+React, .NET+React, Angular+Java, and more.
+It standardises how developers use AI coding assistants across projects with
+varied tech stacks — Next.js+React, .NET+React, Angular+Java, and more.
 
 See 'qode workflow' for the full diagram.`,
 		SilenceUsage:  true,
