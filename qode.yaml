@@ -1,4 +1,4 @@
-qode_version: 0.1.8-alpha
+qode_version: 0.2.0-beta
 review:
     min_code_score: 10
     min_security_score: 10

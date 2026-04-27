@@ -53,17 +53,28 @@ git push origin v1.0.0
 ### Every Merge to Main
 
 1. Tests run (`go test ./...`)
-2. Binaries built for all platforms via GoReleaser (snapshot mode)
+2. Binaries built for all platforms via GoReleaser (snapshot mode, `--skip=sign`)
 3. A rolling `latest` pre-release on GitHub Releases is overwritten with fresh binaries
 4. Version: `0.1.0-alpha+<run_number>` (e.g., `0.1.0-alpha+42`)
+
+Snapshot builds skip cosign signing and Homebrew tap publishing — neither artifact is consumed by anyone, and avoiding them keeps the snapshot path independent of `cosign` install and `HOMEBREW_TAP_TOKEN`. Validated locally: `env -u HOMEBREW_TAP_TOKEN goreleaser release --snapshot --clean --skip=publish,sign` succeeds without either prerequisite.
 
 ### Tagged Releases
 
 When a version tag (`v*`) is pushed:
 
 1. Tests run
-2. GoReleaser creates a formal GitHub Release with changelog and binaries
-3. The release is permanent and not overwritten
+2. cosign is installed (`sigstore/cosign-installer@v3`) for keyless OIDC signing
+3. GoReleaser creates a formal GitHub Release with changelog and binaries
+4. `checksums.txt` is signed with cosign — `checksums.txt.{sig,pem}` are uploaded as release assets
+5. A Homebrew cask is generated and pushed to `nqode-io/homebrew-tap`
+6. The release is permanent and not overwritten
+
+### Stable channel (post-beta)
+
+`install.sh` and `install.ps1` currently fetch `/releases?per_page=30` and pick the newest `v*` tag, which intentionally includes pre-releases (e.g. `v0.1.0-beta`) so the beta one-liner works.
+
+Once a non-pre-release tag is cut (e.g. `v1.0.0`), update both installers to fetch `/repos/<owner>/<repo>/releases/latest`. That endpoint returns only the most recent **non-pre-release**, which prevents future betas from being served to users on the stable install one-liner.
 
 ## Target Platforms
 
