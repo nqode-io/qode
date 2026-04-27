@@ -1,0 +1,22 @@
+# Fetch Ticket via MCP — qode
+
+Fetch the ticket at the URL or ID provided in $ARGUMENTS using your available MCP tools.
+
+**Steps:**
+1. Use the MCP tool for the appropriate ticketing system (Jira, Linear, GitHub Issues,
+   Notion, or Azure DevOps). Prefer the official MCP server for the system. If no MCP
+   server is available, STOP IMMEDIATELY and inform the user that they need to configure
+   an appropriate MCP server for their ticketing system or copy the ticket contents
+   manually into the ticket.md file.
+2. Collect: title, description, all comments (with author names and timestamps), any
+   linked resources, and attachment summaries.
+3. For each linked resource, record its URL and title. If an MCP server is configured
+   for the resource's service (e.g. Figma, Google Docs/Drive, SharePoint, Confluence,
+   Miro), use it to read the resource — then write a concise description of what it
+   contains and how it relates to this ticket. Do NOT dump raw content; summarise only
+   what is relevant to understanding the ticket's requirements.
+4. Write the following files to .qode/contexts/current/, creating the directory if needed:
+   - ticket.md — title, description, metadata
+   - ticket-comments.md — all comments in chronological order (omit if no comments)
+   - ticket-links.md — linked resources with summaries or fetched content (omit if no links)
+5. Report a one-line summary: "Fetched: <title> — <N> comments, <M> links."
