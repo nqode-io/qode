@@ -8,7 +8,7 @@ AI-assisted developer workflow CLI by nQode.
 [![Go Report Card](https://goreportcard.com/badge/github.com/nqode-io/qode)](https://goreportcard.com/report/github.com/nqode-io/qode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Standardises how developers use AI coding assistants across client projects with varied tech stacks — Next.js+React, .NET+React, Angular+Java, and more.
+Standardises how developers use AI coding assistants across projects with varied tech stacks — Next.js+React, .NET+React, Angular+Java, and more.
 
 ## Installation
 
@@ -173,6 +173,7 @@ Workflow names available in all IDEs:
 - `qode-knowledge-add-context` — capture lessons learned
 
 Invocation syntax:
+
 - Cursor / Claude Code: `/qode-*`
 - Codex: `$qode-*` skills generated under `.agents/skills/`
 

@@ -765,6 +765,53 @@
       margin-top: 2px;
     }
 
+    /* Tunable callout — subtle, with a brand-edge accent */
+    .tunable {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 18px;
+      align-items: center;
+      padding: 18px 22px;
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--border-brand);
+      border-radius: var(--r-2);
+      background: linear-gradient(90deg, rgba(0, 168, 120, 0.05), rgba(0, 168, 120, 0) 60%);
+    }
+
+    .tunable .badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--green-300);
+      border: 1px solid var(--border-brand);
+      padding: 4px 8px;
+      border-radius: var(--r-1, 6px);
+      white-space: nowrap;
+    }
+
+    .tunable .body {
+      font-size: 14px;
+      color: var(--fg-1);
+      line-height: 1.55;
+    }
+
+    .tunable .body strong {
+      color: var(--fg-0);
+    }
+
+    .tunable .body code {
+      color: var(--fg-0);
+    }
+
+    @media (max-width: 600px) {
+      .tunable {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+    }
+
     /* IDE matrix */
     .ide-table {
       width: 100%;
@@ -1216,6 +1263,17 @@
             <div class="check"><span class="mk">›</span><span><strong style="color:var(--fg-0)">Security:</strong> Score
                 10.0 is not valid — complete security is not provable.</span></div>
           </div>
+        </div>
+      </div>
+
+      <div class="tunable" role="note" aria-label="Per-project configuration">
+        <span class="badge">Tunable per project</span>
+        <div class="body">
+          <strong>Every gate above is yours to shape.</strong> Adjust thresholds in
+          <code>qode.yaml</code> (<code>review.min_code_score</code>, <code>review.min_security_score</code>,
+          <code>scoring.target_score</code>) and rewrite rubric dimensions, weights, and criteria in
+          <code>.qode/scoring.yaml</code> — survives <code>qode init</code>, version-controlled with the repo.
+          <a href="https://github.com/nqode-io/qode/blob/main/docs/scoring-yaml-reference.md">Rubric reference →</a>
         </div>
       </div>
     </div>
