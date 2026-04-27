@@ -114,6 +114,39 @@ func TestSetupClaudeCode_IncludesQodeCheck(t *testing.T) {
 	}
 }
 
+func TestSetupClaudeCode_WritesPrResolveCommand(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
+		t.Fatalf("SetupClaudeCode: %v", err)
+	}
+	content := readClaudeCommand(t, dir, "qode-pr-resolve")
+	for _, want := range []string{"MCP", "confirm", "Do NOT commit"} {
+		if !strings.Contains(content, want) {
+			t.Errorf("qode-pr-resolve.md missing %q", want)
+		}
+	}
+	for _, banned := range []string{"gh ", "git push", "git commit"} {
+		if strings.Contains(content, banned) {
+			t.Errorf("qode-pr-resolve.md must not contain %q", banned)
+		}
+	}
+}
+
+func TestSetupCursor_WritesPrResolveCommand(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupCursor(io.Discard, dir); err != nil {
+		t.Fatalf("SetupCursor: %v", err)
+	}
+	content := readCursorCommand(t, dir, "qode-pr-resolve")
+	for _, want := range []string{"description:", "MCP", "confirm", "Do NOT commit"} {
+		if !strings.Contains(content, want) {
+			t.Errorf("qode-pr-resolve.mdc missing %q", want)
+		}
+	}
+}
+
 func TestSetupClaudeCode_CommandContent(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

@@ -118,8 +118,11 @@ func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string)
 	// Step 9: Create pull request — always manual.
 	lines = append(lines, step(9, "Create pull request", "Always done by the user — run /qode-pr-create."))
 
-	// Step 10: Lessons learned — always optional.
-	lines = append(lines, step(10, "Capture lessons learned", "Always optional — run /qode-knowledge-add-context."))
+	// Step 10: Resolve PR review comments — always manual.
+	lines = append(lines, step(10, "Resolve PR review comments", "Always done by the user — run /qode-pr-resolve."))
+
+	// Step 11: Lessons learned — always optional.
+	lines = append(lines, step(11, "Capture lessons learned", "Always optional — run /qode-knowledge-add-context."))
 
 	return lines, upNext
 }
@@ -216,10 +219,13 @@ const workflowList = `qode Workflow
 9.  Create pull request
     /qode-pr-create
 
-10. Capture lessons learned
+10. Resolve PR review comments
+    /qode-pr-resolve
+
+11. Capture lessons learned
     /qode-knowledge-add-context  (optional)
 
-11. Cleanup
+12. Cleanup
     qode context remove
 
 Run 'qode workflow status' to see live completion status for the current context.

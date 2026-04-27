@@ -117,6 +117,18 @@ func TestBuildStatusLines_FullyComplete(t *testing.T) {
 	if upNext != "" {
 		t.Errorf("expected empty upNext for fully completed workflow, got: %q", upNext)
 	}
+
+	// Step 10 must reference /qode-pr-resolve.
+	found := false
+	for _, line := range lines {
+		if strings.Contains(line, "qode-pr-resolve") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected a status line referencing /qode-pr-resolve")
+	}
 }
 
 func TestRefineStatus_Table(t *testing.T) {
