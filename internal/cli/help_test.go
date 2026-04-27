@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -27,6 +28,34 @@ func TestWorkflowList_ListsNoteAddAsOptionalHelper(t *testing.T) {
 	}
 	if strings.Contains(workflowList, "3.  qode-note-add") {
 		t.Fatalf("workflowList must not promote qode-note-add to a numbered workflow step, got:\n%s", workflowList)
+	}
+}
+
+func TestWorkflowList_ListsKnowledgeAddContextAsOptionalHelper(t *testing.T) {
+	if !strings.Contains(workflowList, "Optional helper: qode-knowledge-add-context") {
+		t.Fatalf("workflowList must mention qode-knowledge-add-context as an optional helper, got:\n%s", workflowList)
+	}
+	numberedKnowledge := regexp.MustCompile(`(?m)^[0-9]{1,2}\.\s+qode-knowledge-add-context\b`)
+	if numberedKnowledge.MatchString(workflowList) {
+		t.Fatalf("workflowList must not promote qode-knowledge-add-context to a numbered workflow step, got:\n%s", workflowList)
+	}
+	titleLine := regexp.MustCompile(`(?m)^[0-9]{1,2}\.\s+Capture lessons learned\b`)
+	if titleLine.MatchString(workflowList) {
+		t.Fatalf("workflowList must not have a numbered 'Capture lessons learned' heading, got:\n%s", workflowList)
+	}
+}
+
+func TestWorkflowList_SplitsReviewsIntoTwoNumberedSteps(t *testing.T) {
+	codeReview := regexp.MustCompile(`(?m)^8\.\s+Code review\b`)
+	if !codeReview.MatchString(workflowList) {
+		t.Fatalf("workflowList must list code review as numbered step 8, got:\n%s", workflowList)
+	}
+	securityReview := regexp.MustCompile(`(?m)^9\.\s+Security review\b`)
+	if !securityReview.MatchString(workflowList) {
+		t.Fatalf("workflowList must list security review as numbered step 9, got:\n%s", workflowList)
+	}
+	if !strings.Contains(workflowList, "qode-review-code") || !strings.Contains(workflowList, "qode-review-security") {
+		t.Fatalf("workflowList must reference both review commands, got:\n%s", workflowList)
 	}
 }
 
@@ -127,16 +156,60 @@ func TestBuildStatusLines_FullyComplete(t *testing.T) {
 		t.Errorf("expected empty upNext for fully completed workflow, got: %q", upNext)
 	}
 
-	// Step 10 must reference qode-pr-resolve.
-	found := false
-	for _, line := range lines {
-		if strings.Contains(line, "qode-pr-resolve") {
-			found = true
-			break
-		}
-	}
-	if !found {
+	joined := strings.Join(lines, "\n")
+
+	if !strings.Contains(joined, "qode-pr-resolve") {
 		t.Error("expected a status line referencing qode-pr-resolve")
+	}
+
+	codeReview := regexp.MustCompile(`(?m)^8\.\s+Code review\b`)
+	if !codeReview.MatchString(joined) {
+		t.Errorf("expected step 8 'Code review' line, got:\n%s", joined)
+	}
+	securityReview := regexp.MustCompile(`(?m)^9\.\s+Security review\b`)
+	if !securityReview.MatchString(joined) {
+		t.Errorf("expected step 9 'Security review' line, got:\n%s", joined)
+	}
+
+	if !strings.Contains(joined, "Optional helper: Capture lessons learned") {
+		t.Errorf("expected unnumbered 'Optional helper: Capture lessons learned' line, got:\n%s", joined)
+	}
+	numberedLessons := regexp.MustCompile(`(?m)^[0-9]{1,2}\.\s+Capture lessons learned\b`)
+	if numberedLessons.MatchString(joined) {
+		t.Errorf("lessons-learned must not be numbered in status output, got:\n%s", joined)
+	}
+}
+
+func TestBuildStatusLines_SeparatesReviews(t *testing.T) {
+	ctx := &qodecontext.Context{
+		Ticket:          "JIRA-123",
+		RefinedAnalysis: "analysis",
+		Spec:            "spec content",
+		Iterations: []qodecontext.Iteration{
+			{Number: 1, Score: 25},
+		},
+	}
+	cfgVal := config.DefaultConfig()
+	cfg := &cfgVal
+
+	lines, upNext := buildStatusLines(ctx, cfg, "diff content")
+	joined := strings.Join(lines, "\n")
+
+	codeLine := regexp.MustCompile(`(?m)^8\.\s+Code review\s+-\s+Not started\.`)
+	if !codeLine.MatchString(joined) {
+		t.Errorf("expected step 8 code review pending line, got:\n%s", joined)
+	}
+	secLine := regexp.MustCompile(`(?m)^9\.\s+Security review\s+-\s+Not started\.`)
+	if !secLine.MatchString(joined) {
+		t.Errorf("expected step 9 security review pending line, got:\n%s", joined)
+	}
+
+	// upNext must point at code review first when both are pending.
+	if !strings.Contains(upNext, "qode-review-code") {
+		t.Errorf("upNext should suggest qode-review-code first, got: %q", upNext)
+	}
+	if strings.Contains(upNext, "qode-review-security") {
+		t.Errorf("upNext should not suggest qode-review-security while code review is pending, got: %q", upNext)
 	}
 }
 

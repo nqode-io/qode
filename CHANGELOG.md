@@ -5,6 +5,12 @@ All notable changes to qode are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3-beta] - 2026-04-28
+
+### Changed
+
+- Workflow numbering: `/qode-review-code` and `/qode-review-security` now occupy distinct steps (8 and 9). `/qode-knowledge-add-context` is no longer numbered — it is presented as an optional helper alongside `/qode-note-add`. Total numbered steps unchanged at 12. README, tutorial, contributor guide, marketing site, `qode workflow` CLI output, and `qode workflow status` are reconciled to match. Marketing site documents qode's parallel-worktree safety as a subtle callout in the workflow section.
+
 ## [0.3.2-beta] - 2026-04-27
 
 ### Added

@@ -112,17 +112,17 @@ func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string)
 	lines = append(lines, step(6, "Test locally", "Always done by the user."))
 	lines = append(lines, step(7, "Quality gates", "Always done by the user."))
 
-	// Step 8: Reviews.
+	// Steps 8–9: Reviews (code first, then security).
 	lines = append(lines, reviewStatus(ctx, cfg, &upNext)...)
 
-	// Step 9: Create pull request — always manual.
-	lines = append(lines, step(9, "Create pull request", "Always done by the user — run the `qode-pr-create` step."))
+	// Step 10: Create pull request — always manual.
+	lines = append(lines, step(10, "Create pull request", "Always done by the user — run the `qode-pr-create` step."))
 
-	// Step 10: Resolve PR review comments — always manual.
-	lines = append(lines, step(10, "Resolve PR review comments", "Always done by the user — run the `qode-pr-resolve` step."))
+	// Step 11: Resolve PR review comments — always manual.
+	lines = append(lines, step(11, "Resolve PR review comments", "Always done by the user — run the `qode-pr-resolve` step."))
 
-	// Step 11: Lessons learned — always optional.
-	lines = append(lines, step(11, "Capture lessons learned", "Always optional — run the `qode-knowledge-add-context` step."))
+	// Optional helper: Lessons learned — unnumbered, always optional.
+	lines = append(lines, "Optional helper: Capture lessons learned - Always optional — run the `qode-knowledge-add-context` step.")
 
 	return lines, upNext
 }
@@ -166,8 +166,8 @@ func reviewStatus(ctx *qodecontext.Context, cfg *config.Config, upNext *string) 
 		"qode-review-security", secMax, upNext,
 	)
 	lines = append(lines,
-		fmt.Sprintf("8. Review - Code review: %s", codeStatus),
-		fmt.Sprintf("   Security review: %s", secStatus),
+		fmt.Sprintf("8. Code review - %s", codeStatus),
+		fmt.Sprintf("9. Security review - %s", secStatus),
 	)
 	return lines
 }
@@ -217,18 +217,18 @@ IDE invocation surface:
 7.  Quality gates
     qode-check
 
-8.  Review
+8.  Code review
     qode-review-code
+
+9.  Security review
     qode-review-security
 
-9.  Create pull request
+10. Create pull request
     qode-pr-create
 
-10. Resolve PR review comments
+11. Resolve PR review comments
     qode-pr-resolve
-
-11. Capture lessons learned
-    qode-knowledge-add-context  (optional)
+    Optional helper: qode-knowledge-add-context  (in IDE, capture lessons learned)
 
 12. Cleanup
     qode context remove

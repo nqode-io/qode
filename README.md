@@ -87,25 +87,25 @@ qode context init feat-user-dashboard --auto-switch
 Before beginning, manually create a new branch for your work.
 
 ```markdown
-1.  qode context init <name>                 Create a named work context
-2.  qode-ticket-fetch <url>       (in IDE)   Fetch ticket via MCP into context
-    Optional helper: qode-note-add (in IDE)  Follow with free-form notes to record scope, constraints, or course corrections
-3.  qode-plan-refine              (in IDE)   Refine requirements — worker + scoring pass
-4.  qode-plan-spec                (in IDE)   Generate tech spec
-5.  qode-start                    (in IDE)   Run implementation prompt
-6.  Test locally                  (manual)   Verify the change behaves as expected
-7.  qode-check                    (in IDE)   Run quality gates (tests + lint)
-8.  qode-review-code              (in IDE)   Code review
-    qode-review-security          (in IDE)   Security review
-9.  qode-pr-create                (in IDE)   Create pull request via MCP
-10. qode-pr-resolve               (in IDE)   Resolve PR review comments via MCP
-11. qode-knowledge-add-context    (in IDE)   Capture lessons learned (optional)
-12. qode context remove                      Cleanup
+1.  qode context init <name>                          Create a named work context
+2.  qode-ticket-fetch <url>                (in IDE)   Fetch ticket via MCP into context
+    Optional helper: qode-note-add         (in IDE)   Follow with free-form notes to record scope, constraints, or course corrections
+3.  qode-plan-refine                       (in IDE)   Refine requirements — worker + scoring pass
+4.  qode-plan-spec                         (in IDE)   Generate tech spec
+5.  qode-start                             (in IDE)   Run implementation prompt
+6.  Test locally                           (manual)   Verify the change behaves as expected
+7.  qode-check                             (in IDE)   Run quality gates (tests + lint)
+8.  qode-review-code                       (in IDE)   Code review
+9.  qode-review-security                   (in IDE)   Security review
+10. qode-pr-create                         (in IDE)   Create pull request via MCP
+11. qode-pr-resolve                        (in IDE)   Resolve PR review comments via MCP
+    Optional helper: qode-knowledge-add-context (in IDE)  Capture lessons learned
+12. qode context remove                               Cleanup
 ```
 
 Cursor and Claude Code invoke these workflows as slash commands (`/qode-*`). Codex invokes the same workflow names as skills (`$qode-*`).
 
-`qode-note-add` is intentionally an optional helper, not a numbered workflow step. Follow the invocation with free-form note text; single-line and multi-paragraph notes both work.
+`qode-note-add` and `qode-knowledge-add-context` are intentionally optional helpers, not numbered workflow steps. `qode-note-add` accepts free-form note text after the invocation (single-line and multi-paragraph notes both work). `qode-knowledge-add-context` extracts durable lessons from the finished context into `.qode/knowledge/lessons/` — run it whenever the AI loops on the same misunderstanding so future runs benefit.
 
 Run `qode workflow` for the full diagram. `qode workflow status` shows live completion status for the active context.
 
@@ -214,19 +214,6 @@ qode knowledge search <query>                                  Search knowledge 
 
 qode workflow                                                  Show full workflow diagram
 qode workflow status                                           Show live completion status for the current context
-```
-
-## Project Setup
-
-```markdown
-my-project/
-├── qode.yaml
-├── src/
-└── package.json
-```
-
-```bash
-cd my-project && qode init
 ```
 
 ## Ticket Fetch via MCP

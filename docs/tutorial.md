@@ -89,7 +89,7 @@ You will re-run this command for the second subtask later — same ticket URL, f
 
 Start a new chat before the next step.
 
-## Step 3 — add a focus note
+## Optional — add a focus note
 
 When one ticket spans multiple subtasks, the ticket text itself does not say "in this context, work only on the backend." That's what `notes.md` is for:
 
@@ -109,7 +109,7 @@ Every downstream qode command reads `notes.md` automatically, which is how you k
 >
 > This is especially handy on the second or third pass — you nudge the analysis without leaving the IDE.
 
-## Step 4 — refine the requirements
+## Step 3 — refine the requirements
 
 ```
 /qode-plan-refine
@@ -126,7 +126,7 @@ Iterate until the judge score clears `scoring.target_score` (default 25/25). Eac
 
 When the score clears the target, **start a new chat** before moving on.
 
-## Step 5 — generate the spec
+## Step 4 — generate the spec
 
 ```
 /qode-plan-spec
@@ -142,7 +142,7 @@ Read the spec. If something is off, **don't edit the spec by hand** — update `
 
 Start a new chat once the spec is right.
 
-## Step 6 — implement
+## Step 5 — implement
 
 ```
 /qode-start
@@ -152,11 +152,11 @@ The AI reads `spec.md`, the lessons in `.qode/knowledge/`, and the ticket, then 
 
 When the implementation lands, **start a new chat**.
 
-## Step 7 — test locally
+## Step 6 — test locally
 
 Manual. The AI can write tests, but the engineer is responsible for actually verifying correctness, tesing, hitting the new endpoint, and exerciseing edge cases. Capture anything broken in `notes.md` and loop back to `/qode-start` if needed or more probably just instruct the agent on what needs fixing.
 
-## Step 8 — quality gates
+## Step 7 — quality gates
 
 ```
 /qode-check
@@ -164,7 +164,7 @@ Manual. The AI can write tests, but the engineer is responsible for actually ver
 
 Auto-detects your test runner and linter from project files (`package.json`, `go.mod`, `Cargo.toml`, etc.) and runs them. Must pass before review.
 
-## Step 9 — code review
+## Step 8 — code review
 
 ```
 /qode-review-code
@@ -174,7 +174,7 @@ Reviews the diff against the hardened code-review prompt and the `review` rubric
 
 > **Verify the diff scope.** The review prompt occasionally builds against a partial diff (only the last commit instead of the whole branch). Before trusting a review, run `git diff main --stat` in a terminal and confirm the changed-file list matches what the review covered. Read the full per-file diffs directly when in doubt.
 
-## Step 10 — security review
+## Step 9 — security review
 
 ```
 /qode-review-security
@@ -182,7 +182,7 @@ Reviews the diff against the hardened code-review prompt and the `review` rubric
 
 Same shape as code review, scored against the `security` rubric. Output: `security-review.md`. Address findings and re-run if below `review.min_security_score`.
 
-## Step 11 — create the pull request
+## Step 10 — create the pull request
 
 ```
 /qode-pr-create
@@ -190,7 +190,7 @@ Same shape as code review, scored against the `security` rubric. Output: `securi
 
 The AI assembles a PR title and description from the context (refined analysis, spec, diff, reviews) and opens the PR via your Git provider's MCP server. The PR URL is saved in the context for later steps.
 
-## Step 12 — resolve PR comments
+## Step 11 — resolve PR comments
 
 When reviewers leave comments:
 
@@ -200,7 +200,7 @@ When reviewers leave comments:
 
 The AI fetches the comments via MCP, addresses each one (code change, reply, or both), and pushes. Re-run after every fresh round of comments.
 
-## Step 13 — capture lessons learned (optional, recommended)
+## Optional — capture lessons learned
 
 ```
 /qode-knowledge-add-context
@@ -210,7 +210,7 @@ Extracts durable lessons from the finished context (gotchas, patterns, surprises
 
 This step may be run at any time before. It should be run whenever you loop in circles with the LLM struggling to understand something or repeating errors.
 
-## Step 14 — clean up the context
+## Step 12 — clean up the context
 
 ```bash
 qode context remove backend-api
@@ -238,7 +238,7 @@ This pulls the same ticket again — including any comments posted while you wer
 /qode-note-add Focus: frontend only. Build the profile-edit form against the new PATCH /users/:id endpoint shipped from the `backend-api` context. Re-use components from `src/components/forms/`. The form lives at `src/pages/profile/edit.tsx`. Backend response shape is documented in the merged backend PR.
 ```
 
-Then walk Steps 4 → 14 again for the frontend subtask. When both subtasks are done, the ticket is done.
+Then walk Steps 3 → 12 again for the frontend subtask. When both subtasks are done, the ticket is done.
 
 ## Per-IDE best practices
 

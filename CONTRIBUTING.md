@@ -39,7 +39,7 @@ Cursor and Claude Code invoke the IDE workflows below as `/qode-*`. Codex invoke
 ```bash
 qode context init <name> --auto-switch  # Create a new work context (one per subtask) and switch to it
 /qode-ticket-fetch <url> (in IDE)       # Fetch ticket into context
-/qode-note-add (in IDE)                 # Follow with free-form notes to record scope, constraints, course corrections
+/qode-note-add (in IDE)                 # (optional helper) Follow with free-form notes to record scope, constraints, course corrections
 /qode-plan-refine (in IDE)              # Refine requirements — worker + scoring pass
 /qode-plan-spec (in IDE)                # Generate tech spec
 /qode-start (in IDE)                    # Run implementation prompt
@@ -49,7 +49,7 @@ qode context init <name> --auto-switch  # Create a new work context (one per sub
 /qode-review-security (in IDE)          # Security review
 /qode-pr-create (in IDE)                # Create pull request via MCP
 /qode-pr-resolve (in IDE)               # Resolve PR review comments via MCP
-/qode-knowledge-add-context (in IDE)    # Capture lessons learned (optional)
+/qode-knowledge-add-context (in IDE)    # (optional helper) Capture lessons learned
 qode context remove <name>              # Cleanup per subtask
 ```
 

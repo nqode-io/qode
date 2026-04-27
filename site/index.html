@@ -5,6 +5,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>qode — AI-assisted developer workflow CLI</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/favicon-512.png">
+  <meta name="theme-color" content="#000000">
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1149,22 +1156,22 @@
           <div class="desc">Code review with post-mortem mindset.</div>
         </div>
         <div class="wf-step">
-          <div class="num">08</div>
+          <div class="num">09</div>
           <div class="cmd">/qode-<span class="op">review-security</span></div>
           <div class="desc">Security review — adversary simulation required.</div>
         </div>
         <div class="wf-step">
-          <div class="num">09</div>
+          <div class="num">10</div>
           <div class="cmd">/qode-<span class="op">pr-create</span></div>
           <div class="desc">Create the pull request via MCP.</div>
         </div>
         <div class="wf-step">
-          <div class="num">10</div>
+          <div class="num">11</div>
           <div class="cmd">/qode-<span class="op">pr-resolve</span></div>
           <div class="desc">Resolve PR review comments via MCP.</div>
         </div>
         <div class="wf-step optional">
-          <div class="num">11</div>
+          <div class="num">+</div>
           <div class="cmd">/qode-<span class="op">knowledge-add-context</span></div>
           <div class="desc">Optional. Capture lessons for the knowledge base.</div>
         </div>
@@ -1172,6 +1179,17 @@
           <div class="num">12</div>
           <div class="cmd">qode <span class="op">context remove</span></div>
           <div class="desc">Cleanup. Onto the next ticket.</div>
+        </div>
+      </div>
+
+      <div class="tunable" role="note" aria-label="Parallel worktrees">
+        <span class="badge">Parallel-worktree safe</span>
+        <div class="body">
+          <strong>Run multiple workflows in parallel.</strong> Each
+          <code>git worktree</code> gets its own <code>.qode/contexts/current</code> —
+          qode resolves paths from the working directory, writes atomically inside
+          the target folder, and holds no shared on-disk state. Spin up a worktree
+          per ticket and run <code>qode</code> in each without conflict.
         </div>
       </div>
     </div>
