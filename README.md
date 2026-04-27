@@ -50,23 +50,23 @@ go install github.com/nqode-io/qode/cmd/qode@latest
 
 ### Advanced — supply-chain verification
 
-Tagged releases sign `checksums.txt` with [cosign](https://github.com/sigstore/cosign) keyless OIDC. To verify, download the checksums and signature artifacts from the release page, then run `cosign verify-blob` from the directory containing them:
+Tagged releases sign `checksums.txt` with [cosign](https://github.com/sigstore/cosign) keyless OIDC. The signature is published as a single Sigstore bundle (`checksums.txt.bundle`) containing both signature and certificate. To verify, download the checksums and bundle from the release page, then run `cosign verify-blob` from the directory containing them:
 
 ```bash
 # Replace with the tag you want to verify
 TAG=v0.1.0-beta
 BASE="https://github.com/nqode-io/qode/releases/download/${TAG}"
 curl -sSfLO "${BASE}/checksums.txt"
-curl -sSfLO "${BASE}/checksums.txt.sig"
-curl -sSfLO "${BASE}/checksums.txt.pem"
+curl -sSfLO "${BASE}/checksums.txt.bundle"
 
 cosign verify-blob \
   --certificate-identity-regexp 'https://github.com/nqode-io/qode/\.github/workflows/release\.yml@refs/tags/v.*' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  --signature checksums.txt.sig \
-  --certificate checksums.txt.pem \
+  --bundle checksums.txt.bundle \
   checksums.txt
 ```
+
+Releases tagged before this change shipped `checksums.txt.sig` + `checksums.txt.pem` instead — verify those with `--signature checksums.txt.sig --certificate checksums.txt.pem` and no `--bundle` flag.
 
 ## Quick Start
 

@@ -5,6 +5,14 @@ All notable changes to qode are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1-beta] - 2026-04-27
+
+### Changed
+
+- `.goreleaser.yml` cosign `signs` block migrated to the Sigstore bundle format — releases now publish a single `checksums.txt.bundle` (signature + certificate combined) instead of the separate `checksums.txt.sig` + `checksums.txt.pem` pair, fixing the `create bundle file: open : no such file or directory` failure introduced when cosign 2.6 made `--new-bundle-format` the default and silently ignored `--output-signature` / `--output-certificate`
+- `README.md` supply-chain verification snippet now downloads `checksums.txt.bundle` and verifies with `cosign verify-blob --bundle …`, with a note covering pre-0.3.1-beta releases that still ship the legacy `.sig` + `.pem` artifacts
+- `docs/versioning.md` tagged-release pipeline description updated to reflect the bundle-format signing asset
+
 ## [0.3.0-beta] - 2026-04-27
 
 ### Added
