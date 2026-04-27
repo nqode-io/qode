@@ -61,19 +61,15 @@ release:
     owner: nqode-io
     name: qode
 
-homebrew_casks:
+brews:
   - name: qode
-    binaries:
-      - qode
     repository:
       owner: nqode-io
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Casks
+    directory: Formula
     homepage: "https://github.com/nqode-io/qode"
     description: "Generates structured AI prompts for a standardized developer workflow"
     license: "MIT"
-    hooks:
-      post:
-        install: |
-          system_command "#{staged_path}/qode", args: ["--version"]
+    test: |
+      system "#{bin}/qode", "--version"
