@@ -67,7 +67,7 @@ When a version tag (`v*`) is pushed:
 2. cosign is installed (`sigstore/cosign-installer@v3`) for keyless OIDC signing
 3. GoReleaser creates a formal GitHub Release with changelog and binaries
 4. `checksums.txt` is signed with cosign — `checksums.txt.{sig,pem}` are uploaded as release assets
-5. A Homebrew cask is generated and pushed to `nqode-io/homebrew-tap`
+5. A Homebrew formula is generated and pushed to `nqode-io/homebrew-tap`
 6. The release is permanent and not overwritten
 
 ### Stable channel (post-beta)
