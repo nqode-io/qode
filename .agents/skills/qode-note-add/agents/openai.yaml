@@ -1,0 +1,5 @@
+interface:
+  display_name: "qode-note-add"
+  short_description: "Capture free-form notes into the active qode context."
+policy:
+  allow_implicit_invocation: false

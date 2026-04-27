@@ -7,6 +7,7 @@ type workflowDefinition struct {
 
 var qodeWorkflows = []workflowDefinition{
 	{Name: "qode-ticket-fetch", Description: "Fetch a ticket into the current qode context via MCP."},
+	{Name: "qode-note-add", Description: "Capture free-form notes into the active qode context."},
 	{Name: "qode-plan-refine", Description: "Refine requirements with a worker pass plus scoring pass."},
 	{Name: "qode-plan-spec", Description: "Generate the technical specification for the active qode context."},
 	{Name: "qode-start", Description: "Start the implementation session from the current qode spec."},

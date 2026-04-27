@@ -97,6 +97,8 @@ When one ticket spans multiple subtasks, the ticket text itself does not say "in
 /qode-note-add Focus: backend only. Implement PATCH /users/:id, validation, and tests. The frontend form is handled in a separate context (frontend-form).
 ```
 
+Everything after `/qode-note-add` is treated as note content, so both single-line and multi-paragraph notes work. If you want an explicit stop marker, `end note` is allowed but optional.
+
 Every downstream qode command reads `notes.md` automatically, which is how you keep refinements and specs scoped to the current subtask.
 
 > **Combining workflows in one prompt.** In Cursor and Claude Code, qode workflows are slash commands, so you can chain them with prose freely. In Codex, use the matching `$qode-*` skill names instead.
@@ -259,7 +261,7 @@ For all three:
 | `qode init` | Once per project |
 | `qode context init <name> --auto-switch` | Per subtask |
 | `/qode-ticket-fetch <url>` | After context init |
-| `/qode-note-add <text>` | Any time you want to record scope, constraints, corrections |
+| `/qode-note-add` | Any time you want to record scope, constraints, corrections with free-form note text |
 | `/qode-plan-refine` | Until score ≥ `scoring.target_score` |
 | `/qode-plan-spec` | After refine clears the gate |
 | `/qode-start` | After spec is correct |

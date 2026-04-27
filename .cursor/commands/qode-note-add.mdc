@@ -1,4 +1,6 @@
-# Add a note — qode
+---
+description: Add a note to the active qode context for qode
+---
 
 Treat all text after this command or skill invocation as note content. The note content may be a single line or multiple paragraphs. If the user includes a line containing only `end note`, stop reading note content at that line; otherwise use all trailing text.
 

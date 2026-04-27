@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/qode-yaml-reference.md` field descriptions for `ide.cursor.enabled`, `ide.claude_code.enabled`, `ide.codex.enabled`, and `knowledge.path` so every key in `internal/config/schema.go` is documented
 - Code of Conduct link in `README.md` `## Contributing` and at the top of `CONTRIBUTING.md`
 - Codex IDE support documented across `README.md`, `CONTRIBUTING.md`, `docs/tutorial.md`, and `docs/qode-yaml-reference.md` after Codex scaffolder landed in [#34](https://github.com/nqode-io/qode/issues/34)
+- Generated `qode-note-add` workflow assets for Claude Code, Cursor, and Codex, with free-form note capture into `.qode/contexts/current/notes.md`
 
 ### Changed
 
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CLAUDE.md` package references updated from the obsolete `branchcontext` to `qodecontext` (renamed in [#33](https://github.com/nqode-io/qode/issues/33)); minimum security-review score aligned with the documented default
 - `.github/workflows/ci.yml` now also runs on `push: branches: [main]` so the new CI badge has a status to display on the default branch
 - Codex integration now generates explicit-invocation skills under `.agents/skills/` instead of legacy `.codex/commands/`, and the docs/help text now describe cross-IDE workflow invocation accordingly
+- Workflow docs and help now present `qode-note-add` as an optional helper with free-form note text rather than a numbered workflow step
 
 ### Fixed
 

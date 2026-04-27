@@ -1,3 +1,8 @@
+---
+name: "qode-note-add"
+description: "Capture free-form notes into the active qode context."
+---
+
 # Add a note — qode
 
 Treat all text after this command or skill invocation as note content. The note content may be a single line or multiple paragraphs. If the user includes a line containing only `end note`, stop reading note content at that line; otherwise use all trailing text.

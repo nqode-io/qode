@@ -21,6 +21,15 @@ func TestRunWorkflow(t *testing.T) {
 	}
 }
 
+func TestWorkflowList_ListsNoteAddAsOptionalHelper(t *testing.T) {
+	if !strings.Contains(workflowList, "Optional helper: qode-note-add") {
+		t.Fatalf("workflowList must mention qode-note-add as an optional helper, got:\n%s", workflowList)
+	}
+	if strings.Contains(workflowList, "3.  qode-note-add") {
+		t.Fatalf("workflowList must not promote qode-note-add to a numbered workflow step, got:\n%s", workflowList)
+	}
+}
+
 func TestBuildStatusLines_AllEmpty(t *testing.T) {
 	ctx := &qodecontext.Context{}
 	cfgVal := config.DefaultConfig()

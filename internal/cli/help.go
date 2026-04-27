@@ -200,6 +200,7 @@ IDE invocation surface:
 
 2.  Add context
     qode-ticket-fetch <url>  (in IDE)
+    Optional helper: qode-note-add  (in IDE, followed by free-form notes)
 
 3.  Refine requirements  (iterate until pass threshold)
     qode-plan-refine   — worker and scoring pass

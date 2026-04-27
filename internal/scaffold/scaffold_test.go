@@ -42,6 +42,30 @@ func readCursorCommand(t *testing.T, root, name string) string {
 	return string(data)
 }
 
+func assertNoteAddPrompt(t *testing.T, content string) {
+	t.Helper()
+
+	for _, want := range []string{
+		"Treat all text after this command or skill invocation as note content.",
+		"single line or multiple paragraphs",
+		"`end note`",
+		".qode/contexts/current/notes.md",
+		"Append only the new notes",
+		"Do not overwrite existing notes",
+		"No currently active qode context.",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("note-add content missing %q", want)
+		}
+	}
+
+	for _, banned := range []string{"$ARGUMENTS", "<text>"} {
+		if strings.Contains(content, banned) {
+			t.Errorf("note-add content must not contain %q", banned)
+		}
+	}
+}
+
 // --- SetupClaudeCode ---
 
 func TestSetupClaudeCode_WritesTicketFetchCommand(t *testing.T) {
@@ -133,6 +157,16 @@ func TestSetupClaudeCode_WritesPrResolveCommand(t *testing.T) {
 	}
 }
 
+func TestSetupClaudeCode_WritesNoteAddCommand(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupClaudeCode(io.Discard, dir); err != nil {
+		t.Fatalf("SetupClaudeCode: %v", err)
+	}
+
+	assertNoteAddPrompt(t, readClaudeCommand(t, dir, "qode-note-add"))
+}
+
 func TestSetupCursor_WritesPrResolveCommand(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -145,6 +179,16 @@ func TestSetupCursor_WritesPrResolveCommand(t *testing.T) {
 			t.Errorf("qode-pr-resolve.mdc missing %q", want)
 		}
 	}
+}
+
+func TestSetupCursor_WritesNoteAddCommand(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupCursor(io.Discard, dir); err != nil {
+		t.Fatalf("SetupCursor: %v", err)
+	}
+
+	assertNoteAddPrompt(t, readCursorCommand(t, dir, "qode-note-add"))
 }
 
 func TestSetupClaudeCode_CommandContent(t *testing.T) {
@@ -566,6 +610,21 @@ func TestSetupCodex_CommandContent(t *testing.T) {
 				t.Errorf("%s openai.yaml must disable implicit invocation", workflow.Name)
 			}
 		})
+	}
+}
+
+func TestSetupCodex_WritesNoteAddSkill(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupCodex(io.Discard, dir); err != nil {
+		t.Fatalf("SetupCodex: %v", err)
+	}
+
+	assertNoteAddPrompt(t, readCodexSkill(t, dir, "qode-note-add"))
+
+	metadata := readCodexSkillMetadata(t, dir, "qode-note-add")
+	if !strings.Contains(metadata, "allow_implicit_invocation: false") {
+		t.Error("qode-note-add openai.yaml must disable implicit invocation")
 	}
 }
 
