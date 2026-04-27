@@ -657,25 +657,6 @@ func TestSetupCodex_Idempotent(t *testing.T) {
 	}
 }
 
-func TestSetupCodex_RemovesLegacyCommandsDir(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	legacyPath := filepath.Join(dir, ".codex", "commands", "qode-plan-refine.md")
-	if err := os.MkdirAll(filepath.Dir(legacyPath), 0755); err != nil {
-		t.Fatalf("MkdirAll legacy dir: %v", err)
-	}
-	if err := os.WriteFile(legacyPath, []byte("legacy"), 0644); err != nil {
-		t.Fatalf("WriteFile legacy command: %v", err)
-	}
-
-	if err := SetupCodex(io.Discard, dir); err != nil {
-		t.Fatalf("SetupCodex: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, ".codex", "commands")); !os.IsNotExist(err) {
-		t.Errorf("expected legacy .codex/commands to be removed, got err=%v", err)
-	}
-}
-
 // readAllCommands reads every file in dir and returns a map of name → content.
 func readAllCommands(t *testing.T, dir string) map[string]string {
 	t.Helper()

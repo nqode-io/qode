@@ -81,7 +81,7 @@ func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string)
 	} else {
 		lines = append(lines, step(2, "Add context", "Not started."))
 		if upNext == "" {
-			upNext = "Run the `qode-ticket-fetch` workflow with the ticket URL."
+			upNext = "Run the `qode-ticket-fetch` step with the ticket URL."
 		}
 	}
 
@@ -94,7 +94,7 @@ func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string)
 	} else {
 		lines = append(lines, step(4, "Generate spec", "Not started."))
 		if upNext == "" {
-			upNext = "Run the `qode-plan-spec` workflow."
+			upNext = "Run the `qode-plan-spec` step."
 		}
 	}
 
@@ -104,7 +104,7 @@ func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string)
 	} else {
 		lines = append(lines, step(5, "Implement", "Not started."))
 		if upNext == "" {
-			upNext = "Run the `qode-start` workflow to generate the implementation prompt."
+			upNext = "Run the `qode-start` step to generate the implementation prompt."
 		}
 	}
 
@@ -116,13 +116,13 @@ func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string)
 	lines = append(lines, reviewStatus(ctx, cfg, &upNext)...)
 
 	// Step 9: Create pull request — always manual.
-	lines = append(lines, step(9, "Create pull request", "Always done by the user — run the `qode-pr-create` workflow."))
+	lines = append(lines, step(9, "Create pull request", "Always done by the user — run the `qode-pr-create` step."))
 
 	// Step 10: Resolve PR review comments — always manual.
-	lines = append(lines, step(10, "Resolve PR review comments", "Always done by the user — run the `qode-pr-resolve` workflow."))
+	lines = append(lines, step(10, "Resolve PR review comments", "Always done by the user — run the `qode-pr-resolve` step."))
 
 	// Step 11: Lessons learned — always optional.
-	lines = append(lines, step(11, "Capture lessons learned", "Always optional — run the `qode-knowledge-add-context` workflow."))
+	lines = append(lines, step(11, "Capture lessons learned", "Always optional — run the `qode-knowledge-add-context` step."))
 
 	return lines, upNext
 }
@@ -130,7 +130,7 @@ func buildStatusLines(ctx *qodecontext.Context, cfg *config.Config, diff string)
 func refineStatus(ctx *qodecontext.Context, cfg *config.Config, upNext *string) string {
 	if !ctx.HasRefinedAnalysis() {
 		if *upNext == "" {
-			*upNext = "Run the `qode-plan-refine` workflow."
+			*upNext = "Run the `qode-plan-refine` step."
 		}
 		return "Not started."
 	}
@@ -138,15 +138,15 @@ func refineStatus(ctx *qodecontext.Context, cfg *config.Config, upNext *string) 
 	score := ctx.LatestScore()
 	if score == 0 {
 		if *upNext == "" {
-			*upNext = "Run the `qode-plan-judge` workflow to score the analysis."
+			*upNext = "Run the `qode-plan-judge` step to score the analysis."
 		}
-		return fmt.Sprintf("%d iteration(s), unscored — run the `qode-plan-judge` workflow.", n)
+		return fmt.Sprintf("%d iteration(s), unscored — run the `qode-plan-judge` step.", n)
 	}
 	maxScore := workflow.RefineMaxScore(cfg)
 	minScore := workflow.RefineMinScore(cfg)
 	if score < minScore {
 		if *upNext == "" {
-			*upNext = fmt.Sprintf("Score %d/%d is below minimum %d. Run the `qode-plan-refine` workflow to improve it.", score, maxScore, minScore)
+			*upNext = fmt.Sprintf("Score %d/%d is below minimum %d. Run the `qode-plan-refine` step to improve it.", score, maxScore, minScore)
 		}
 		return fmt.Sprintf("%d iteration(s), latest score: %d/%d (below minimum %d).", n, score, maxScore, minScore)
 	}
@@ -175,13 +175,13 @@ func reviewStatus(ctx *qodecontext.Context, cfg *config.Config, upNext *string) 
 func reviewItemStatus(present bool, score, min float64, cmd string, maxScore int, upNext *string) string {
 	if !present {
 		if *upNext == "" {
-			*upNext = fmt.Sprintf("Run the `%s` workflow.", cmd)
+			*upNext = fmt.Sprintf("Run the `%s` step.", cmd)
 		}
 		return "Not started."
 	}
 	if score < min {
 		if *upNext == "" {
-			*upNext = fmt.Sprintf("Score %.1f/%d is below minimum %.1f. Consider fixing issues and re-running the `%s` workflow.", score, maxScore, min, cmd)
+			*upNext = fmt.Sprintf("Score %.1f/%d is below minimum %.1f. Consider fixing issues and re-running the `%s` step.", score, maxScore, min, cmd)
 		}
 		return fmt.Sprintf("Score %.1f/%d (below minimum %.1f).", score, maxScore, min)
 	}

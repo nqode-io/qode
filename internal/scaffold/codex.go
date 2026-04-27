@@ -3,7 +3,6 @@ package scaffold
 import (
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 
 	"github.com/nqode/qode/internal/iokit"
@@ -11,16 +10,12 @@ import (
 )
 
 const (
-	codexLegacyCommandsDir = ".codex/commands"
-	codexSkillsDir         = ".agents/skills"
+	codexSkillsDir = ".agents/skills"
 )
 
 // SetupCodex generates Codex skills under <root>/.agents/skills/.
 // It writes one SKILL.md file per workflow plus minimal OpenAI skill metadata.
 func SetupCodex(out io.Writer, root string) error {
-	if err := os.RemoveAll(filepath.Join(root, codexLegacyCommandsDir)); err != nil {
-		return fmt.Errorf("remove legacy codex commands: %w", err)
-	}
 	skillsDir := filepath.Join(root, codexSkillsDir)
 	if err := iokit.EnsureDir(skillsDir); err != nil {
 		return fmt.Errorf("codex setup: %w", err)
