@@ -129,7 +129,6 @@ func TestBuildRubric_ReviewOverride(t *testing.T) {
 	}
 }
 
-
 func TestDefaultRefineRubricLevels(t *testing.T) {
 	dims := DefaultRefineRubric.Dimensions
 	if len(dims) == 0 {

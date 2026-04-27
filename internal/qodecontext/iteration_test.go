@@ -46,7 +46,7 @@ func TestSaveIterationResult(t *testing.T) {
 			t.Parallel()
 			dir := t.TempDir()
 
-			if err := SaveIterationResult(context.Background(),dir, tc.iteration, tc.text, tc.result); err != nil {
+			if err := SaveIterationResult(context.Background(), dir, tc.iteration, tc.text, tc.result); err != nil {
 				t.Fatalf("SaveIterationResult: %v", err)
 			}
 
@@ -79,7 +79,7 @@ func TestSaveIterationResult_CreatesDir(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "nested", "context")
 
 	result := scoring.Result{TotalScore: 15, MaxScore: 25}
-	if err := SaveIterationResult(context.Background(),dir, 1, "body", result); err != nil {
+	if err := SaveIterationResult(context.Background(), dir, 1, "body", result); err != nil {
 		t.Fatalf("SaveIterationResult: %v", err)
 	}
 
@@ -95,7 +95,7 @@ func TestParseAndSaveIteration_TargetScoreOverride(t *testing.T) {
 	cfg := config.DefaultConfig()
 	cfg.Scoring.TargetScore = 18
 
-	result, err := ParseAndSaveIteration(context.Background(),dir, 1, "some analysis", &cfg)
+	result, err := ParseAndSaveIteration(context.Background(), dir, 1, "some analysis", &cfg)
 	if err != nil {
 		t.Fatalf("ParseAndSaveIteration: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestParseAndSaveIteration_DefaultsToRubricTotal(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 
-	result, err := ParseAndSaveIteration(context.Background(),dir, 1, "some analysis", nil)
+	result, err := ParseAndSaveIteration(context.Background(), dir, 1, "some analysis", nil)
 	if err != nil {
 		t.Fatalf("ParseAndSaveIteration: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestParseAndSaveIteration_WritesFiles(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 
-	result, err := ParseAndSaveIteration(context.Background(),dir, 3, "analysis text", nil)
+	result, err := ParseAndSaveIteration(context.Background(), dir, 3, "analysis text", nil)
 	if err != nil {
 		t.Fatalf("ParseAndSaveIteration: %v", err)
 	}
@@ -176,4 +176,3 @@ func TestBuildAnalysisHeader(t *testing.T) {
 		})
 	}
 }
-

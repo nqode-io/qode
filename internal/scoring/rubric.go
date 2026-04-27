@@ -30,7 +30,7 @@ func (r Rubric) Total() int {
 // Dimension is one scoring axis in a rubric.
 type Dimension struct {
 	Name   string
-	Weight int      // points available
+	Weight int // points available
 	Desc   string
 	Levels []string // full labelled strings highest-first, e.g. "5: Perfect restatement..."
 }
