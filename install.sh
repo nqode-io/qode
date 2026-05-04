@@ -49,7 +49,7 @@ curl -sSfL "${BASE}/${FILENAME}"    -o "${WORKDIR}/${FILENAME}"
 curl -sSfL "${BASE}/checksums.txt"  -o "${WORKDIR}/checksums.txt"
 
 cd "$WORKDIR"
-LINE=$(awk -v f="$FILENAME" 'NF==2 && $1 ~ /^[0-9a-fA-F]{64}$/ && $2==f' checksums.txt)
+LINE=$(awk -v f="$FILENAME" 'NF==2 && length($1)==64 && $1 ~ /^[0-9a-fA-F]+$/ && $2==f' checksums.txt)
 if [ -z "$LINE" ]; then
   echo "Error: checksum entry missing or malformed for $FILENAME" >&2
   exit 1
