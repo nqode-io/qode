@@ -114,7 +114,7 @@ them per this policy instead of blocking:
 | --- | --- |
 | "Post … as a new ticket comment?" (refine / spec / reviews) | **No.** The PR body carries the results; the loop does not comment on issues. |
 | `/qode-check` "Accept / Stop / Comment" on failures | **Accept**, fixes applied by a builder-tier subagent. After 3 consecutive failing rounds, pause and ask the operator. |
-| `/qode-plan-refine` open questions (once #72 lands, the command asks them itself) | Answer from the ticket, the codebase, and this document where the answer is determinable. **Owner-level decisions** (naming, public CLI surface, breaking changes not settled by the ticket) go to the operator via a blocking question **before the spec**, and are recorded in the analysis as DECIDED items. |
+| `/qode-plan-refine` clarification pass | Pick the candidate the ticket, the codebase or this document determines; answer "use your judgement" when none of them does, which the command records as an `(assumed)` entry. **Owner-level decisions** (naming, public CLI surface, breaking changes not settled by the ticket) go to the operator via a blocking question **before the spec**, and are recorded in the analysis as DECIDED items. |
 | `/qode-pr-resolve` "wait for the user to confirm" | Confirm — the operator's review comments are the confirmation. |
 | Anything asking for `--force` | **Never.** |
 

@@ -40,7 +40,7 @@ Cursor and Claude Code invoke the IDE workflows below as `/qode-*`. Codex invoke
 qode context init <name> --auto-switch  # Create a new work context (one per subtask) and switch to it
 /qode-ticket-fetch <url> (in IDE)       # Fetch ticket into context
 /qode-note-add (in IDE)                 # (optional helper) Follow with free-form notes to record scope, constraints, course corrections
-/qode-plan-refine (in IDE)              # Refine requirements — worker + scoring pass
+/qode-plan-refine (in IDE)              # Refine requirements — worker + clarification + scoring pass
 /qode-plan-spec (in IDE)                # Generate tech spec
 /qode-start (in IDE)                    # Run implementation prompt
 # Test locally (manual)

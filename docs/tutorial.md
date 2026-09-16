@@ -115,10 +115,13 @@ Every downstream qode command reads `notes.md` automatically, which is how you k
 /qode-plan-refine
 ```
 
-This runs in two passes:
+This runs in three passes:
 
 1. **Worker** — produces an analysis with no self-score → `refined-analysis.md`.
-2. **Judge** — a fresh AI instance scores the analysis against the `refine` rubric, independently → score appended to `refined-analysis.md`.
+2. **Clarification** — the command reads the analysis's `## Open Questions` section and asks you each question, proposing candidate answers and always accepting free text. Your answers are written back into `refined-analysis.md` as `## Resolved Questions`, so the judge sees an analysis with its ambiguities already settled. An analysis with no open questions (`_None_`, or no such section at all) goes straight to the judge, and an unattended run answers the questions itself and marks each entry `(assumed)`.
+3. **Judge** — a fresh AI instance scores the analysis against the `refine` rubric, independently → score appended to `refined-analysis.md`.
+
+> **Your answers are recorded, not private.** Everything you type in the clarification pass lands in `refined-analysis.md` — the same file the command can later offer to post as a public ticket comment. Keep credentials and internal-only detail out of the answers.
 
 Iterate until the judge score clears `scoring.target_score` (default 25/25). Each pass is preserved as `iteration-N.md`, so you can diff iterations.
 

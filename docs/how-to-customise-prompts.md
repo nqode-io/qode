@@ -17,6 +17,8 @@ Edit the template file directly in `.qode/prompts/`:
 $EDITOR .qode/prompts/refine/base.md.tmpl
 ```
 
+> **Keep the `## Open Questions` contract.** `.qode/prompts/refine/base.md.tmpl` must keep instructing the worker to emit a top-level `## Open Questions` heading, with the single line `_None_` when there is nothing unresolved. The clarification pass in the generated `qode-plan-refine` command reads that heading; if your override drops it, the pass finds nothing to ask and skips straight to the judge.
+
 To preview the rendered output after editing, use the `--to-file` flag:
 
 ```bash
