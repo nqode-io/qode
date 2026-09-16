@@ -59,6 +59,15 @@ See [docs/tutorial.md](docs/tutorial.md) for an end-to-end walkthrough, or the [
 >
 > **Use the installed `qode` binary**, never `go run` from your checkout. Local source may be mid-edit; the installed binary is the contract you and your reviewers share.
 
+### Autonomous ticket loop (Claude Code)
+
+`/qode-loop` drives GitHub issues through the workflow above one at a time — refine, spec,
+implement, check, reviews, PR — with the operator merging each PR. It is contributor tooling
+for this repository, not a qode feature. The driver protocol, model assignments, gates, and
+the rule for dogfooding the freshly merged `qode` binary are in [docs/qode-loop.md](docs/qode-loop.md);
+bookkeeping goes through `go run ./tools/qode-loop`, and
+`.claude/settings.local.example.json` lists the permissions it needs to run unattended.
+
 ## Quality Gates
 
 All contributions must pass these checks:

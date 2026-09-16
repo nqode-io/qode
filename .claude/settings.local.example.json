@@ -1,0 +1,51 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(loop)",
+      "Skill(loop:*)",
+      "Skill(qode-loop)",
+      "Skill(qode-plan-refine)",
+      "Skill(qode-plan-spec)",
+      "Skill(qode-start)",
+      "Skill(qode-check)",
+      "Skill(qode-review-code)",
+      "Skill(qode-review-security)",
+      "Skill(qode-pr-create)",
+      "Skill(qode-pr-resolve)",
+      "Skill(qode-ticket-fetch)",
+      "Skill(qode-note-add)",
+      "Bash(git:*)",
+      "Bash(qode:*)",
+      "Bash(PATH=\"$(go env GOPATH)/bin:$PATH\" qode:*)",
+      "Bash(go:*)",
+      "Bash(golangci-lint run:*)",
+      "Bash(gh auth status:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh run list:*)",
+      "Bash(env -u GITHUB_TOKEN gh auth status:*)",
+      "Bash(env -u GITHUB_TOKEN gh issue view:*)",
+      "Bash(env -u GITHUB_TOKEN gh pr view:*)",
+      "Bash(env -u GITHUB_TOKEN gh pr checks:*)",
+      "Bash(env -u GITHUB_TOKEN gh pr list:*)",
+      "Bash(env -u GITHUB_TOKEN gh run list:*)",
+      "Bash(head:*)",
+      "Bash(cat:*)",
+      "Bash(cp:*)",
+      "Bash(mkdir:*)",
+      "Bash(grep:*)",
+      "Bash(tree:*)",
+      "Bash(tail:*)",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(diff:*)"
+    ],
+    "deny": [
+      "Bash(ssh:*)",
+      "Bash(sudo:*)",
+      "Bash(chown:*)"
+    ]
+  }
+}
