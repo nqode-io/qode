@@ -132,6 +132,9 @@ bookkeeping protocol. Remember the `PATH` prefix from the dogfooding section onc
    `/qode-pr-create` uses for `Closes #N`); `go run ./tools/qode-loop state init ticket=<n>`.
 2. **refine**: invoke `/qode-plan-refine` and follow it. The worker prompt is executed by a
    builder-tier subagent writing `refined-analysis.md` (`<!-- qode:iteration=N -->` header).
+   The orchestrator runs the command's clarification pass itself, answering per the policy table
+   above — never in a subagent, which has no user to ask and would record every answer as
+   `(assumed)`.
    The judge pass runs as an independent reviewer-tier subagent — fresh context, never the
    author — reading `CLAUDE.md`, the ticket, and the analysis, and re-running any empirical
    claim it can probe. Orchestrator: parse `S/M`, run
