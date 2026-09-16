@@ -87,7 +87,7 @@ var refineClarificationSentinels = []string{
 // may carry; plainTextAskSentinels are the ones only the other variants may carry.
 var (
 	askUserQuestionSentinels = []string{"AskUserQuestion", `the tool's built-in "Other" choice`}
-	plainTextAskSentinels    = []string{"or type your own answer"}
+	plainTextAskSentinels    = []string{"or type your own answer", "End your turn after printing a batch"}
 )
 
 func assertRefineClarificationPass(t *testing.T, content string, wantAskUserQuestion bool) {
@@ -98,7 +98,12 @@ func assertRefineClarificationPass(t *testing.T, content string, wantAskUserQues
 		wanted, banned = askUserQuestionSentinels, plainTextAskSentinels
 	}
 
-	for _, want := range append(append([]string{}, refineClarificationSentinels...), wanted...) {
+	for _, want := range refineClarificationSentinels {
+		if !strings.Contains(content, want) {
+			t.Errorf("clarification pass missing %q", want)
+		}
+	}
+	for _, want := range wanted {
 		if !strings.Contains(content, want) {
 			t.Errorf("clarification pass missing %q", want)
 		}
