@@ -73,7 +73,9 @@ heading spelled `Open Questions`. Its body is either:
   first marked `(recommended)`; or
 - the single line `_None_`, when there is no unresolved question.
 
-Never omit the section — `_None_` is how "no questions" is stated.
+Never omit the section — `_None_` is how "no questions" is stated. The clarification pass may
+remove an empty `## Open Questions` section after it runs; re-emit the section on every
+iteration regardless.
 
 If the previous analysis contains a `## Resolved Questions` section, copy it forward verbatim
 and do not re-open any item recorded there. A decided item never returns to `## Open Questions`.
@@ -81,7 +83,7 @@ and do not re-open any item recorded there. A decided item never returns to `## 
 ## Constraints
 - Be specific. Vague statements score 0.
 - Reference actual file paths, function names, or APIs when possible.
-- If you lack information to answer something, say so explicitly and ask.
+- If you lack information to answer something, record the question in `## Open Questions` rather than guessing.
 
 ---
 *[DO NOT SCORE YOUR OWN OUTPUT — a separate judge will score this independently]*
