@@ -35,7 +35,7 @@ Perform a thorough requirements analysis. Cover:
 1. **Problem Understanding**
    - Restate the problem in your own words
    - Identify the user need and business value
-   - Clarify any ambiguities (list open questions if any)
+   - Clarify any ambiguities — record each one in the `## Open Questions` section defined under "Output Shape" below
 
 2. **Technical Analysis**
    - Which layers/components are affected?
@@ -58,6 +58,25 @@ Perform a thorough requirements analysis. Cover:
    - Break the work into concrete tasks (each implementable in one commit)
    - Suggest the order of implementation
    - Identify any prerequisite work
+
+## Output Shape
+
+Use top-level `##` headings in this order: `## Problem Understanding`, `## Resolved Questions`
+(only when a previous analysis already has one), `## Open Questions`, `## Technical Analysis`,
+`## Risk & Edge Cases`, `## Completeness Check`, `## Actionable Implementation Plan`.
+
+`## Open Questions` is a machine-read contract. Emit it exactly once, as a top-level `##`
+heading spelled `Open Questions`. Its body is either:
+
+- a numbered list, one entry per question: the question on the first line, then 2-4
+  `- Candidate:` bullets with concrete answers grounded in the ticket and the codebase, the
+  first marked `(recommended)`; or
+- the single line `_None_`, when there is no unresolved question.
+
+Never omit the section — `_None_` is how "no questions" is stated.
+
+If the previous analysis contains a `## Resolved Questions` section, copy it forward verbatim
+and do not re-open any item recorded there. A decided item never returns to `## Open Questions`.
 
 ## Constraints
 - Be specific. Vague statements score 0.
