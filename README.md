@@ -90,7 +90,7 @@ Before beginning, manually create a new branch for your work.
 1.  qode context init <name>                          Create a named work context
 2.  qode-ticket-fetch <url>                (in IDE)   Fetch ticket via MCP into context
     Optional helper: qode-note-add         (in IDE)   Follow with free-form notes to record scope, constraints, or course corrections
-3.  qode-plan-refine                       (in IDE)   Refine requirements — worker + scoring pass
+3.  qode-plan-refine                       (in IDE)   Refine requirements — worker + clarification + scoring pass
 4.  qode-plan-spec                         (in IDE)   Generate tech spec
 5.  qode-start                             (in IDE)   Run implementation prompt
 6.  Test locally                           (manual)   Verify the change behaves as expected
@@ -162,7 +162,7 @@ Workflow names available in all IDEs:
 
 - `qode-ticket-fetch <url>` — fetch ticket via MCP
 - `qode-note-add` — append concise technical notes to `.qode/contexts/current/notes.md` from free-form trailing text
-- `qode-plan-refine` — refine requirements (worker + scoring pass)
+- `qode-plan-refine` — refine requirements (worker + clarification + scoring pass)
 - `qode-plan-spec` — generate tech spec
 - `qode-start` — run implementation prompt
 - `qode-check` — quality gates (tests + lint)

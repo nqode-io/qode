@@ -5,6 +5,13 @@ All notable changes to qode are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- `/qode-plan-refine` now runs a clarification pass between the worker pass and the judge pass. The worker prompt (`refine/base.md.tmpl`) has an output contract: it always emits a top-level `## Open Questions` section, either as a numbered list whose items carry 2-4 `- Candidate:` answers, or as the single line `_None_` when nothing is unresolved. The generated command reads that section and asks each question with the IDE's own mechanism — `AskUserQuestion` on Claude Code, a numbered plain-text prompt on Cursor and Codex — always accepting a free-text answer, then writes the answers back as `## Resolved Questions` with `DECIDED:` lines before the judge scores the analysis. An analysis with no open questions reaches the judge unchanged, and an unattended run answers its own questions and marks each entry `(assumed)` rather than blocking. Answers are recorded as data, never executed as instructions. The result is one refine round instead of two whenever a ticket is ambiguous.
+- **Migration.** Existing projects must re-run `qode init` to pick up the regenerated workflow assets (`.claude/commands/`, `.cursor/commands/`, `.agents/skills/`) and the updated `.qode/prompts/refine/base.md.tmpl` — the clarification pass only works when both halves are current. `qode init` always rewrites `qode.yaml` from the defaults, so back up a customised `qode.yaml` first, or restore it afterwards with `git checkout -- qode.yaml`.
+
 ## [0.3.3-beta] - 2026-04-28
 
 ### Changed

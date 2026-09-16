@@ -115,12 +115,15 @@ Every downstream qode command reads `notes.md` automatically, which is how you k
 /qode-plan-refine
 ```
 
-This runs in two passes:
+This runs in three passes:
 
 1. **Worker** — produces an analysis with no self-score → `refined-analysis.md`.
-2. **Judge** — a fresh AI instance scores the analysis against the `refine` rubric, independently → score appended to `refined-analysis.md`.
+2. **Clarification** — the command reads the analysis's `## Open Questions` section and asks you each question, proposing candidate answers and always accepting free text. Your answers are written back into `refined-analysis.md` as `## Resolved Questions`, so the judge sees an analysis with its ambiguities already settled. An analysis with no open questions (`_None_`, or no such section at all) goes straight to the judge, and an unattended run answers the questions itself and marks each entry `(assumed)`.
+3. **Judge** — a fresh AI instance scores the analysis against the `refine` rubric, independently → score appended to `refined-analysis.md`.
 
-Iterate until the judge score clears `scoring.target_score` (default 25/25). Each pass is preserved as `iteration-N.md`, so you can diff iterations.
+> **Your answers are recorded, not private.** Everything you type in the clarification pass lands in `refined-analysis.md` — the same file the command can later offer to post as a public ticket comment. Keep credentials and internal-only detail out of the answers.
+
+Iterate until the judge score clears `scoring.target_score` (default 25/25). Each pass is preserved as `refined-analysis-N-score-S.md`, so you can diff iterations.
 
 > **Course-correct mid-run.** If you notice while the prompt is executing that it's heading the wrong way — wrong scope, missing constraint, ignoring a comment — you can send a follow-up message **without stopping the run**. Claude Code handles this cleanly: the message gets queued and applied during or after the current turn. Codex behaves the same way in most setups. Cursor's behaviour depends on which model you've selected — verify before relying on it. When in doubt: stop, course-correct in `notes.md`, re-run.
 
