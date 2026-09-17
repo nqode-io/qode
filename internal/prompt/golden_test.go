@@ -22,8 +22,9 @@ func TestGolden_Templates(t *testing.T) {
 	rubric := scoring.BuildRubric(scoring.RubricRefine, nil)
 
 	tests := []struct {
-		name string
-		data TemplateData
+		name   string // template name passed to Render
+		golden string // golden file key; empty means "same as name"
+		data   TemplateData
 	}{
 		{
 			name: "refine/base",
@@ -77,17 +78,51 @@ func TestGolden_Templates(t *testing.T) {
 				WithOutputPath("/tmp/judge-score.md").
 				Build(),
 		},
+		{
+			name:   "scaffold/qode-plan-refine",
+			golden: "scaffold/qode-plan-refine.claude",
+			data:   NewTemplateData("test-project").WithIDE("claude").Build(),
+		},
+		{
+			name:   "scaffold/qode-plan-refine",
+			golden: "scaffold/qode-plan-refine.cursor",
+			data:   NewTemplateData("test-project").WithIDE("cursor").Build(),
+		},
+		{
+			name:   "scaffold/qode-plan-refine",
+			golden: "scaffold/qode-plan-refine.codex",
+			data:   NewTemplateData("test-project").WithIDE("codex").Build(),
+		},
+		{
+			name:   "scaffold/qode-check",
+			golden: "scaffold/qode-check.claude",
+			data:   NewTemplateData("test-project").WithIDE("claude").Build(),
+		},
+		{
+			name:   "scaffold/qode-check",
+			golden: "scaffold/qode-check.cursor",
+			data:   NewTemplateData("test-project").WithIDE("cursor").Build(),
+		},
+		{
+			name:   "scaffold/qode-check",
+			golden: "scaffold/qode-check.codex",
+			data:   NewTemplateData("test-project").WithIDE("codex").Build(),
+		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		golden := tt.golden
+		if golden == "" {
+			golden = tt.name
+		}
+		t.Run(golden, func(t *testing.T) {
 			t.Parallel()
 			got, err := e.Render(tt.name, tt.data)
 			if err != nil {
 				t.Fatalf("Render(%q): %v", tt.name, err)
 			}
 
-			goldenFile := filepath.Join("testdata", "golden", filepath.FromSlash(tt.name)+".golden")
+			goldenFile := filepath.Join("testdata", "golden", filepath.FromSlash(golden)+".golden")
 			if *update {
 				if err := os.MkdirAll(filepath.Dir(goldenFile), 0755); err != nil {
 					t.Fatalf("MkdirAll: %v", err)
