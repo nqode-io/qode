@@ -642,3 +642,66 @@ func TestRunInitExisting_UnreadableConfigHasNoOverwriteHint(t *testing.T) {
 		t.Errorf("hint attached to an error that overwriting will not fix: %v", err)
 	}
 }
+
+// --- deprecated ide: key ---
+
+const legacyRenameLine = "qode.yaml: 'ide:' has been renamed to 'agents:' — updated in place."
+
+func TestRunInitExisting_RenamesLegacyIDEKey(t *testing.T) {
+	// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
+	isolateHome(t)
+	dir := t.TempDir()
+	seedProjectConfig(t, dir, "qode_version: 0.3.4-beta\nide:\n  cursor:\n    enabled: false\n")
+
+	var buf bytes.Buffer
+	if err := runInitExisting(context.Background(), &buf, dir, "0.4.0-beta", false, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	if got := strings.Count(buf.String(), legacyRenameLine); got != 1 {
+		t.Errorf("rename line printed %d times, want 1:\n%s", got, buf.String())
+	}
+	rendered := readProjectConfig(t, dir)
+	if !strings.Contains(rendered, "\nagents:\n") {
+		t.Errorf("qode.yaml has no agents: block:\n%s", rendered)
+	}
+	if strings.Contains(rendered, "\nide:\n") {
+		t.Errorf("qode.yaml still carries the deprecated ide: block:\n%s", rendered)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".cursor")); !errors.Is(err, fs.ErrNotExist) {
+		t.Error(".cursor was generated for an agent the legacy config disabled")
+	}
+}
+
+func TestRunInitExisting_BothKeys_DoesNotPrintRenameLine(t *testing.T) {
+	// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
+	isolateHome(t)
+	dir := t.TempDir()
+	const body = "qode_version: 0.3.4-beta\nagents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n    enabled: false\n"
+	seedProjectConfig(t, dir, body)
+
+	var buf bytes.Buffer
+	if err := runInitExisting(context.Background(), &buf, dir, "0.4.0-beta", false, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	if strings.Contains(buf.String(), legacyRenameLine) {
+		t.Errorf("rename line printed for a file carrying both keys:\n%s", buf.String())
+	}
+	rendered := readProjectConfig(t, dir)
+	if !strings.Contains(rendered, "ide:\n  cursor:\n    enabled: false\n") {
+		t.Errorf("the deprecated block was rewritten:\n%s", rendered)
+	}
+}
+
+func TestInitCmd_LongHelpUsesAgentVocabulary(t *testing.T) {
+	t.Parallel()
+
+	long := newInitCmd().Long
+	if !strings.Contains(long, "agent workflow assets") {
+		t.Errorf("init --help does not describe agent workflow assets:\n%s", long)
+	}
+	if strings.Contains(long, "IDE") {
+		t.Errorf("init --help still says IDE:\n%s", long)
+	}
+}

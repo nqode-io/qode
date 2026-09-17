@@ -30,7 +30,7 @@ Generates qode.yaml with commented defaults when it is absent. When it already
 exists, every value you set is kept, qode_version is refreshed on released
 builds, and settings added by newer qode versions are appended with their
 defaults — nothing is reset. Creates the .qode/ directory structure, copies
-embedded prompt templates, and generates IDE workflow assets for the IDEs
+embedded prompt templates, and generates agent workflow assets for the agents
 enabled in qode.yaml (Cursor, Claude Code, Codex, OpenCode).
 
 Use --config-only to write qode.yaml and stop, so you can review and edit it
@@ -90,6 +90,9 @@ func ensureConfig(ctx context.Context, out io.Writer, root, binaryVersion string
 		if res.Changed {
 			_, _ = fmt.Fprintf(out, "Updated: %s\n", path)
 		}
+		if res.LegacyKeyRenamed {
+			_, _ = fmt.Fprintln(out, "qode.yaml: 'ide:' has been renamed to 'agents:' — updated in place.")
+		}
 	}
 	// Load unconditionally: one code path, and a freshly written file is parsed and
 	// validated before anything is scaffolded against it. Errors here may name
@@ -113,7 +116,7 @@ func withOverwriteHint(err error) error {
 
 // scaffoldFromConfig creates the .qode/ directory structure, writes the first-run
 // scoring rubrics, copies prompt templates, and generates workflow assets for the
-// IDEs cfg enables. .qode/scoring.yaml is only written on first run so
+// agents cfg enables. .qode/scoring.yaml is only written on first run so
 // user-customised rubrics are never overwritten.
 func scaffoldFromConfig(ctx context.Context, out io.Writer, root string, cfg *config.Config) error {
 	// Create .qode directory structure.
@@ -146,9 +149,9 @@ func scaffoldFromConfig(ctx context.Context, out io.Writer, root string, cfg *co
 		return err
 	}
 
-	// Generate IDE configs and workflow assets using the loaded (or default) config.
+	// Generate agent configs and workflow assets using the loaded (or default) config.
 	if err := scaffold.Setup(out, root, cfg); err != nil {
-		return fmt.Errorf("setting up IDE configs: %w", err)
+		return fmt.Errorf("setting up agent configs: %w", err)
 	}
 
 	if err := scaffold.AppendGitignoreRules(ctx, out, root); err != nil {
