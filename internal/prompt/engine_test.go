@@ -197,6 +197,84 @@ func TestRender_FuncMap_Pct(t *testing.T) {
 	}
 }
 
+// renderIDETemplate writes tmplBody as a local override and renders it for ide.
+func renderIDETemplate(t *testing.T, name, tmplBody, ide string) string {
+	t.Helper()
+	root := t.TempDir()
+	overridePath := filepath.Join(root, ".qode", "prompts", name+".md.tmpl")
+	if err := os.MkdirAll(filepath.Dir(overridePath), 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(overridePath, []byte(tmplBody), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	e, err := NewEngine(root)
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+	out, err := e.Render(name, minimalTemplateData().WithIDE(ide).Build())
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	return out
+}
+
+func TestRender_FuncMap_QuestionTool(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		ide  string
+		want string
+	}{
+		{"claude has AskUserQuestion", "claude", "Y:AskUserQuestion"},
+		{"cursor has none", "cursor", "N"},
+		{"codex has none", "codex", "N"},
+		{"opencode has question", "opencode", "Y:question"},
+		{"empty ide has none", "", "N"},
+		{"unknown ide has none", "aider", "N"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := renderIDETemplate(t, "test-question-tool",
+				`{{if questionTool .IDE}}Y:{{questionTool .IDE}}{{else}}N{{end}}`, tt.ide)
+			if got != tt.want {
+				t.Errorf("questionTool(%q) rendered %q, want %q", tt.ide, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRender_FuncMap_HasFrontmatter(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		ide  string
+		want string
+	}{
+		{"claude uses a title heading", "claude", "N"},
+		{"cursor uses frontmatter", "cursor", "Y"},
+		{"codex uses a title heading", "codex", "N"},
+		{"opencode uses frontmatter", "opencode", "Y"},
+		{"empty ide uses a title heading", "", "N"},
+		{"unknown ide uses a title heading", "aider", "N"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := renderIDETemplate(t, "test-has-frontmatter",
+				`{{if hasFrontmatter .IDE}}Y{{else}}N{{end}}`, tt.ide)
+			if got != tt.want {
+				t.Errorf("hasFrontmatter(%q) rendered %q, want %q", tt.ide, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestEmbeddedTemplates(t *testing.T) {
 	t.Parallel()
 	templates, err := EmbeddedTemplates()

@@ -18,6 +18,13 @@ import (
 //go:embed templates
 var embeddedFS embed.FS
 
+// IDE identifiers accepted by TemplateData.IDE.
+const (
+	ideClaude   = "claude"
+	ideCursor   = "cursor"
+	ideOpenCode = "opencode"
+)
+
 // TemplateProject holds the project name for template rendering.
 type TemplateProject struct {
 	Name string
@@ -47,6 +54,26 @@ func NewEngine(root string) (*Engine, error) {
 		// pct returns percent% of n as float64. Use with printf "%.1f" in templates.
 		// Example: {{printf "%.1f" (pct 75 .Rubric.Total)}} → "7.5" for a 10-pt rubric.
 		"pct": func(percent float64, n int) float64 { return float64(n) * percent / 100.0 },
+		// questionTool returns the name of the structured-question tool available in the
+		// given IDE, or "" when that IDE has none. The empty return is load-bearing: it is
+		// falsy in text/template, so {{if questionTool .IDE}} is the structured-question
+		// branch test and {{questionTool .IDE}} interpolates the tool name. Never return a
+		// non-empty placeholder such as "none" — every such conditional would invert.
+		"questionTool": func(ide string) string {
+			switch ide {
+			case ideClaude:
+				return "AskUserQuestion"
+			case ideOpenCode:
+				return "question"
+			default:
+				return ""
+			}
+		},
+		// hasFrontmatter reports whether the given IDE's command files open with a YAML
+		// frontmatter block rather than a Markdown title heading.
+		"hasFrontmatter": func(ide string) bool {
+			return ide == ideCursor || ide == ideOpenCode
+		},
 	}
 	return e, nil
 }
@@ -58,7 +85,7 @@ func (e *Engine) ProjectName() string {
 
 // TemplateData is passed into every template.
 type TemplateData struct {
-	IDE          string // target IDE ("claude" or "cursor"); used by scaffold templates
+	IDE          string // target IDE ("claude", "cursor", "codex" or "opencode"); used by scaffold templates
 	Project      TemplateProject
 	Ticket       string         // inline content; set only for knowledge/add-context
 	Analysis     string         // inline content; set for knowledge/add-context and scoring judge
