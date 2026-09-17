@@ -279,3 +279,44 @@ func TestIntegration_Init_CreatesOpenCodeCommands(t *testing.T) {
 		t.Error("qode-plan-refine.md must not reference AskUserQuestion")
 	}
 }
+
+// TestIntegration_Init_ConfigOnlyFlag exercises the cobra wiring of --config-only
+// on a fresh command instance. --root is a persistent flag on rootCmd only, so the
+// working directory is switched instead of mutating the package global.
+func TestIntegration_Init_ConfigOnlyFlag(t *testing.T) {
+	// t.Chdir and t.Setenv both forbid t.Parallel; config.Load reads os.UserHomeDir().
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	var buf bytes.Buffer
+	cmd := newInitCmd()
+	cmd.SetOut(&buf)
+	cmd.SetErr(&buf)
+	cmd.SetArgs([]string{"--config-only"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("qode init --config-only: %v", err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading dir: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "qode.yaml" {
+		var names []string
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		t.Fatalf("--config-only created %v, want only qode.yaml", names)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "qode.yaml"))
+	if err != nil {
+		t.Fatalf("reading qode.yaml: %v", err)
+	}
+	if !strings.Contains(string(data), "# Minimum scores a review must reach.") {
+		t.Errorf("generated config is not the commented default document:\n%s", data)
+	}
+}
