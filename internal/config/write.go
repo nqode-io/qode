@@ -1,0 +1,586 @@
+package config
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+
+	"github.com/nqode/qode/internal/iokit"
+	"gopkg.in/yaml.v3"
+)
+
+// devVersion is the version string carried by locally installed builds. It mirrors
+// the skips in cli.checkVersion (root.go) and version.CheckCompatibility: a dev
+// build does not participate in version enforcement, and Upgrade does not re-stamp
+// qode_version for one either.
+const devVersion = "dev"
+
+// mergeKey is YAML's merge key, which injects another mapping's entries.
+const mergeKey = "<<"
+
+// mergeTag is the resolved tag yaml.v3 gives a merge key.
+const mergeTag = "!!merge"
+
+// versionKeyName is the config key carrying the format version.
+const versionKeyName = "qode_version"
+
+// maxConfigBytes caps how much of qode.yaml is read. A real config is a few
+// hundred bytes, and the fullest one this tool generates is under 2 KiB, so
+// 64 KiB is generous. The ceiling is deliberately not larger: yaml.v3's
+// duplicate-key check is quadratic in a mapping's key count, so bytes bound
+// decode cost only while they stay small. At 64 KiB the worst case measured is
+// a quarter of a second; at 1 MiB it was 56 seconds and 321 MB, on the first
+// command a user runs in a fresh clone.
+const maxConfigBytes = 64 << 10
+
+// configFileMode is the permission for qode.yaml. It is committed and team-readable,
+// so 0644 rather than the 0600 used for prompt scratch files.
+const configFileMode = 0644
+
+// ErrConfigExists is returned when qode.yaml already exists and overwrite is false.
+var ErrConfigExists = errors.New("qode.yaml already exists")
+
+// ErrConfigInvalid is returned when the project qode.yaml cannot be parsed or fails
+// Validate. Only Upgrade returns it, so the CLI can attach the overwrite hint to a
+// broken project file without attaching it to a broken .qode/scoring.yaml.
+var ErrConfigInvalid = errors.New("invalid qode.yaml")
+
+// WriteDefault renders the commented default document and writes it to root/qode.yaml.
+// When overwrite is false an existing file is left untouched and ErrConfigExists is
+// returned. The write is atomic because every subsequent workflow step reads this file.
+func WriteDefault(ctx context.Context, root, binaryVersion string, overwrite bool) error {
+	path := filepath.Join(root, ConfigFileName)
+	if !overwrite {
+		switch _, err := os.Stat(path); {
+		case err == nil:
+			return fmt.Errorf("%s: %w", path, ErrConfigExists)
+		case !errors.Is(err, fs.ErrNotExist):
+			return fmt.Errorf("checking %s: %w", path, err)
+		}
+	}
+	data, err := encodeDocument(defaultDocument(binaryVersion))
+	if err != nil {
+		return err
+	}
+	if err := iokit.AtomicWriteCtx(ctx, path, data, configFileMode); err != nil {
+		return fmt.Errorf("writing %s: %w", path, err)
+	}
+	return nil
+}
+
+// encodeDocument renders a node tree at two-space indent, matching every YAML
+// example in docs/qode-yaml-reference.md (yaml.v3 defaults to four).
+func encodeDocument(n *yaml.Node) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(n); err != nil {
+		_ = enc.Close()
+		return nil, fmt.Errorf("encoding %s: %w", ConfigFileName, err)
+	}
+	if err := enc.Close(); err != nil {
+		return nil, fmt.Errorf("encoding %s: %w", ConfigFileName, err)
+	}
+	return buf.Bytes(), nil
+}
+
+// rubricTotal sums the dimension weights of a default rubric so the generated
+// comments cannot drift from DefaultRubricConfigs(). An unknown name yields the
+// zero RubricConfig and a total of 0 rather than a panic.
+func rubricTotal(name string) int {
+	total := 0
+	for _, d := range DefaultRubricConfigs()[name].Dimensions {
+		total += d.Weight
+	}
+	return total
+}
+
+// scalarNode builds an untagged scalar so yaml.v3 infers the type from the literal
+// text. qode_version is the one caller that overrides Tag.
+func scalarNode(value string) *yaml.Node {
+	return &yaml.Node{Kind: yaml.ScalarNode, Value: value}
+}
+
+func mappingNode(content ...*yaml.Node) *yaml.Node {
+	return &yaml.Node{Kind: yaml.MappingNode, Content: content}
+}
+
+// appendSection appends a commented key/value pair to a mapping node. The head
+// comment starts with "\n" to render a blank separator line above the section.
+func appendSection(m *yaml.Node, key, headComment string, value *yaml.Node) {
+	k := scalarNode(key)
+	k.HeadComment = headComment
+	m.Content = append(m.Content, k, value)
+}
+
+// defaultDocument builds the fully commented default qode.yaml as a yaml.Node tree.
+// It is the single source of truth for what qode.yaml contains: WriteDefault renders
+// it and Upgrade uses it as the source of keys a file is missing.
+// Comment text is lifted from docs/qode-yaml-reference.md.
+func defaultDocument(binaryVersion string) *yaml.Node {
+	def := DefaultConfig()
+	if binaryVersion == "" {
+		binaryVersion = devVersion
+	}
+
+	versionKey := scalarNode("qode_version")
+	versionKey.HeadComment = "qode configuration. Full reference:\ndocs/qode-yaml-reference.md"
+	versionVal := scalarNode(binaryVersion)
+	versionVal.Tag = "!!str" // keeps a numeric-looking version quoted rather than a float
+	versionVal.LineComment = "written by qode init; identifies the config format version"
+
+	root := mappingNode(versionKey, versionVal)
+	appendSection(root, "review", "\nMinimum scores a review must reach.", reviewNode(def.Review))
+	appendSection(root, "scoring", "\nScoring engine. Rubric dimensions live in .qode/scoring.yaml, not here.", scoringNode(def.Scoring))
+	appendSection(root, "ide", "\nIDE assets generated by 'qode init'. Set false to skip one.", ideNode(def.IDE))
+	appendSection(root, "knowledge", "\nWhere 'qode knowledge' stores and looks up entries.", knowledgeNode(def.Knowledge))
+	appendSection(root, "diff", "\nCommand whose stdout is the diff reviewed by 'qode review'.", diffNode(def.Diff))
+
+	return &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{root}}
+}
+
+// reviewNode renders the thresholds with one decimal so the generated file reads
+// exactly like docs/qode-yaml-reference.md. The rubric maxima are derived, never
+// typed: review totals 12 and security totals 10, and they are not the same number,
+// so one shared comment would ship a false claim about min_security_score.
+func reviewNode(r ReviewConfig) *yaml.Node {
+	code := scalarNode(strconv.FormatFloat(r.MinCodeScore, 'f', 1, 64))
+	code.LineComment = fmt.Sprintf("default review rubric total is %d", rubricTotal("review"))
+	sec := scalarNode(strconv.FormatFloat(r.MinSecurityScore, 'f', 1, 64))
+	sec.LineComment = fmt.Sprintf("default security rubric total is %d", rubricTotal("security"))
+	return mappingNode(
+		scalarNode("min_code_score"), code,
+		scalarNode("min_security_score"), sec,
+	)
+}
+
+// scoringNode carries target_score as a commented-out line rather than a live key:
+// 0 is the sentinel for "use the refine rubric total", so an emitted 0 would be
+// wrong and an emitted 25 would freeze a derived default. The comment hangs off the
+// strict KEY node — a FootComment on the scoring mapping renders at column 0 after
+// the next key.
+func scoringNode(s ScoringConfig) *yaml.Node {
+	strictKey := scalarNode("strict")
+	strictKey.HeadComment = fmt.Sprintf(
+		"target_score: %d # override the /qode-plan-refine pass threshold", rubricTotal("refine"))
+	strictVal := scalarNode(strconv.FormatBool(s.Strict))
+	strictVal.LineComment = "enforce step ordering; exit 1 when a gate fails"
+	return mappingNode(strictKey, strictVal)
+}
+
+func ideNode(i IDEConfig) *yaml.Node {
+	return mappingNode(
+		scalarNode("cursor"), enabledNode(i.Cursor.Enabled, ".cursor/commands/*.mdc"),
+		scalarNode("claude_code"), enabledNode(i.ClaudeCode.Enabled, ".claude/commands/*.md"),
+		scalarNode("codex"), enabledNode(i.Codex.Enabled, ".agents/skills/*/SKILL.md"),
+		scalarNode("opencode"), enabledNode(i.OpenCode.Enabled, ".opencode/commands/*.md"),
+	)
+}
+
+// enabledNode labels each toggle with the assets it controls.
+func enabledNode(enabled bool, assets string) *yaml.Node {
+	v := scalarNode(strconv.FormatBool(enabled))
+	v.LineComment = assets
+	return mappingNode(scalarNode("enabled"), v)
+}
+
+func knowledgeNode(k KnowledgeConfig) *yaml.Node {
+	return mappingNode(scalarNode("path"), scalarNode(k.Path))
+}
+
+// diffNode quotes the command: it round-trips unquoted too, but the reference doc
+// and this repo's qode.yaml show it quoted, and a quoted string is the safer
+// example for a user who edits it.
+func diffNode(d DiffConfig) *yaml.Node {
+	cmd := scalarNode(d.Command)
+	cmd.Style = yaml.DoubleQuotedStyle
+	return mappingNode(scalarNode("command"), cmd)
+}
+
+// Upgrade preserves an existing qode.yaml: every value the user set is kept,
+// qode_version is re-stamped on release binaries, and settings the file is missing
+// are appended with their defaults and their comments. It reports whether anything
+// was written; when nothing changed the file's bytes and mtime are untouched.
+// A file that cannot be parsed or fails Validate is left alone and reported as
+// ErrConfigInvalid.
+func Upgrade(ctx context.Context, root, binaryVersion string) (bool, error) {
+	path := filepath.Join(root, ConfigFileName)
+	// Resolve before reading, not just before writing: a repository can ship
+	// qode.yaml as a link to a device or a pipe, and reading one is unbounded.
+	target, err := resolveTarget(root, path)
+	if err != nil {
+		return false, err
+	}
+	data, err := os.ReadFile(target)
+	if err != nil {
+		return false, fmt.Errorf("reading %s: %w", path, err)
+	}
+	doc, err := parseDocument(data, path)
+	if err != nil {
+		return false, err
+	}
+	if err := validateDocument(doc, path); err != nil {
+		return false, err
+	}
+	rootNode := doc.Content[0]
+	changed, err := mergeMissing(rootNode, defaultDocument(binaryVersion).Content[0])
+	if err != nil {
+		return false, fmt.Errorf("%w: %s: %v", ErrConfigInvalid, path, err)
+	}
+	stamped, err := stampVersion(rootNode, binaryVersion)
+	if err != nil {
+		return false, fmt.Errorf("%w: %s: %v", ErrConfigInvalid, path, err)
+	}
+	changed = changed || stamped
+	if !changed {
+		return false, nil
+	}
+	// Validate again: the merge appends keys by raw name while yaml resolves them
+	// by tag, so a file can gain a duplicate the first pass could not see. Better
+	// to refuse than to write a qode.yaml that Load will reject.
+	if err := validateDocument(doc, path); err != nil {
+		return false, err
+	}
+	if err := writeDocument(ctx, target, path, doc); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// parseDocument parses qode.yaml into a document node whose root is always a
+// mapping, so the caller can decode, merge into and encode it unconditionally.
+// A file with nothing to carry a value — empty, comment-only, "---" or "~" —
+// becomes an empty mapping and is filled from the defaults. A file holding more
+// than one YAML document is refused rather than silently rewritten, because only
+// the first document is ever read and re-encoding would drop the rest.
+func parseDocument(data []byte, path string) (*yaml.Node, error) {
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	var doc yaml.Node
+	if err := dec.Decode(&doc); err != nil && !errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("%w: parsing %s: %v", ErrConfigInvalid, path, err)
+	}
+	// Anything left in the stream but empty trailing documents is content qode
+	// never reads and re-encoding would drop, whether it parses or not.
+	for {
+		var extra yaml.Node
+		err := dec.Decode(&extra)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil || !isEmptyDocument(&extra) {
+			return nil, fmt.Errorf("%w: %s holds more than one YAML document; qode reads only the first", ErrConfigInvalid, path)
+		}
+	}
+	// Kind 0 is an empty or comment-only file; a document whose root is a null
+	// scalar ("---" or "~") carries no mapping to merge into either. Both fields
+	// must be set, not just Content: a node left at Kind 0 can be neither decoded
+	// nor encoded.
+	if doc.Kind == 0 || len(doc.Content) == 0 || isNull(doc.Content[0]) {
+		doc.Kind = yaml.DocumentNode
+		doc.Content = []*yaml.Node{{Kind: yaml.MappingNode}}
+	}
+	if err := refuseComplexKeys(&doc); err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", ErrConfigInvalid, path, err)
+	}
+	return &doc, nil
+}
+
+// refuseComplexKeys rejects any mapping whose key is not a plain scalar. No qode
+// config has ever had one, and yaml.v3 panics while resolving a complex key that
+// sits beside a merge key — a crash qode init would otherwise inherit from any
+// repository it is run in.
+func refuseComplexKeys(n *yaml.Node) error {
+	if n.Kind == yaml.MappingNode {
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			if n.Content[i].Kind != yaml.ScalarNode {
+				return errors.New("mapping keys must be plain values")
+			}
+		}
+	}
+	for _, c := range n.Content {
+		if err := refuseComplexKeys(c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func isNull(n *yaml.Node) bool {
+	return n.Kind == yaml.ScalarNode && n.Tag == "!!null"
+}
+
+// isEmptyDocument reports whether a document carries nothing — a bare "---" with
+// no value and no comment. Such a document is tolerated because dropping it on
+// write loses nothing; Load already ignores it.
+func isEmptyDocument(doc *yaml.Node) bool {
+	if doc.HeadComment != "" || doc.LineComment != "" || doc.FootComment != "" {
+		return false
+	}
+	if doc.Kind == 0 || len(doc.Content) == 0 {
+		return true
+	}
+	n := doc.Content[0]
+	return isNull(n) && n.HeadComment == "" && n.LineComment == "" && n.FootComment == ""
+}
+
+// validateDocument decodes the project file alone onto the defaults and validates it.
+// Node.Decode onto a pre-populated struct merges key-by-key exactly like
+// mergeFromFile, so this reproduces Load's project-file semantics without reading
+// .qode/scoring.yaml or ~/.qode/config.yaml.
+func validateDocument(doc *yaml.Node, path string) error {
+	cfg := DefaultConfig()
+	if err := doc.Decode(&cfg); err != nil {
+		return fmt.Errorf("%w: parsing %s: %v", ErrConfigInvalid, path, err)
+	}
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("%w: %s: %v", ErrConfigInvalid, path, err)
+	}
+	return nil
+}
+
+// mergeMissing appends to dst every (key, value) pair present in def but absent from
+// dst, recursing into mappings the two share. A key dst already has is never read,
+// rewritten or re-marshalled — that single rule is what preserves enabled: false,
+// scoring.strict: true and any threshold the user tuned. Comments therefore arrive
+// only with keys that are added.
+func mergeMissing(dst, def *yaml.Node) (bool, error) {
+	if dst.Kind != yaml.MappingNode || def.Kind != yaml.MappingNode {
+		return false, nil
+	}
+	merged, err := mergedKeys(dst)
+	if err != nil {
+		return false, err
+	}
+	changed := false
+	for i := 0; i+1 < len(def.Content); i += 2 {
+		defKey, defVal := def.Content[i], def.Content[i+1]
+		dstVal := lookupValue(dst, defKey.Value)
+		switch {
+		case dstVal != nil:
+			if dstVal.Kind == yaml.MappingNode && defVal.Kind == yaml.MappingNode {
+				nested, err := mergeMissing(dstVal, defVal)
+				if err != nil {
+					return false, err
+				}
+				changed = changed || nested
+			}
+		case merged[defKey.Value]:
+			// The key is supplied through a YAML merge key, so the user has set it
+			// even though no literal entry carries it. An explicit key beats a
+			// merged one, so appending the default here would silently override
+			// their value — exactly what this function exists to prevent.
+		default:
+			dst.Content = append(dst.Content, adopt(defKey, dst), adopt(defVal, dst))
+			changed = true
+		}
+	}
+	return changed, nil
+}
+
+// mergedKeys returns the keys a mapping resolves to through YAML merge keys (<<),
+// which lookupValue cannot see because no literal entry carries them. Mappings
+// without a merge key — every ordinary config — skip the decode entirely. A merge
+// key that cannot be resolved is an error rather than an empty result: treating it
+// as "no merged keys" would append defaults over values the user set.
+func mergedKeys(m *yaml.Node) (map[string]bool, error) {
+	if !hasMergeKey(m) {
+		return nil, nil
+	}
+	var decoded map[string]yaml.Node
+	if err := m.Decode(&decoded); err != nil {
+		return nil, fmt.Errorf("resolving merge key: %w", err)
+	}
+	out := make(map[string]bool, len(decoded))
+	for k := range decoded {
+		out[k] = true
+	}
+	return out, nil
+}
+
+// hasMergeKey reports whether a mapping carries YAML's merge key, testing the
+// resolved tag exactly as yaml.v3's own isMerge does. A quoted "<<" resolves to
+// !!str and is an ordinary string key; both the bare "<<:" and the explicitly
+// tagged "!!merge <<:" the encoder emits are merges.
+func hasMergeKey(m *yaml.Node) bool {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		k := m.Content[i]
+		if k.Value == mergeKey && (k.Tag == "" || k.Tag == mergeTag) {
+			return true
+		}
+	}
+	return false
+}
+
+// adopt copies a default node for insertion into dst, dropping the comments when
+// dst is written in flow style ({a: 1}), where a comment would render inside the
+// braces. The copy keeps the default node itself reusable across calls.
+func adopt(n, dst *yaml.Node) *yaml.Node {
+	if dst.Style&yaml.FlowStyle == 0 {
+		return n
+	}
+	clone := *n
+	clone.HeadComment = ""
+	clone.LineComment = ""
+	clone.FootComment = ""
+	if len(n.Content) > 0 {
+		clone.Content = make([]*yaml.Node, len(n.Content))
+		for i, c := range n.Content {
+			clone.Content[i] = adopt(c, dst)
+		}
+	}
+	return &clone
+}
+
+// lookupValue returns the value node for key in a mapping node, or nil.
+func lookupValue(m *yaml.Node, key string) *yaml.Node {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == key {
+			return m.Content[i+1]
+		}
+	}
+	return nil
+}
+
+// stampVersion refreshes qode_version for release binaries only. A dev build never
+// overwrites an existing value, mirroring the skips in cli.checkVersion and
+// version.CheckCompatibility, which is what keeps a tracked qode_version stable
+// under 'go install' builds. A file missing the key entirely gets it from
+// mergeMissing (dev value included), because checkVersion treats an absent
+// qode_version as not-initialised.
+//
+// A release binary that cannot write the key — because an alias or a merge key
+// supplies it — reports an error instead of skipping silently, since a stale
+// qode_version makes every guarded command fail with "run qode init" as its
+// remedy: the command that just declined to fix it.
+func stampVersion(root *yaml.Node, binaryVersion string) (bool, error) {
+	if binaryVersion == "" || binaryVersion == devVersion {
+		return false, nil
+	}
+	v := lookupValue(root, versionKeyName)
+	switch {
+	case v == nil:
+		// mergeMissing has already appended an absent key, so a missing entry here
+		// means a merge key supplies it.
+		merged, err := mergedKeys(root)
+		if err != nil {
+			return false, err
+		}
+		if merged[versionKeyName] {
+			return false, errUnwritableVersion
+		}
+		return false, nil
+	case v.Kind != yaml.ScalarNode:
+		return false, errUnwritableVersion
+	case v.Value == binaryVersion:
+		return false, nil
+	}
+	v.Value = binaryVersion
+	v.Tag = "!!str"
+	return true, nil
+}
+
+// errUnwritableVersion names the one shape Upgrade cannot refresh.
+var errUnwritableVersion = errors.New(
+	versionKeyName + " is an alias or a merged value and cannot be refreshed; write it as a plain value")
+
+// writeDocument renders doc and writes it atomically to target, which Upgrade has
+// already resolved and contained, keeping whatever mode the target already has.
+func writeDocument(ctx context.Context, target, path string, doc *yaml.Node) error {
+	stripMergeTags(doc)
+	out, err := encodeDocument(doc)
+	if err != nil {
+		return err
+	}
+	mode := os.FileMode(configFileMode)
+	if info, statErr := os.Stat(target); statErr == nil {
+		mode = info.Mode().Perm()
+	}
+	if err := iokit.AtomicWriteCtx(ctx, target, out, mode); err != nil {
+		return fmt.Errorf("writing %s: %w", path, err)
+	}
+	return nil
+}
+
+// resolveTarget follows a symlinked qode.yaml — so a config shared between
+// sibling modules of one project is written through rather than replaced by a
+// regular file — and vets what the link leads to before a single byte is read.
+// The target must be inside the project: a config shared from outside it is
+// refused, deliberately. A repository can ship
+// qode.yaml as a link to anything its user can reach, so the target must sit
+// inside the project, be named like a config rather than some other file that
+// happens to parse, be a regular file rather than a device or a pipe, and be
+// small enough to be a configuration.
+func resolveTarget(root, path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("resolving %s: %w", path, err)
+	}
+	target, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return "", fmt.Errorf("resolving %s: %w", path, err)
+	}
+	base, err := resolveRootDir(root)
+	if err != nil {
+		return "", err
+	}
+	rel, relErr := filepath.Rel(base, target)
+	switch {
+	case relErr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)):
+		return "", fmt.Errorf("%w: %s leads to %s, outside the project; qode init will not write there",
+			ErrConfigInvalid, path, filepath.Base(target))
+	case filepath.Base(target) != ConfigFileName:
+		// Keeps a link from turning init into "append YAML to .git/HEAD", or to a
+		// workflow file, or to anything else that happens to parse as a mapping.
+		return "", fmt.Errorf("%w: %s leads to %s, which is not a %s",
+			ErrConfigInvalid, path, filepath.Base(target), ConfigFileName)
+	}
+	info, err := os.Stat(target)
+	if err != nil {
+		return "", fmt.Errorf("checking %s: %w", path, err)
+	}
+	switch {
+	case !info.Mode().IsRegular():
+		return "", fmt.Errorf("%w: %s is not a regular file", ErrConfigInvalid, path)
+	case info.Size() > maxConfigBytes:
+		return "", fmt.Errorf("%w: %s is %d bytes, past the %d-byte limit for a configuration",
+			ErrConfigInvalid, path, info.Size(), maxConfigBytes)
+	}
+	return target, nil
+}
+
+// resolveRootDir gives the project root in the same absolute, link-free form as a
+// resolved target, so the two can be compared.
+func resolveRootDir(root string) (string, error) {
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return "", fmt.Errorf("resolving %s: %w", root, err)
+	}
+	base, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return "", fmt.Errorf("resolving %s: %w", root, err)
+	}
+	return base, nil
+}
+
+// stripMergeTags removes the explicit !!merge tag the parser attaches to every
+// merge key, so re-encoding renders the "<<:" every hand-written config uses
+// rather than "!!merge <<:".
+func stripMergeTags(n *yaml.Node) {
+	if n.Kind == yaml.MappingNode {
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			if k := n.Content[i]; k.Value == mergeKey && k.Tag == mergeTag {
+				k.Tag = ""
+			}
+		}
+	}
+	for _, c := range n.Content {
+		stripMergeTags(c)
+	}
+}

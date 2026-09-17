@@ -2,8 +2,10 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -16,48 +18,104 @@ import (
 )
 
 func newInitCmd() *cobra.Command {
+	var configOnly bool
+	var force bool
+
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initialise qode in a project",
 		Long: `Initialise qode in the current directory.
 
-Writes a minimal qode.yaml with defaults, creates the .qode/ directory
-structure, copies embedded prompt templates, and generates IDE workflow assets
-for Cursor, Claude Code, Codex, and OpenCode.`,
+Generates qode.yaml with commented defaults when it is absent. When it already
+exists, every value you set is kept, qode_version is refreshed on released
+builds, and settings added by newer qode versions are appended with their
+defaults — nothing is reset. Creates the .qode/ directory structure, copies
+embedded prompt templates, and generates IDE workflow assets for the IDEs
+enabled in qode.yaml (Cursor, Claude Code, Codex, OpenCode).
+
+Use --config-only to write qode.yaml and stop, so you can review and edit it
+before anything else is generated. --force overwrites an existing qode.yaml
+with the defaults instead of preserving it (unlike --force on plan, review and
+start, which bypasses step guard checks).`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := resolveRoot()
 			if err != nil {
 				return err
 			}
-			return runInitExisting(cmd.OutOrStdout(), root)
+			return runInitExisting(cmd.Context(), cmd.OutOrStdout(), root, rootCmd.Version, configOnly, force)
 		},
 	}
+	cmd.Flags().BoolVar(&configOnly, "config-only", false, "write qode.yaml with commented defaults and stop")
+	cmd.Flags().BoolVar(&force, "force", false, "overwrite an existing qode.yaml with the defaults")
 	return cmd
 }
 
-// runInitExisting writes qode.yaml with defaults, creates .qode/ dirs, copies
-// prompt templates, and generates IDE configs. .qode/scoring.yaml is only
-// written on first run so user-customised rubrics are never overwritten.
-func runInitExisting(out io.Writer, root string) error {
-	cfg := config.DefaultConfig()
-	cfg.QodeVersion = rootCmd.Version
-	if cfg.QodeVersion == "" {
-		cfg.QodeVersion = "dev"
+// runInitExisting generates or upgrades qode.yaml and then scaffolds the project
+// against the configuration that file actually carries. With configOnly it writes
+// qode.yaml and stops.
+func runInitExisting(ctx context.Context, out io.Writer, root, binaryVersion string, configOnly, force bool) error {
+	if configOnly {
+		if err := config.WriteDefault(ctx, root, binaryVersion, force); err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintf(out, "Generated: %s\n", filepath.Join(root, config.ConfigFileName))
+		return nil
 	}
-
-	// Always write qode.yaml — rubrics live in .qode/scoring.yaml, not here.
-	cfgForYaml := cfg
-	cfgForYaml.Scoring.Rubrics = nil
-	data, err := yaml.Marshal(&cfgForYaml)
+	cfg, err := ensureConfig(ctx, out, root, binaryVersion, force)
 	if err != nil {
-		return fmt.Errorf("marshaling config: %w", err)
+		return err
 	}
-	outPath := filepath.Join(root, config.ConfigFileName)
-	if err := iokit.WriteFile(outPath, data, 0644); err != nil {
-		return fmt.Errorf("writing %s: %w", outPath, err)
-	}
-	_, _ = fmt.Fprintf(out, "Generated: %s\n", outPath)
+	return scaffoldFromConfig(ctx, out, root, cfg)
+}
 
+// ensureConfig generates, or preserves-and-upgrades, the project qode.yaml and
+// returns the loaded configuration. A file that cannot be parsed or validated is
+// left byte-identical.
+func ensureConfig(ctx context.Context, out io.Writer, root, binaryVersion string, force bool) (*config.Config, error) {
+	path := filepath.Join(root, config.ConfigFileName)
+	_, statErr := os.Stat(path)
+	switch {
+	case errors.Is(statErr, fs.ErrNotExist) || force:
+		if err := config.WriteDefault(ctx, root, binaryVersion, true); err != nil {
+			return nil, err
+		}
+		_, _ = fmt.Fprintf(out, "Generated: %s\n", path)
+	case statErr != nil:
+		return nil, fmt.Errorf("checking %s: %w", path, statErr)
+	default:
+		changed, err := config.Upgrade(ctx, root, binaryVersion)
+		if err != nil {
+			return nil, withOverwriteHint(err)
+		}
+		if changed {
+			_, _ = fmt.Fprintf(out, "Updated: %s\n", path)
+		}
+	}
+	// Load unconditionally: one code path, and a freshly written file is parsed and
+	// validated before anything is scaffolded against it. Errors here may name
+	// .qode/scoring.yaml or ~/.qode/config.yaml, so they are returned undecorated.
+	cfg, err := config.Load(root)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+// withOverwriteHint appends the escape hatch for a broken project qode.yaml. Only
+// config.Upgrade returns ErrConfigInvalid, so a malformed .qode/scoring.yaml can
+// never be answered with "overwrite your qode.yaml".
+func withOverwriteHint(err error) error {
+	if !errors.Is(err, config.ErrConfigInvalid) {
+		return err
+	}
+	return fmt.Errorf("%w\nqode.yaml could not be read; fix it, or overwrite it with 'qode init --config-only --force'", err)
+}
+
+// scaffoldFromConfig creates the .qode/ directory structure, writes the first-run
+// scoring rubrics, copies prompt templates, and generates workflow assets for the
+// IDEs cfg enables. .qode/scoring.yaml is only written on first run so
+// user-customised rubrics are never overwritten.
+func scaffoldFromConfig(ctx context.Context, out io.Writer, root string, cfg *config.Config) error {
 	// Create .qode directory structure.
 	for _, dir := range []string{
 		filepath.Join(root, config.QodeDir, "contexts"),
@@ -89,11 +147,11 @@ func runInitExisting(out io.Writer, root string) error {
 	}
 
 	// Generate IDE configs and workflow assets using the loaded (or default) config.
-	if err := scaffold.Setup(out, root, &cfg); err != nil {
+	if err := scaffold.Setup(out, root, cfg); err != nil {
 		return fmt.Errorf("setting up IDE configs: %w", err)
 	}
 
-	if err := scaffold.AppendGitignoreRules(context.Background(), out, root); err != nil {
+	if err := scaffold.AppendGitignoreRules(ctx, out, root); err != nil {
 		return fmt.Errorf("appending gitignore rules: %w", err)
 	}
 

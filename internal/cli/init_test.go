@@ -4,20 +4,25 @@ package cli
 
 import (
 	"bytes"
+	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/prompt"
 	"github.com/nqode/qode/internal/scaffold"
 	"gopkg.in/yaml.v3"
 )
 
 func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -40,9 +45,10 @@ func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 }
 
 func TestRunInitExisting_CreatesDirs(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -55,9 +61,10 @@ func TestRunInitExisting_CreatesDirs(t *testing.T) {
 }
 
 func TestRunInitExisting_CopiesTemplates(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -88,9 +95,10 @@ func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 }
 
 func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -126,9 +134,10 @@ func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
 }
 
 func TestRunInitExisting_NoCursorRules(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -143,10 +152,11 @@ func TestRunInitExisting_NoCursorRules(t *testing.T) {
 }
 
 func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
 	var buf bytes.Buffer
-	if err := runInitExisting(&buf, dir); err != nil {
+	if err := runInitExisting(context.Background(), &buf, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -165,9 +175,10 @@ func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 }
 
 func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -178,9 +189,10 @@ func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
 }
 
 func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("first runInitExisting: %v", err)
 	}
 
@@ -192,7 +204,7 @@ func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 	}
 
 	// Second run must succeed and must not overwrite .qode/scoring.yaml.
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("second runInitExisting: %v", err)
 	}
 
@@ -207,10 +219,10 @@ func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 }
 
 func TestRunInitExisting_AppendsGitignoreRules(t *testing.T) {
-	t.Parallel()
+	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -228,13 +240,13 @@ func TestRunInitExisting_AppendsGitignoreRules(t *testing.T) {
 }
 
 func TestRunInitExisting_GitignoreIsIdempotent(t *testing.T) {
-	t.Parallel()
+	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("first runInitExisting: %v", err)
 	}
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("second runInitExisting: %v", err)
 	}
 
@@ -256,5 +268,377 @@ func TestRootCmd_NoIDESubcommand(t *testing.T) {
 	ideCmd, _, findErr := rootCmd.Find([]string{"ide"})
 	if findErr == nil && ideCmd != rootCmd {
 		t.Error("'ide' subcommand must not be registered on rootCmd")
+	}
+}
+
+// seedProjectConfig writes body as the project qode.yaml and returns its path.
+func seedProjectConfig(t *testing.T, dir, body string) string {
+	t.Helper()
+	path := filepath.Join(dir, config.ConfigFileName)
+	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
+		t.Fatalf("seeding %s: %v", config.ConfigFileName, err)
+	}
+	return path
+}
+
+func readProjectConfig(t *testing.T, dir string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(dir, config.ConfigFileName))
+	if err != nil {
+		t.Fatalf("reading %s: %v", config.ConfigFileName, err)
+	}
+	return string(data)
+}
+
+func TestRunInitExisting_ConfigOnly_WritesOnlyConfig(t *testing.T) {
+	isolateHome(t)
+	dir := t.TempDir()
+
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", true, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading dir: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Name() != config.ConfigFileName {
+		var names []string
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		t.Fatalf("--config-only created %v, want only %s", names, config.ConfigFileName)
+	}
+	if !strings.Contains(readProjectConfig(t, dir), "# Minimum scores a review must reach.") {
+		t.Error("generated config is not the commented default document")
+	}
+}
+
+func TestRunInitExisting_ConfigOnly_RefusesExisting(t *testing.T) {
+	isolateHome(t)
+	dir := t.TempDir()
+	const existing = "qode_version: 0.1.0\n"
+	seedProjectConfig(t, dir, existing)
+
+	err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", true, false)
+	if !errors.Is(err, config.ErrConfigExists) {
+		t.Fatalf("error = %v, want ErrConfigExists", err)
+	}
+	if got := readProjectConfig(t, dir); got != existing {
+		t.Errorf("existing config was modified: %q", got)
+	}
+}
+
+func TestRunInitExisting_ConfigOnly_ForceOverwrites(t *testing.T) {
+	isolateHome(t)
+	dir := t.TempDir()
+	seedProjectConfig(t, dir, "qode_version: 0.1.0\n")
+
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", true, true); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+	if !strings.Contains(readProjectConfig(t, dir), "# Minimum scores a review must reach.") {
+		t.Error("config was not replaced by the commented defaults")
+	}
+}
+
+// customisedConfig is a hand-tuned project config: three non-default values, a
+// hand-written comment, and no ide.opencode block.
+const customisedConfig = `# keep me
+qode_version: 0.1.0
+review:
+  min_security_score: 10
+scoring:
+  strict: true
+ide:
+  cursor:
+    enabled: false
+  claude_code:
+    enabled: true
+  codex:
+    enabled: true
+`
+
+func TestRunInitExisting_UpgradesExistingConfig(t *testing.T) {
+	isolateHome(t)
+	dir := t.TempDir()
+	seedProjectConfig(t, dir, customisedConfig)
+
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "0.4.0-beta", false, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	rendered := readProjectConfig(t, dir)
+	if !strings.Contains(rendered, "# keep me") {
+		t.Errorf("hand-written comment was dropped:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "  opencode:\n    enabled: true") {
+		t.Errorf("opencode was not appended under the existing ide mapping:\n%s", rendered)
+	}
+
+	cfg, err := config.Load(dir)
+	if err != nil {
+		t.Fatalf("reloading config: %v", err)
+	}
+	if cfg.Review.MinSecurityScore != 10 {
+		t.Errorf("min_security_score = %v, want the user's 10", cfg.Review.MinSecurityScore)
+	}
+	if !cfg.Scoring.Strict {
+		t.Error("scoring.strict was reset to false")
+	}
+	if cfg.IDE.Cursor.Enabled {
+		t.Error("ide.cursor.enabled was reset to true")
+	}
+	if cfg.QodeVersion != "0.4.0-beta" {
+		t.Errorf("qode_version = %q, want it re-stamped to 0.4.0-beta", cfg.QodeVersion)
+	}
+}
+
+func TestRunInitExisting_SecondRunIsNoOp(t *testing.T) {
+	isolateHome(t)
+	dir := t.TempDir()
+	seedProjectConfig(t, dir, customisedConfig)
+
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "0.4.0-beta", false, false); err != nil {
+		t.Fatalf("first runInitExisting: %v", err)
+	}
+	before := readProjectConfig(t, dir)
+	path := filepath.Join(dir, config.ConfigFileName)
+	statBefore, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "0.4.0-beta", false, false); err != nil {
+		t.Fatalf("second runInitExisting: %v", err)
+	}
+	if got := readProjectConfig(t, dir); got != before {
+		t.Errorf("second run rewrote qode.yaml:\n%s", got)
+	}
+	statAfter, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if !statAfter.ModTime().Equal(statBefore.ModTime()) {
+		t.Error("second run touched qode.yaml's mtime")
+	}
+}
+
+func TestRunInitExisting_SkipsDisabledIDEs(t *testing.T) {
+	tests := []struct {
+		name     string
+		key      string
+		skipped  string
+		expected []string
+	}{
+		{
+			name: "cursor", key: "cursor", skipped: ".cursor",
+			expected: []string{".claude/commands/qode-plan-refine.md", ".agents/skills/qode-plan-refine/SKILL.md", ".opencode/commands/qode-plan-refine.md"},
+		},
+		{
+			name: "claude_code", key: "claude_code", skipped: ".claude",
+			expected: []string{".cursor/commands/qode-plan-refine.mdc", ".agents/skills/qode-plan-refine/SKILL.md", ".opencode/commands/qode-plan-refine.md"},
+		},
+		{
+			name: "codex", key: "codex", skipped: ".agents",
+			expected: []string{".cursor/commands/qode-plan-refine.mdc", ".claude/commands/qode-plan-refine.md", ".opencode/commands/qode-plan-refine.md"},
+		},
+		{
+			name: "opencode", key: "opencode", skipped: ".opencode",
+			expected: []string{".cursor/commands/qode-plan-refine.mdc", ".claude/commands/qode-plan-refine.md", ".agents/skills/qode-plan-refine/SKILL.md"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
+			isolateHome(t)
+			dir := t.TempDir()
+			seedProjectConfig(t, dir, "ide:\n  "+tc.key+":\n    enabled: false\n")
+
+			if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+				t.Fatalf("runInitExisting: %v", err)
+			}
+
+			if _, err := os.Stat(filepath.Join(dir, tc.skipped)); !errors.Is(err, fs.ErrNotExist) {
+				t.Errorf("%s was generated for a disabled IDE", tc.skipped)
+			}
+			for _, rel := range tc.expected {
+				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
+					t.Errorf("%s was not generated: %v", rel, err)
+				}
+			}
+		})
+	}
+}
+
+func TestRunInitExisting_NoIDEsEnabled(t *testing.T) {
+	isolateHome(t)
+	dir := t.TempDir()
+	seedProjectConfig(t, dir, `ide:
+  cursor:
+    enabled: false
+  claude_code:
+    enabled: false
+  codex:
+    enabled: false
+  opencode:
+    enabled: false
+`)
+
+	var buf bytes.Buffer
+	if err := runInitExisting(context.Background(), &buf, dir, "", false, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+	if !strings.Contains(buf.String(), "No IDEs enabled") {
+		t.Errorf("output does not guide a user with every IDE disabled:\n%s", buf.String())
+	}
+}
+
+func TestRunInitExisting_BrokenConfigIsUntouched(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "parse error", body: "scoring: [\n"},
+		{name: "validate failure", body: "review:\n  min_code_score: -1\n"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
+			isolateHome(t)
+			dir := t.TempDir()
+			seedProjectConfig(t, dir, tc.body)
+
+			err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false)
+			if !errors.Is(err, config.ErrConfigInvalid) {
+				t.Fatalf("error = %v, want ErrConfigInvalid", err)
+			}
+			if !strings.Contains(err.Error(), "--config-only --force") {
+				t.Errorf("error does not name the overwrite command: %v", err)
+			}
+			if got := readProjectConfig(t, dir); got != tc.body {
+				t.Errorf("broken config was modified:\ngot  %q\nwant %q", got, tc.body)
+			}
+		})
+	}
+}
+
+func TestRunInitExisting_BrokenScoringYamlHasNoOverwriteHint(t *testing.T) {
+	tests := []struct {
+		name      string
+		body      string
+		wantNamed string
+	}{
+		// A parse failure is wrapped by Load with the offending path.
+		{name: "parse error", body: "rubrics: [\n", wantNamed: config.ScoringFileName},
+		// A file that parses but fails Validate is reported by the rubric key it broke.
+		{name: "invalid rubric", body: "rubrics:\n  bogus:\n    dimensions: []\n", wantNamed: "scoring.rubrics"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
+			isolateHome(t)
+			dir := t.TempDir()
+			const valid = "qode_version: 0.1.0\n"
+			seedProjectConfig(t, dir, valid)
+
+			scoringPath := filepath.Join(dir, config.QodeDir, config.ScoringFileName)
+			if err := os.MkdirAll(filepath.Dir(scoringPath), 0755); err != nil {
+				t.Fatalf("mkdir: %v", err)
+			}
+			if err := os.WriteFile(scoringPath, []byte(tc.body), 0644); err != nil {
+				t.Fatalf("writing %s: %v", config.ScoringFileName, err)
+			}
+
+			err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false)
+			if err == nil {
+				t.Fatal("expected an error for a broken scoring.yaml")
+			}
+			if !strings.Contains(err.Error(), tc.wantNamed) {
+				t.Errorf("error does not name %q: %v", tc.wantNamed, err)
+			}
+			if strings.Contains(err.Error(), "--config-only --force") {
+				t.Errorf("a broken scoring.yaml must not suggest overwriting qode.yaml: %v", err)
+			}
+			// qode.yaml is valid here, so ensureConfig upgrades it before Load reaches
+			// the broken rubric file; what must survive is the user's own value.
+			if got := readProjectConfig(t, dir); !strings.Contains(got, "qode_version: 0.1.0") {
+				t.Errorf("the user's qode_version did not survive: %q", got)
+			}
+		})
+	}
+}
+
+func TestRunInitExisting_EmptyConfigIsFilled(t *testing.T) {
+	isolateHome(t)
+	dir := t.TempDir()
+	seedProjectConfig(t, dir, "")
+
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	if !strings.Contains(readProjectConfig(t, dir), "# Minimum scores a review must reach.") {
+		t.Error("empty config was not filled with the commented defaults")
+	}
+	cfg, err := config.Load(dir)
+	if err != nil {
+		t.Fatalf("reloading config: %v", err)
+	}
+	if cfg.Review.MinCodeScore != config.DefaultConfig().Review.MinCodeScore {
+		t.Errorf("min_code_score = %v, want the default", cfg.Review.MinCodeScore)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".claude", "commands", "qode-plan-refine.md")); err != nil {
+		t.Errorf("scaffolding did not proceed after filling the config: %v", err)
+	}
+}
+
+func TestRunInitExisting_UpgradeOutputLine(t *testing.T) {
+	isolateHome(t)
+	dir := t.TempDir()
+	seedProjectConfig(t, dir, "qode_version: 0.1.0\n")
+
+	var buf bytes.Buffer
+	if err := runInitExisting(context.Background(), &buf, dir, "", false, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "Updated: ") {
+		t.Errorf("upgrade path did not report the update:\n%s", out)
+	}
+	for _, banned := range []string{"Detected", "Scanning", "qode ide setup"} {
+		if strings.Contains(out, banned) {
+			t.Errorf("output reintroduced %q:\n%s", banned, out)
+		}
+	}
+}
+
+func TestRunInitExisting_UnreadableConfigHasNoOverwriteHint(t *testing.T) {
+	isolateHome(t)
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores file permissions")
+	}
+	dir := t.TempDir()
+	// An unreadable qode.yaml makes Upgrade fail on the read, which is not
+	// ErrConfigInvalid, so the overwrite hint must not be attached.
+	path := filepath.Join(dir, config.ConfigFileName)
+	if err := os.WriteFile(path, []byte("qode_version: 0.1.0\n"), 0000); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0644) })
+
+	err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false)
+	if err == nil {
+		t.Fatal("expected an error when qode.yaml cannot be read")
+	}
+	if errors.Is(err, config.ErrConfigInvalid) {
+		t.Errorf("an unreadable file is not an invalid one: %v", err)
+	}
+	if strings.Contains(err.Error(), "--config-only --force") {
+		t.Errorf("hint attached to an error that overwriting will not fix: %v", err)
 	}
 }

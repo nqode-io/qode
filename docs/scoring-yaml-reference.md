@@ -1,6 +1,6 @@
 # .qode/scoring.yaml Reference
 
-Scoring rubrics live in `.qode/scoring.yaml`, separate from `qode.yaml`. This means re-running `qode init` (which always regenerates `qode.yaml` with defaults) never overwrites rubric customisations you have iterated on over time.
+Scoring rubrics live in `.qode/scoring.yaml`, separate from `qode.yaml`. `qode init` writes this file on the first run only, so rubric customisations you have iterated on over time are never overwritten. (`qode.yaml` itself is preserved across re-runs too — see [qode-yaml-reference.md](qode-yaml-reference.md).)
 
 ## How it is created
 

@@ -46,6 +46,10 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestSave_Load(t *testing.T) {
+	// config.Load merges ~/.qode/config.yaml, so HOME must be isolated.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	dir := t.TempDir()
 
 	cfg := DefaultConfig()

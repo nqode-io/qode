@@ -24,7 +24,7 @@ Default sequence, in dependency order — do not reorder:
 - [#74](https://github.com/nqode-io/qode/issues/74) `qode init --config`; init reads an existing config and scaffolds only enabled entries
 - [#75](https://github.com/nqode-io/qode/issues/75) rename IDEs to Agents, release `v0.4.0-beta`
 
-**Progress as of 2026-09-16:** #72 merged (PR #77); the next ticket is **73**. Update this line when a
+**Progress as of 2026-09-17:** #72 (PR #77) and #73 (PR #78) merged; the next ticket is **74**. Update this line when a
 ticket merges; the loop itself infers state from `.qode/contexts/`, not from here.
 
 ## Model assignments (owner decision, 2026-09-16)
@@ -52,7 +52,9 @@ The loop drives each ticket with the qode that the previous ticket shipped.
 - **Never `go run ./cmd/qode`.** Local source may be mid-edit; the installed binary is the contract.
 
 **Regenerating tracked assets.** This repo commits `qode.yaml`, `.qode/prompts/`,
-`.qode/scoring.yaml`, `.cursor/`, `.claude/commands/`, and `.agents/skills/`. The prompt
+`.qode/scoring.yaml`, `.cursor/`, `.claude/commands/`, `.agents/skills/`, and `.opencode/commands/`.
+A regenerated `qode.yaml` is committed with them: init preserves the values this project set, so
+its diff is whatever a newer qode added, never a reset. The prompt
 engine reads `.qode/prompts/` **before** the embedded templates, so a ticket that changes an
 embedded template or a scaffold template is not exercised by this repo until the tracked
 copies are regenerated. When a ticket touches `internal/prompt/templates/` or
@@ -61,8 +63,7 @@ copies are regenerated. When a ticket touches `internal/prompt/templates/` or
 ```bash
 go install ./cmd/qode/
 PATH="$(go env GOPATH)/bin:$PATH" qode init
-git checkout -- qode.yaml          # until #74 lands, init rewrites qode.yaml with qode_version: dev
-git add .qode/prompts .cursor .claude/commands .agents/skills && git commit -m "chore: regenerate scaffolded assets"
+git add qode.yaml .qode/prompts .cursor .claude/commands .agents/skills .opencode/commands && git commit -m "chore: regenerate scaffolded assets"
 ```
 
 Regenerated `.claude/commands/qode-loop.md` does not exist — `qode init` only writes the

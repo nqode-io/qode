@@ -26,6 +26,7 @@ cd qode
 go test ./...
 go install ./cmd/qode/
 qode init                               # Once per checkout — generates qode.yaml, .qode/, .cursor/, .claude/, .agents/skills/, .opencode/
+                                        # Safe to re-run: a customised qode.yaml keeps its values
 ```
 
 Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, `.agents/skills/`, and `.opencode/` so reviewers work against the same rubrics, prompts, and IDE workflows.

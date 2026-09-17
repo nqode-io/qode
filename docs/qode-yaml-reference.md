@@ -28,7 +28,17 @@ diff:
   command: "git diff --merge-base origin/HEAD -- :(exclude).qode/"
 ```
 
-> **Re-running `qode init` regenerates `qode.yaml` with these defaults.** Any customisations you have made to `qode.yaml` (score thresholds, `scoring.strict`, etc.) will be reset. Re-add them after running `qode init`, or run it only when you want a clean reset.
+> **Re-running `qode init` preserves your `qode.yaml`.** Every value you set is kept, `qode_version` is refreshed on released builds, and settings added by newer qode versions are appended with their defaults and their comments. Nothing is reset, and the file is only rewritten when something actually changes.
+>
+> Two things follow. New keys land at the end of their section rather than in the order shown below, and the first run that does write re-emits the file: indentation normalises to two spaces, blank lines between blocks are dropped, and CRLF line endings, a byte-order mark, a leading `---`, a trailing `...` and any `%YAML`/`%TAG` directive are not carried over. Your values and your own comments survive; generated comments arrive only with keys that are added.
+>
+> `qode.yaml` may be a symlink to a config shared across a workspace, and `qode init` writes through it, keeping the permissions the target already has. The link must lead to a regular file named `qode.yaml` inside the project; anything else is refused rather than followed.
+>
+> A run that fails later — a malformed `.qode/scoring.yaml`, say — may already have upgraded `qode.yaml` before the failure. Your own values are still there; only missing settings were added.
+>
+> `qode init --config-only` writes `qode.yaml` and stops, so you can review and edit it before anything else is generated. It refuses to overwrite an existing file unless you add `--force`. `qode init --force` is the explicit clean reset — a different meaning from `--force` on `plan`, `review` and `start`, where it bypasses step guard checks.
+>
+> A key you never wrote falls back to its default, so an absent `ide.opencode` block means OpenCode is **enabled**, not disabled. Settings can also come from `~/.qode/config.yaml`, merged over the project file on that machine only: a machine-wide `ide.codex.enabled: false` there suppresses `.agents/skills/` in every project on that machine with nothing in the project to show for it. `qode init` never copies those machine-local values, or the rubrics from `.qode/scoring.yaml`, into your project's `qode.yaml`.
 
 ## Full reference
 
@@ -65,7 +75,9 @@ diff:
 
 ### `qode_version`
 
-Written by `qode init`. Identifies the qode configuration format version. Currently informational; version enforcement is planned for a future release.
+Written by `qode init`. Identifies the qode configuration format version. A released binary compares it against its own version and refuses to run guarded commands when the two are incompatible; an absent value reads as "not initialised". `dev` builds skip the check entirely.
+
+`qode init` re-stamps this key on every run of a released binary. A `dev` build — anything installed with `go install` from a source checkout — leaves an existing value alone, so working on qode itself does not churn the tracked version string. A file that lacks the key receives it either way, because an absent `qode_version` reads as "not initialised".
 
 ### `review.min_code_score` / `review.min_security_score`
 

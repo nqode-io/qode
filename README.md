@@ -71,9 +71,14 @@ Releases tagged before this change shipped `checksums.txt.sig` + `checksums.txt.
 ## Quick Start
 
 ```bash
-# Onboard an existing project (writes qode.yaml and generates IDE configs)
+# Onboard an existing project (generates qode.yaml and IDE configs)
 cd your-project
 qode init
+
+# Or review the config before anything else is generated
+qode init --config-only     # writes qode.yaml and stops
+$EDITOR qode.yaml           # e.g. set ide.codex.enabled: false
+qode init                   # scaffolds only what qode.yaml enables
 
 # Start a feature
 qode context init feat-user-dashboard --auto-switch
@@ -81,6 +86,8 @@ qode context init feat-user-dashboard --auto-switch
 # Cursor / Claude Code / OpenCode: /qode-ticket-fetch <url>
 # Codex: $qode-ticket-fetch <url>
 ```
+
+Re-running `qode init` is safe: an existing `qode.yaml` keeps every value you set, and settings added by newer qode versions are appended with their defaults.
 
 ## The Workflow
 
@@ -158,6 +165,8 @@ qode supports four IDEs out of the box. Cursor, Claude Code and OpenCode receive
 | Enable in `qode.yaml` | `ide.cursor.enabled: true`       | `ide.claude_code.enabled: true`   | `ide.codex.enabled: true`        | `ide.opencode.enabled: true`     |
 | Regenerate            | Run `qode init` after toggling   | Run `qode init` after toggling    | Run `qode init` after toggling   | Run `qode init` after toggling   |
 
+A toggle set to `false` is honoured: `qode init` skips that IDE's assets and leaves your `qode.yaml` untouched.
+
 Workflow names available in all IDEs:
 
 - `qode-ticket-fetch <url>` — fetch ticket via MCP
@@ -177,12 +186,14 @@ Invocation syntax:
 - Cursor / Claude Code / OpenCode: `/qode-*`
 - Codex: `$qode-*` skills generated under `.agents/skills/`
 
-Run `qode init` after toggling enablement in `qode.yaml` to regenerate the IDE assets.
+Run `qode init` after toggling enablement in `qode.yaml` to regenerate the IDE assets. Your toggle survives the run — `qode init` no longer resets `qode.yaml` to the defaults.
 
 ## Commands
 
 ```markdown
-qode init                                                      Initialise qode: write qode.yaml, create .qode/ dirs, generate IDE configs
+qode init                                                      Initialise qode: generate or upgrade qode.yaml, create .qode/ dirs, generate IDE configs for enabled IDEs
+qode init --config-only                                        Write qode.yaml with commented defaults and stop
+qode init --force                                              Overwrite qode.yaml with the defaults (NOT the guard bypass --force means on plan/review/start)
 
 qode context init <name> [--auto-switch]                        Create a new context (--auto-switch to activate it)
 qode context switch <name>                                     Switch the active context
