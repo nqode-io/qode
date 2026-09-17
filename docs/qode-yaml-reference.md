@@ -30,7 +30,7 @@ diff:
 
 > **Re-running `qode init` preserves your `qode.yaml`.** Every value you set is kept, `qode_version` is refreshed on released builds, and settings added by newer qode versions are appended with their defaults and their comments. Nothing is reset, and the file is only rewritten when something actually changes.
 >
-> Two things follow. New keys land at the end of their section rather than in the order shown below, and the first run that does write normalises indentation to two spaces and drops blank lines between blocks. Your values and your own comments survive; generated comments arrive only with keys that are added.
+> Two things follow. New keys land at the end of their section rather than in the order shown below, and the first run that does write re-emits the file: indentation normalises to two spaces, blank lines between blocks are dropped, and CRLF line endings, a byte-order mark, a leading `---`, a trailing `...` and any `%YAML`/`%TAG` directive are not carried over. Your values and your own comments survive; generated comments arrive only with keys that are added.
 >
 > A run that fails later — a malformed `.qode/scoring.yaml`, say — may already have upgraded `qode.yaml` before the failure. Your own values are still there; only missing settings were added.
 >

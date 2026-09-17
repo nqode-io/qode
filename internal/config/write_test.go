@@ -615,6 +615,10 @@ ide:
 			if got.IDE.Cursor.Enabled {
 				t.Errorf("a value set through a merge key was overridden by the default:\n%s", readConfig(t, dir))
 			}
+			// Preserving the merged value must not cost the mapping its new settings.
+			if !got.IDE.OpenCode.Enabled {
+				t.Errorf("opencode was not appended alongside the merge key:\n%s", readConfig(t, dir))
+			}
 		})
 	}
 }
@@ -721,7 +725,8 @@ qode_version: *v
 `
 	dir := seedConfig(t, body)
 
-	if _, err := Upgrade(context.Background(), dir, "100"); err != nil {
+	// A dev build never re-stamps, so the alias is simply left alone.
+	if _, err := Upgrade(context.Background(), dir, "dev"); err != nil {
 		t.Fatalf("Upgrade: %v", err)
 	}
 
@@ -769,9 +774,11 @@ func TestUpgrade_MergeKeyRendersWithoutExplicitTag(t *testing.T) {
 	t.Parallel()
 
 	dir := seedConfig(t, `qode_version: 0.1.0
+inner: &inner
+  enabled: false
 base: &base
   cursor:
-    enabled: false
+    <<: *inner
 ide:
   <<: *base
 `)
@@ -786,5 +793,85 @@ ide:
 	}
 	if !strings.Contains(rendered, "<<: *base") {
 		t.Errorf("merge key was not preserved:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "<<: *inner") {
+		t.Errorf("a merge key inside an anchor definition was not preserved:\n%s", rendered)
+	}
+}
+
+func TestUpgrade_ReleaseBinaryRefusesUnwritableVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "aliased value", body: "v: &v 0.1.0\nqode_version: *v\n"},
+		{name: "merged key", body: "base: &base\n  qode_version: 0.1.0\n<<: *base\n"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := seedConfig(t, tc.body)
+
+			// Skipping silently would leave a stale version behind, and every guarded
+			// command would then tell the user to run the command that just skipped it.
+			changed, err := Upgrade(context.Background(), dir, "0.4.0-beta")
+			if !errors.Is(err, ErrConfigInvalid) {
+				t.Fatalf("error = %v, want ErrConfigInvalid", err)
+			}
+			if changed {
+				t.Error("Upgrade reported a change it could not make")
+			}
+			if got := string(readConfig(t, dir)); got != tc.body {
+				t.Errorf("file was modified:\ngot  %q\nwant %q", got, tc.body)
+			}
+		})
+	}
+}
+
+func TestUpgrade_QuotedMergeKeyIsAnOrdinaryKey(t *testing.T) {
+	t.Parallel()
+
+	// A quoted "<<" is a plain string key to YAML, not a merge, so the mapping is
+	// upgraded normally and the key is left exactly as the user wrote it.
+	dir := seedConfig(t, "qode_version: 0.1.0\nide:\n  \"<<\": not-a-merge\n  cursor:\n    enabled: false\n")
+
+	if _, err := Upgrade(context.Background(), dir, "dev"); err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+
+	rendered := readConfig(t, dir)
+	if !strings.Contains(string(rendered), `"<<": not-a-merge`) {
+		t.Errorf("a quoted key was rewritten into a merge key:\n%s", rendered)
+	}
+	var got Config
+	if err := yaml.Unmarshal(rendered, &got); err != nil {
+		t.Fatalf("unmarshalling upgraded config: %v", err)
+	}
+	if got.IDE.Cursor.Enabled {
+		t.Error("cursor was overridden")
+	}
+	if !got.IDE.OpenCode.Enabled {
+		t.Errorf("the mapping did not receive its new settings:\n%s", rendered)
+	}
+}
+
+func TestUpgrade_ToleratesEmptyTrailingDocument(t *testing.T) {
+	t.Parallel()
+
+	dir := seedConfig(t, "qode_version: 0.1.0\nide:\n  cursor:\n    enabled: false\n---\n")
+
+	if _, err := Upgrade(context.Background(), dir, "dev"); err != nil {
+		t.Fatalf("a bare trailing document marker must not be treated as content: %v", err)
+	}
+	var got Config
+	if err := yaml.Unmarshal(readConfig(t, dir), &got); err != nil {
+		t.Fatalf("unmarshalling upgraded config: %v", err)
+	}
+	if got.IDE.Cursor.Enabled {
+		t.Error("cursor was overridden")
 	}
 }

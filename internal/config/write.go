@@ -24,6 +24,9 @@ const devVersion = "dev"
 // mergeKey is YAML's merge key, which injects another mapping's entries.
 const mergeKey = "<<"
 
+// versionKeyName is the config key carrying the format version.
+const versionKeyName = "qode_version"
+
 // configFileMode is the permission for qode.yaml. It is committed and team-readable,
 // so 0644 rather than the 0600 used for prompt scratch files.
 const configFileMode = 0644
@@ -208,10 +211,15 @@ func Upgrade(ctx context.Context, root, binaryVersion string) (bool, error) {
 		return false, err
 	}
 	rootNode := doc.Content[0]
-	changed := mergeMissing(rootNode, defaultDocument(binaryVersion).Content[0])
-	if stampVersion(rootNode, binaryVersion) {
-		changed = true
+	changed, err := mergeMissing(rootNode, defaultDocument(binaryVersion).Content[0])
+	if err != nil {
+		return false, fmt.Errorf("%w: %s: %v", ErrConfigInvalid, path, err)
 	}
+	stamped, err := stampVersion(rootNode, binaryVersion)
+	if err != nil {
+		return false, fmt.Errorf("%w: %s: %v", ErrConfigInvalid, path, err)
+	}
+	changed = changed || stamped
 	if !changed {
 		return false, nil
 	}
@@ -233,11 +241,17 @@ func parseDocument(data []byte, path string) (*yaml.Node, error) {
 	if err := dec.Decode(&doc); err != nil && !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("%w: parsing %s: %v", ErrConfigInvalid, path, err)
 	}
-	var extra yaml.Node
-	// Anything but a clean end of stream means there is more in the file than the
-	// one document qode reads, whether it parses or not. Re-encoding would drop it.
-	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
-		return nil, fmt.Errorf("%w: %s holds more than one YAML document; qode reads only the first", ErrConfigInvalid, path)
+	// Anything left in the stream but empty trailing documents is content qode
+	// never reads and re-encoding would drop, whether it parses or not.
+	for {
+		var extra yaml.Node
+		err := dec.Decode(&extra)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil || !isEmptyDocument(&extra) {
+			return nil, fmt.Errorf("%w: %s holds more than one YAML document; qode reads only the first", ErrConfigInvalid, path)
+		}
 	}
 	// Kind 0 is an empty or comment-only file; a document whose root is a null
 	// scalar ("---" or "~") carries no mapping to merge into either. Both fields
@@ -252,6 +266,20 @@ func parseDocument(data []byte, path string) (*yaml.Node, error) {
 
 func isNull(n *yaml.Node) bool {
 	return n.Kind == yaml.ScalarNode && n.Tag == "!!null"
+}
+
+// isEmptyDocument reports whether a document carries nothing — a bare "---" with
+// no value and no comment. Such a document is tolerated because dropping it on
+// write loses nothing; Load already ignores it.
+func isEmptyDocument(doc *yaml.Node) bool {
+	if doc.HeadComment != "" || doc.LineComment != "" || doc.FootComment != "" {
+		return false
+	}
+	if doc.Kind == 0 || len(doc.Content) == 0 {
+		return true
+	}
+	n := doc.Content[0]
+	return isNull(n) && n.HeadComment == "" && n.LineComment == "" && n.FootComment == ""
 }
 
 // validateDocument decodes the project file alone onto the defaults and validates it.
@@ -274,15 +302,13 @@ func validateDocument(doc *yaml.Node, path string) error {
 // rewritten or re-marshalled — that single rule is what preserves enabled: false,
 // scoring.strict: true and any threshold the user tuned. Comments therefore arrive
 // only with keys that are added.
-func mergeMissing(dst, def *yaml.Node) bool {
+func mergeMissing(dst, def *yaml.Node) (bool, error) {
 	if dst.Kind != yaml.MappingNode || def.Kind != yaml.MappingNode {
-		return false
+		return false, nil
 	}
-	merged, resolved := mergedKeys(dst)
-	if !resolved {
-		// The mapping carries a merge key we cannot resolve, so we cannot tell which
-		// keys the user has already set. Appending would risk overriding one.
-		return false
+	merged, err := mergedKeys(dst)
+	if err != nil {
+		return false, err
 	}
 	changed := false
 	for i := 0; i+1 < len(def.Content); i += 2 {
@@ -291,9 +317,11 @@ func mergeMissing(dst, def *yaml.Node) bool {
 		switch {
 		case dstVal != nil:
 			if dstVal.Kind == yaml.MappingNode && defVal.Kind == yaml.MappingNode {
-				if mergeMissing(dstVal, defVal) {
-					changed = true
+				nested, err := mergeMissing(dstVal, defVal)
+				if err != nil {
+					return false, err
 				}
+				changed = changed || nested
 			}
 		case merged[defKey.Value]:
 			// The key is supplied through a YAML merge key, so the user has set it
@@ -305,33 +333,39 @@ func mergeMissing(dst, def *yaml.Node) bool {
 			changed = true
 		}
 	}
-	return changed
+	return changed, nil
 }
 
 // mergedKeys returns the keys a mapping resolves to through YAML merge keys (<<),
 // which lookupValue cannot see because no literal entry carries them. Mappings
-// without a merge key — every ordinary config — skip the decode entirely.
-func mergedKeys(m *yaml.Node) (keys map[string]bool, resolved bool) {
-	mk := lookupValue(m, mergeKey)
-	if mk == nil {
-		return nil, true
-	}
-	// Strip the explicit !!merge tag the parser attaches, so re-encoding renders the
-	// merge key as the "<<:" every hand-written config uses.
-	for i := 0; i+1 < len(m.Content); i += 2 {
-		if m.Content[i].Value == mergeKey {
-			m.Content[i].Tag = ""
-		}
+// without a merge key — every ordinary config — skip the decode entirely. A merge
+// key that cannot be resolved is an error rather than an empty result: treating it
+// as "no merged keys" would append defaults over values the user set.
+func mergedKeys(m *yaml.Node) (map[string]bool, error) {
+	if !hasMergeKey(m) {
+		return nil, nil
 	}
 	var decoded map[string]yaml.Node
 	if err := m.Decode(&decoded); err != nil {
-		return nil, false
+		return nil, fmt.Errorf("resolving merge key: %w", err)
 	}
 	out := make(map[string]bool, len(decoded))
 	for k := range decoded {
 		out[k] = true
 	}
-	return out, true
+	return out, nil
+}
+
+// hasMergeKey reports whether a mapping carries YAML's merge key. The test matches
+// yaml.v3's own: a quoted "<<" is an ordinary string key, not a merge.
+func hasMergeKey(m *yaml.Node) bool {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		k := m.Content[i]
+		if k.Value == mergeKey && k.Style == 0 && (k.Tag == "" || k.Tag == "!!merge") {
+			return true
+		}
+	}
+	return false
 }
 
 // adopt copies a default node for insertion into dst, dropping the comments when
@@ -367,28 +401,50 @@ func lookupValue(m *yaml.Node, key string) *yaml.Node {
 // stampVersion refreshes qode_version for release binaries only. A dev build never
 // overwrites an existing value, mirroring the skips in cli.checkVersion and
 // version.CheckCompatibility, which is what keeps a tracked qode_version stable
-// under 'go install' builds. A file missing the key entirely still gets it from
+// under 'go install' builds. A file missing the key entirely gets it from
 // mergeMissing (dev value included), because checkVersion treats an absent
 // qode_version as not-initialised.
-func stampVersion(root *yaml.Node, binaryVersion string) bool {
+//
+// A release binary that cannot write the key — because an alias or a merge key
+// supplies it — reports an error instead of skipping silently, since a stale
+// qode_version makes every guarded command fail with "run qode init" as its
+// remedy: the command that just declined to fix it.
+func stampVersion(root *yaml.Node, binaryVersion string) (bool, error) {
 	if binaryVersion == "" || binaryVersion == devVersion {
-		return false
+		return false, nil
 	}
-	v := lookupValue(root, "qode_version")
-	// An alias or a collection is not ours to rewrite: setting Value on one emits a
-	// broken anchor reference that the file can never be parsed out of again.
-	if v == nil || v.Kind != yaml.ScalarNode || v.Value == binaryVersion {
-		return false
+	v := lookupValue(root, versionKeyName)
+	switch {
+	case v == nil:
+		// mergeMissing has already appended an absent key, so a missing entry here
+		// means a merge key supplies it.
+		merged, err := mergedKeys(root)
+		if err != nil {
+			return false, err
+		}
+		if merged[versionKeyName] {
+			return false, errUnwritableVersion
+		}
+		return false, nil
+	case v.Kind != yaml.ScalarNode:
+		return false, errUnwritableVersion
+	case v.Value == binaryVersion:
+		return false, nil
 	}
 	v.Value = binaryVersion
 	v.Tag = "!!str"
-	return true
+	return true, nil
 }
+
+// errUnwritableVersion names the one shape Upgrade cannot refresh.
+var errUnwritableVersion = errors.New(
+	versionKeyName + " is an alias or a merged value and cannot be refreshed; write it as a plain value")
 
 // writeDocument renders doc and writes it atomically. A symlinked qode.yaml is
 // resolved first so a shared config is written through rather than replaced by a
 // regular file (os.Rename would swap the link itself).
 func writeDocument(ctx context.Context, path string, doc *yaml.Node) error {
+	stripMergeTags(doc)
 	out, err := encodeDocument(doc)
 	if err != nil {
 		return err
@@ -401,4 +457,20 @@ func writeDocument(ctx context.Context, path string, doc *yaml.Node) error {
 		return fmt.Errorf("writing %s: %w", target, err)
 	}
 	return nil
+}
+
+// stripMergeTags removes the explicit !!merge tag the parser attaches to every
+// merge key, so re-encoding renders the "<<:" every hand-written config uses
+// rather than "!!merge <<:".
+func stripMergeTags(n *yaml.Node) {
+	if n.Kind == yaml.MappingNode {
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			if k := n.Content[i]; k.Value == mergeKey && k.Tag == "!!merge" {
+				k.Tag = ""
+			}
+		}
+	}
+	for _, c := range n.Content {
+		stripMergeTags(c)
+	}
 }
