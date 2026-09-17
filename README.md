@@ -78,7 +78,7 @@ qode init
 # Start a feature
 qode context init feat-user-dashboard --auto-switch
 # Then invoke qode-ticket-fetch in your IDE to fetch the ticket via MCP
-# Cursor / Claude Code: /qode-ticket-fetch <url>
+# Cursor / Claude Code / OpenCode: /qode-ticket-fetch <url>
 # Codex: $qode-ticket-fetch <url>
 ```
 
@@ -103,7 +103,7 @@ Before beginning, manually create a new branch for your work.
 12. qode context remove                               Cleanup
 ```
 
-Cursor and Claude Code invoke these workflows as slash commands (`/qode-*`). Codex invokes the same workflow names as skills (`$qode-*`).
+Cursor, Claude Code and OpenCode invoke these workflows as slash commands (`/qode-*`). Codex invokes the same workflow names as skills (`$qode-*`).
 
 `qode-note-add` and `qode-knowledge-add-context` are intentionally optional helpers, not numbered workflow steps. `qode-note-add` accepts free-form note text after the invocation (single-line and multi-paragraph notes both work). `qode-knowledge-add-context` extracts durable lessons from the finished context into `.qode/knowledge/lessons/` — run it whenever the AI loops on the same misunderstanding so future runs benefit.
 
@@ -150,13 +150,13 @@ Both prompts can be customised via `.qode/prompts/review/` local overrides.
 
 ## IDE Support
 
-qode supports three IDEs out of the box. Cursor and Claude Code receive slash commands; Codex receives skills that surface the same workflow names in its picker.
+qode supports four IDEs out of the box. Cursor, Claude Code and OpenCode receive slash commands; Codex receives skills that surface the same workflow names in its picker.
 
-|                       | Cursor                           | Claude Code                       | Codex                            |
-| --------------------- | -------------------------------- | --------------------------------- | -------------------------------- |
-| Generated assets      | `.cursor/commands/*.mdc`         | `.claude/commands/*.md`           | `.agents/skills/*/SKILL.md`      |
-| Enable in `qode.yaml` | `ide.cursor.enabled: true`       | `ide.claude_code.enabled: true`   | `ide.codex.enabled: true`        |
-| Regenerate            | Run `qode init` after toggling   | Run `qode init` after toggling    | Run `qode init` after toggling   |
+|                       | Cursor                           | Claude Code                       | Codex                            | OpenCode                         |
+| --------------------- | -------------------------------- | --------------------------------- | -------------------------------- | -------------------------------- |
+| Generated assets      | `.cursor/commands/*.mdc`         | `.claude/commands/*.md`           | `.agents/skills/*/SKILL.md`      | `.opencode/commands/*.md`        |
+| Enable in `qode.yaml` | `ide.cursor.enabled: true`       | `ide.claude_code.enabled: true`   | `ide.codex.enabled: true`        | `ide.opencode.enabled: true`     |
+| Regenerate            | Run `qode init` after toggling   | Run `qode init` after toggling    | Run `qode init` after toggling   | Run `qode init` after toggling   |
 
 Workflow names available in all IDEs:
 
@@ -174,7 +174,7 @@ Workflow names available in all IDEs:
 
 Invocation syntax:
 
-- Cursor / Claude Code: `/qode-*`
+- Cursor / Claude Code / OpenCode: `/qode-*`
 - Codex: `$qode-*` skills generated under `.agents/skills/`
 
 Run `qode init` after toggling enablement in `qode.yaml` to regenerate the IDE assets.
@@ -218,7 +218,7 @@ qode workflow status                                           Show live complet
 
 ## Ticket Fetch via MCP
 
-Ticket fetching uses IDE-native MCP servers — no API keys in qode itself. Configure the MCP server for your ticketing system (Jira, Linear, GitHub, Azure DevOps, Notion) and linked-resource services (Figma, Google Docs, Confluence, etc.) in your IDE, then invoke `qode-ticket-fetch` in your IDE (`/qode-ticket-fetch <url>` in Cursor/Claude Code, `$qode-ticket-fetch <url>` in Codex).
+Ticket fetching uses IDE-native MCP servers — no API keys in qode itself. Configure the MCP server for your ticketing system (Jira, Linear, GitHub, Azure DevOps, Notion) and linked-resource services (Figma, Google Docs, Confluence, etc.) in your IDE, then invoke `qode-ticket-fetch` in your IDE (`/qode-ticket-fetch <url>` in Cursor/Claude Code/OpenCode, `$qode-ticket-fetch <url>` in Codex).
 
 See [docs/how-to-use-ticket-fetch.md](docs/how-to-use-ticket-fetch.md) for full MCP setup instructions per service.
 

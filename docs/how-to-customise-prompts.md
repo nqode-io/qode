@@ -72,6 +72,10 @@ The following functions are available inside templates in addition to Go's built
 | `add` | `add a b int → int` | Adds two integers. Useful for 1-based dimension counters: `{{add $i 1}}` |
 | `pct` | `pct percent float64, n int → float64` | Returns `n × percent / 100`. Use with `printf "%.1f"` for formatted thresholds: `{{printf "%.1f" (pct 75 .Rubric.Total)}}` |
 | `join` | `join sep string, items []string → string` | Joins a string slice with the given separator |
+| `questionTool` | `questionTool ide string → string` | Returns the IDE's structured-question tool name (`AskUserQuestion` for `claude`, `question` for `opencode`) or the empty string when the IDE has none; the empty string is falsy, so `{{if questionTool .IDE}}` is the branch test |
+| `hasFrontmatter` | `hasFrontmatter ide string → bool` | Reports whether the IDE's command files open with a YAML frontmatter block (`cursor`, `opencode`) rather than a Markdown title |
+
+`questionTool` and `hasFrontmatter` are used only by the `scaffold/` templates, which `qode init` deletes from `.qode/prompts/` after rendering the IDE assets (and which `.gitignore` excludes), so the scaffold templates cannot be overridden locally.
 
 ### Referencing context files
 
