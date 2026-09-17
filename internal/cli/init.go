@@ -42,7 +42,7 @@ start, which bypasses step guard checks).`,
 			if err != nil {
 				return err
 			}
-			return runInitExisting(cmd.Context(), cmd.OutOrStdout(), root, rootCmd.Version, configOnly, force)
+			return runInitExisting(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), root, rootCmd.Version, configOnly, force)
 		},
 	}
 	cmd.Flags().BoolVar(&configOnly, "config-only", false, "write qode.yaml with commented defaults and stop")
@@ -53,7 +53,7 @@ start, which bypasses step guard checks).`,
 // runInitExisting generates or upgrades qode.yaml and then scaffolds the project
 // against the configuration that file actually carries. With configOnly it writes
 // qode.yaml and stops.
-func runInitExisting(ctx context.Context, out io.Writer, root, binaryVersion string, configOnly, force bool) error {
+func runInitExisting(ctx context.Context, out, errOut io.Writer, root, binaryVersion string, configOnly, force bool) error {
 	if configOnly {
 		if err := config.WriteDefault(ctx, root, binaryVersion, force); err != nil {
 			return err
@@ -61,7 +61,7 @@ func runInitExisting(ctx context.Context, out io.Writer, root, binaryVersion str
 		_, _ = fmt.Fprintf(out, "Generated: %s\n", filepath.Join(root, config.ConfigFileName))
 		return nil
 	}
-	cfg, err := ensureConfig(ctx, out, root, binaryVersion, force)
+	cfg, err := ensureConfig(ctx, out, errOut, root, binaryVersion, force)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func runInitExisting(ctx context.Context, out io.Writer, root, binaryVersion str
 // ensureConfig generates, or preserves-and-upgrades, the project qode.yaml and
 // returns the loaded configuration. A file that cannot be parsed or validated is
 // left byte-identical.
-func ensureConfig(ctx context.Context, out io.Writer, root, binaryVersion string, force bool) (*config.Config, error) {
+func ensureConfig(ctx context.Context, out, errOut io.Writer, root, binaryVersion string, force bool) (*config.Config, error) {
 	path := filepath.Join(root, config.ConfigFileName)
 	_, statErr := os.Stat(path)
 	switch {
@@ -97,7 +97,7 @@ func ensureConfig(ctx context.Context, out io.Writer, root, binaryVersion string
 	// Load unconditionally: one code path, and a freshly written file is parsed and
 	// validated before anything is scaffolded against it. Errors here may name
 	// .qode/scoring.yaml or ~/.qode/config.yaml, so they are returned undecorated.
-	cfg, err := config.Load(root)
+	cfg, err := loadConfigNotifying(errOut, root)
 	if err != nil {
 		return nil, err
 	}

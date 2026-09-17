@@ -43,13 +43,13 @@ func newWorkflowStatusCmd() *cobra.Command {
 		Use:   "status",
 		Short: "Show live completion status for each workflow step",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runWorkflowStatus(cmd.OutOrStdout())
+			return runWorkflowStatus(cmd.OutOrStdout(), cmd.ErrOrStderr())
 		},
 	}
 }
 
-func runWorkflowStatus(out io.Writer) error {
-	sess, err := loadSession()
+func runWorkflowStatus(out, errOut io.Writer) error {
+	sess, err := loadSession(errOut)
 	if err != nil {
 		return err
 	}

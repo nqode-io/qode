@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -22,7 +23,7 @@ func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -48,7 +49,7 @@ func TestRunInitExisting_CreatesDirs(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -64,7 +65,7 @@ func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -98,7 +99,7 @@ func TestRunInitExisting_CreatesAgentConfigs(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -137,7 +138,7 @@ func TestRunInitExisting_NoCursorRules(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -156,7 +157,7 @@ func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 	dir := t.TempDir()
 
 	var buf bytes.Buffer
-	if err := runInitExisting(context.Background(), &buf, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &buf, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -178,7 +179,7 @@ func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -192,7 +193,7 @@ func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("first runInitExisting: %v", err)
 	}
 
@@ -204,7 +205,7 @@ func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 	}
 
 	// Second run must succeed and must not overwrite .qode/scoring.yaml.
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("second runInitExisting: %v", err)
 	}
 
@@ -222,7 +223,7 @@ func TestRunInitExisting_AppendsGitignoreRules(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -243,10 +244,10 @@ func TestRunInitExisting_GitignoreIsIdempotent(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("first runInitExisting: %v", err)
 	}
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("second runInitExisting: %v", err)
 	}
 
@@ -294,7 +295,7 @@ func TestRunInitExisting_ConfigOnly_WritesOnlyConfig(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", true, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", true, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -320,7 +321,7 @@ func TestRunInitExisting_ConfigOnly_RefusesExisting(t *testing.T) {
 	const existing = "qode_version: 0.1.0\n"
 	seedProjectConfig(t, dir, existing)
 
-	err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", true, false)
+	err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", true, false)
 	if !errors.Is(err, config.ErrConfigExists) {
 		t.Fatalf("error = %v, want ErrConfigExists", err)
 	}
@@ -334,7 +335,7 @@ func TestRunInitExisting_ConfigOnly_ForceOverwrites(t *testing.T) {
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, "qode_version: 0.1.0\n")
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", true, true); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", true, true); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 	if !strings.Contains(readProjectConfig(t, dir), "# Minimum scores a review must reach.") {
@@ -364,7 +365,7 @@ func TestRunInitExisting_UpgradesExistingConfig(t *testing.T) {
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, customisedConfig)
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "0.4.0-beta", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "0.4.0-beta", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -399,7 +400,7 @@ func TestRunInitExisting_SecondRunIsNoOp(t *testing.T) {
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, customisedConfig)
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "0.4.0-beta", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "0.4.0-beta", false, false); err != nil {
 		t.Fatalf("first runInitExisting: %v", err)
 	}
 	before := readProjectConfig(t, dir)
@@ -409,7 +410,7 @@ func TestRunInitExisting_SecondRunIsNoOp(t *testing.T) {
 		t.Fatalf("stat: %v", err)
 	}
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "0.4.0-beta", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "0.4.0-beta", false, false); err != nil {
 		t.Fatalf("second runInitExisting: %v", err)
 	}
 	if got := readProjectConfig(t, dir); got != before {
@@ -456,7 +457,7 @@ func TestRunInitExisting_SkipsDisabledAgents(t *testing.T) {
 			dir := t.TempDir()
 			seedProjectConfig(t, dir, "agents:\n  "+tc.key+":\n    enabled: false\n")
 
-			if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+			if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 				t.Fatalf("runInitExisting: %v", err)
 			}
 
@@ -487,7 +488,7 @@ func TestRunInitExisting_NoAgentsEnabled(t *testing.T) {
 `)
 
 	var buf bytes.Buffer
-	if err := runInitExisting(context.Background(), &buf, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &buf, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 	if !strings.Contains(buf.String(), "No IDEs enabled") {
@@ -511,7 +512,7 @@ func TestRunInitExisting_BrokenConfigIsUntouched(t *testing.T) {
 			dir := t.TempDir()
 			seedProjectConfig(t, dir, tc.body)
 
-			err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false)
+			err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false)
 			if !errors.Is(err, config.ErrConfigInvalid) {
 				t.Fatalf("error = %v, want ErrConfigInvalid", err)
 			}
@@ -553,7 +554,7 @@ func TestRunInitExisting_BrokenScoringYamlHasNoOverwriteHint(t *testing.T) {
 				t.Fatalf("writing %s: %v", config.ScoringFileName, err)
 			}
 
-			err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false)
+			err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false)
 			if err == nil {
 				t.Fatal("expected an error for a broken scoring.yaml")
 			}
@@ -577,7 +578,7 @@ func TestRunInitExisting_EmptyConfigIsFilled(t *testing.T) {
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, "")
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -602,7 +603,7 @@ func TestRunInitExisting_UpgradeOutputLine(t *testing.T) {
 	seedProjectConfig(t, dir, "qode_version: 0.1.0\n")
 
 	var buf bytes.Buffer
-	if err := runInitExisting(context.Background(), &buf, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &buf, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -631,7 +632,7 @@ func TestRunInitExisting_UnreadableConfigHasNoOverwriteHint(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(path, 0644) })
 
-	err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false)
+	err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false)
 	if err == nil {
 		t.Fatal("expected an error when qode.yaml cannot be read")
 	}
@@ -654,7 +655,7 @@ func TestRunInitExisting_RenamesLegacyIDEKey(t *testing.T) {
 	seedProjectConfig(t, dir, "qode_version: 0.3.4-beta\nide:\n  cursor:\n    enabled: false\n")
 
 	var buf bytes.Buffer
-	if err := runInitExisting(context.Background(), &buf, dir, "0.4.0-beta", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &buf, io.Discard, dir, "0.4.0-beta", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -681,7 +682,7 @@ func TestRunInitExisting_BothKeys_DoesNotPrintRenameLine(t *testing.T) {
 	seedProjectConfig(t, dir, body)
 
 	var buf bytes.Buffer
-	if err := runInitExisting(context.Background(), &buf, dir, "0.4.0-beta", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &buf, io.Discard, dir, "0.4.0-beta", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -703,5 +704,27 @@ func TestInitCmd_LongHelpUsesAgentVocabulary(t *testing.T) {
 	}
 	if strings.Contains(long, "IDE") {
 		t.Errorf("init --help still says IDE:\n%s", long)
+	}
+}
+
+func TestRunInitExisting_BothKeysConfig_WarnsOnce(t *testing.T) {
+	// t.Setenv (via isolateHome) forbids t.Parallel.
+	isolateHome(t)
+	dir := t.TempDir()
+	seedProjectConfig(t, dir,
+		"qode_version: 0.3.4-beta\nagents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n    enabled: false\n")
+
+	var out, errOut bytes.Buffer
+	if err := runInitExisting(context.Background(), &out, &errOut, dir, "0.4.0-beta", false, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	if got := strings.Count(errOut.String(), "both 'agents:' and 'ide:' are set"); got != 1 {
+		t.Errorf("warning printed %d times, want 1:\n%s", got, errOut.String())
+	}
+	// The two notices are mutually exclusive: a file carrying both keys is never
+	// renamed, so the rename line must not appear beside the warning.
+	if strings.Contains(out.String(), legacyRenameLine) {
+		t.Errorf("rename line printed alongside the both-keys warning:\n%s", out.String())
 	}
 }

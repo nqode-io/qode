@@ -29,17 +29,17 @@ func newKnowledgeListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List knowledge base files",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKnowledgeList(cmd.OutOrStdout())
+			return runKnowledgeList(cmd.OutOrStdout(), cmd.ErrOrStderr())
 		},
 	}
 }
 
-func runKnowledgeList(out io.Writer) error {
+func runKnowledgeList(out, errOut io.Writer) error {
 	root, err := resolveRoot()
 	if err != nil {
 		return err
 	}
-	cfg, err := config.Load(root)
+	cfg, err := loadConfigNotifying(errOut, root)
 	if err != nil {
 		return err
 	}
@@ -99,17 +99,17 @@ func newKnowledgeSearchCmd() *cobra.Command {
 		Short: "Search the knowledge base",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runKnowledgeSearch(cmd.OutOrStdout(), args[0])
+			return runKnowledgeSearch(cmd.OutOrStdout(), cmd.ErrOrStderr(), args[0])
 		},
 	}
 }
 
-func runKnowledgeSearch(out io.Writer, query string) error {
+func runKnowledgeSearch(out, errOut io.Writer, query string) error {
 	root, err := resolveRoot()
 	if err != nil {
 		return err
 	}
-	cfg, err := config.Load(root)
+	cfg, err := loadConfigNotifying(errOut, root)
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ func newKnowledgeAddContextCmd() *cobra.Command {
 }
 
 func runKnowledgeAddContext(out, errOut io.Writer, toFile bool) error {
-	sess, err := loadSession()
+	sess, err := loadSession(errOut)
 	if err != nil {
 		return err
 	}

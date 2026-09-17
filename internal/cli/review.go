@@ -52,7 +52,7 @@ func newReviewSecurityCmd() *cobra.Command {
 }
 
 func runReview(ctx context.Context, out, errOut io.Writer, kind string, toFile, force bool) error {
-	sess, err := loadSessionCtx(ctx)
+	sess, err := loadSessionCtx(ctx, errOut)
 	if err != nil {
 		return err
 	}

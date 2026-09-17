@@ -83,7 +83,7 @@ Use --to-file to write the prompt to disk for debugging the judge template.`,
 }
 
 func runPlanJudge(ctx context.Context, out, errOut io.Writer, toFile bool) error {
-	sess, err := loadSessionCtx(ctx)
+	sess, err := loadSessionCtx(ctx, errOut)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func runPlanJudge(ctx context.Context, out, errOut io.Writer, toFile bool) error
 }
 
 func runPlanRefine(ctx context.Context, out, errOut io.Writer, ticketURL string, toFile bool) error {
-	sess, err := loadSessionCtx(ctx)
+	sess, err := loadSessionCtx(ctx, errOut)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func runPlanRefine(ctx context.Context, out, errOut io.Writer, ticketURL string,
 }
 
 func runPlanSpec(ctx context.Context, out, errOut io.Writer, toFile, force bool) error {
-	sess, err := loadSessionCtx(ctx)
+	sess, err := loadSessionCtx(ctx, errOut)
 	if err != nil {
 		return err
 	}

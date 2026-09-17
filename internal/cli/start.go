@@ -33,7 +33,7 @@ Use --to-file to write the prompt to .qode/contexts/current/.start-prompt.md for
 }
 
 func runStart(ctx context.Context, out, errOut io.Writer, toFile, force bool) error {
-	sess, err := loadSessionCtx(ctx)
+	sess, err := loadSessionCtx(ctx, errOut)
 	if err != nil {
 		return err
 	}

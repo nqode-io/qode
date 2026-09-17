@@ -3,10 +3,13 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/nqode/qode/internal/qodecontext"
@@ -25,7 +28,7 @@ func TestLoadSession_HappyPath(t *testing.T) {
 		t.Fatalf("Switch: %v", err)
 	}
 
-	sess, err := loadSession()
+	sess, err := loadSession(io.Discard)
 	if err != nil {
 		t.Fatalf("loadSession: %v", err)
 	}
@@ -61,7 +64,7 @@ func TestLoadSession_NoCurrentContext(t *testing.T) {
 		t.Fatalf("MkdirAll: %v", err)
 	}
 
-	_, err := loadSession()
+	_, err := loadSession(io.Discard)
 	if err == nil {
 		t.Fatal("expected error when no current context")
 	}
@@ -76,8 +79,38 @@ func TestLoadSessionCtx_CancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err := loadSessionCtx(ctx)
+	_, err := loadSessionCtx(ctx, io.Discard)
 	if err == nil {
 		t.Fatal("expected error for cancelled context")
+	}
+}
+
+// bothKeysConfig carries the canonical and the deprecated agent key at once, the
+// state the deprecation warning exists to report.
+const bothKeysConfig = "agents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n    enabled: false\n"
+
+// bothKeysWarning is the distinguishing fragment of config's both-keys notice.
+const bothKeysWarning = "both 'agents:' and 'ide:' are set"
+
+func TestLoadSession_BothKeysConfig_WarnsOnce(t *testing.T) {
+	// t.Setenv (via isolateHome) forbids t.Parallel.
+	isolateHome(t)
+	root := t.TempDir()
+	flagRoot = root
+	t.Cleanup(func() { flagRoot = "" })
+	writeConfigFile(t, root, bothKeysConfig)
+	if err := qodecontext.Init(context.Background(), root, "test-context"); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if err := qodecontext.Switch(context.Background(), root, "test-context"); err != nil {
+		t.Fatalf("Switch: %v", err)
+	}
+
+	var errOut bytes.Buffer
+	if _, err := loadSession(&errOut); err != nil {
+		t.Fatalf("loadSession: %v", err)
+	}
+	if got := strings.Count(errOut.String(), bothKeysWarning); got != 1 {
+		t.Errorf("warning printed %d times, want 1:\n%s", got, errOut.String())
 	}
 }

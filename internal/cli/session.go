@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"io"
 
 	"github.com/nqode/qode/internal/config"
 	"github.com/nqode/qode/internal/prompt"
@@ -16,11 +17,11 @@ type Session struct {
 	Engine  prompt.Renderer
 }
 
-func loadSession() (*Session, error) {
-	return loadSessionCtx(context.Background())
+func loadSession(errOut io.Writer) (*Session, error) {
+	return loadSessionCtx(context.Background(), errOut)
 }
 
-func loadSessionCtx(ctx context.Context) (*Session, error) {
+func loadSessionCtx(ctx context.Context, errOut io.Writer) (*Session, error) {
 	root, err := resolveRoot()
 	if err != nil {
 		return nil, err
@@ -28,7 +29,7 @@ func loadSessionCtx(ctx context.Context) (*Session, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	cfg, err := config.Load(root)
+	cfg, err := loadConfigNotifying(errOut, root)
 	if err != nil {
 		return nil, err
 	}
