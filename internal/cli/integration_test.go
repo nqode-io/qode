@@ -253,9 +253,7 @@ func TestIntegration_PlanRefine_CancelledContext(t *testing.T) {
 // global state.
 func TestIntegration_Init_CreatesOpenCodeCommands(t *testing.T) {
 	// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
+	isolateHome(t)
 	root := t.TempDir()
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, root, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
@@ -285,9 +283,7 @@ func TestIntegration_Init_CreatesOpenCodeCommands(t *testing.T) {
 // working directory is switched instead of mutating the package global.
 func TestIntegration_Init_ConfigOnlyFlag(t *testing.T) {
 	// t.Chdir and t.Setenv both forbid t.Parallel; config.Load reads os.UserHomeDir().
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
+	isolateHome(t)
 	dir := t.TempDir()
 	t.Chdir(dir)
 

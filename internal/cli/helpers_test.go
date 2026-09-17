@@ -18,11 +18,22 @@ const (
 	testYAMLFullNonStrict = "project:\n  name: test\n  stack: go\nscoring:\n  strict: false\n"
 )
 
+// isolateHome redirects the user home directory so config.Load cannot merge the
+// developer's own ~/.qode/config.yaml into a test's configuration. t.Setenv
+// forbids t.Parallel, which is why every test reaching config.Load runs serially.
+func isolateHome(t *testing.T) {
+	t.Helper()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+}
+
 // setupTestRoot creates a temp dir with .qode/contexts/<context>/ and an
 // active "current" symlink, sets flagRoot, and returns root.
 // contextName is also used as the display name for the context.
 func setupTestRoot(t *testing.T, contextName string) string {
 	t.Helper()
+	isolateHome(t)
 	root := t.TempDir()
 	flagRoot = root
 

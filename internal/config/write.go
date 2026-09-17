@@ -234,7 +234,9 @@ func parseDocument(data []byte, path string) (*yaml.Node, error) {
 		return nil, fmt.Errorf("%w: parsing %s: %v", ErrConfigInvalid, path, err)
 	}
 	var extra yaml.Node
-	if err := dec.Decode(&extra); err == nil {
+	// Anything but a clean end of stream means there is more in the file than the
+	// one document qode reads, whether it parses or not. Re-encoding would drop it.
+	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("%w: %s holds more than one YAML document; qode reads only the first", ErrConfigInvalid, path)
 	}
 	// Kind 0 is an empty or comment-only file; a document whose root is a null
@@ -276,7 +278,12 @@ func mergeMissing(dst, def *yaml.Node) bool {
 	if dst.Kind != yaml.MappingNode || def.Kind != yaml.MappingNode {
 		return false
 	}
-	merged := mergedKeys(dst)
+	merged, resolved := mergedKeys(dst)
+	if !resolved {
+		// The mapping carries a merge key we cannot resolve, so we cannot tell which
+		// keys the user has already set. Appending would risk overriding one.
+		return false
+	}
 	changed := false
 	for i := 0; i+1 < len(def.Content); i += 2 {
 		defKey, defVal := def.Content[i], def.Content[i+1]
@@ -304,19 +311,27 @@ func mergeMissing(dst, def *yaml.Node) bool {
 // mergedKeys returns the keys a mapping resolves to through YAML merge keys (<<),
 // which lookupValue cannot see because no literal entry carries them. Mappings
 // without a merge key — every ordinary config — skip the decode entirely.
-func mergedKeys(m *yaml.Node) map[string]bool {
-	if lookupValue(m, mergeKey) == nil {
-		return nil
+func mergedKeys(m *yaml.Node) (keys map[string]bool, resolved bool) {
+	mk := lookupValue(m, mergeKey)
+	if mk == nil {
+		return nil, true
 	}
-	var resolved map[string]yaml.Node
-	if err := m.Decode(&resolved); err != nil {
-		return nil
+	// Strip the explicit !!merge tag the parser attaches, so re-encoding renders the
+	// merge key as the "<<:" every hand-written config uses.
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == mergeKey {
+			m.Content[i].Tag = ""
+		}
 	}
-	out := make(map[string]bool, len(resolved))
-	for k := range resolved {
+	var decoded map[string]yaml.Node
+	if err := m.Decode(&decoded); err != nil {
+		return nil, false
+	}
+	out := make(map[string]bool, len(decoded))
+	for k := range decoded {
 		out[k] = true
 	}
-	return out
+	return out, true
 }
 
 // adopt copies a default node for insertion into dst, dropping the comments when
@@ -360,7 +375,9 @@ func stampVersion(root *yaml.Node, binaryVersion string) bool {
 		return false
 	}
 	v := lookupValue(root, "qode_version")
-	if v == nil || v.Value == binaryVersion {
+	// An alias or a collection is not ours to rewrite: setting Value on one emits a
+	// broken anchor reference that the file can never be parsed out of again.
+	if v == nil || v.Kind != yaml.ScalarNode || v.Value == binaryVersion {
 		return false
 	}
 	v.Value = binaryVersion

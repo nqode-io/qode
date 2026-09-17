@@ -32,6 +32,8 @@ diff:
 >
 > Two things follow. New keys land at the end of their section rather than in the order shown below, and the first run that does write normalises indentation to two spaces and drops blank lines between blocks. Your values and your own comments survive; generated comments arrive only with keys that are added.
 >
+> A run that fails later — a malformed `.qode/scoring.yaml`, say — may already have upgraded `qode.yaml` before the failure. Your own values are still there; only missing settings were added.
+>
 > `qode init --config-only` writes `qode.yaml` and stops, so you can review and edit it before anything else is generated. It refuses to overwrite an existing file unless you add `--force`. `qode init --force` is the explicit clean reset — a different meaning from `--force` on `plan`, `review` and `start`, where it bypasses step guard checks.
 >
 > A key you never wrote falls back to its default, so an absent `ide.opencode` block means OpenCode is **enabled**, not disabled. Settings can also come from `~/.qode/config.yaml`, merged over the project file on that machine only: a machine-wide `ide.codex.enabled: false` there suppresses `.agents/skills/` in every project on that machine with nothing in the project to show for it. `qode init` never copies those machine-local values, or the rubrics from `.qode/scoring.yaml`, into your project's `qode.yaml`.

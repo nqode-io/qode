@@ -27,12 +27,11 @@ func newInitCmd() *cobra.Command {
 		Long: `Initialise qode in the current directory.
 
 Generates qode.yaml with commented defaults when it is absent. When it already
-exists, every value you set is kept, qode_version is refreshed (on released
-builds), and settings
-added by newer qode versions are appended with their defaults — nothing is
-reset. Creates the .qode/ directory structure, copies embedded prompt
-templates, and generates IDE workflow assets for the IDEs enabled in qode.yaml
-(Cursor, Claude Code, Codex, OpenCode).
+exists, every value you set is kept, qode_version is refreshed on released
+builds, and settings added by newer qode versions are appended with their
+defaults — nothing is reset. Creates the .qode/ directory structure, copies
+embedded prompt templates, and generates IDE workflow assets for the IDEs
+enabled in qode.yaml (Cursor, Claude Code, Codex, OpenCode).
 
 Use --config-only to write qode.yaml and stop, so you can review and edit it
 before anything else is generated. --force overwrites an existing qode.yaml

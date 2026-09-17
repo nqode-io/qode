@@ -656,18 +656,33 @@ func TestUpgrade_FillsValuelessFile(t *testing.T) {
 func TestUpgrade_RefusesMultipleDocuments(t *testing.T) {
 	t.Parallel()
 
-	const body = "qode_version: 0.1.0\n---\nreview:\n  min_code_score: 11\n"
-	dir := seedConfig(t, body)
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "well formed second document", body: "qode_version: 0.1.0\n---\nreview:\n  min_code_score: 11\n"},
+		// A second document that does not parse is still a second document: dropping
+		// it on write loses whatever the user put there.
+		{name: "malformed second document", body: "qode_version: 0.1.0\n---\nscoring: [\n"},
+	}
 
-	changed, err := Upgrade(context.Background(), dir, "dev")
-	if !errors.Is(err, ErrConfigInvalid) {
-		t.Fatalf("error = %v, want ErrConfigInvalid", err)
-	}
-	if changed {
-		t.Error("Upgrade reported a change for a multi-document file")
-	}
-	if got := string(readConfig(t, dir)); got != body {
-		t.Errorf("multi-document file was modified:\ngot  %q\nwant %q", got, body)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := seedConfig(t, tc.body)
+
+			changed, err := Upgrade(context.Background(), dir, "dev")
+			if !errors.Is(err, ErrConfigInvalid) {
+				t.Fatalf("error = %v, want ErrConfigInvalid", err)
+			}
+			if changed {
+				t.Error("Upgrade reported a change for a multi-document file")
+			}
+			if got := string(readConfig(t, dir)); got != tc.body {
+				t.Errorf("multi-document file was modified:\ngot  %q\nwant %q", got, tc.body)
+			}
+		})
 	}
 }
 
@@ -693,5 +708,83 @@ func TestUpgrade_ReportsNoWriteOnFailure(t *testing.T) {
 	}
 	if changed {
 		t.Error("Upgrade reported a write that did not happen")
+	}
+}
+
+func TestUpgrade_LeavesAliasedVersionAlone(t *testing.T) {
+	t.Parallel()
+
+	// Writing into an alias node emits a reference to an anchor that does not
+	// exist, leaving a file qode init can never parse again.
+	const body = `v: &v 0.1.0
+qode_version: *v
+`
+	dir := seedConfig(t, body)
+
+	if _, err := Upgrade(context.Background(), dir, "100"); err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+
+	rendered := readConfig(t, dir)
+	if strings.Contains(string(rendered), "qode_version: *100") {
+		t.Fatalf("aliased qode_version was rewritten into a broken anchor:\n%s", rendered)
+	}
+	var reparsed Config
+	if err := yaml.Unmarshal(rendered, &reparsed); err != nil {
+		t.Fatalf("upgraded file no longer parses: %v\n%s", err, rendered)
+	}
+	if reparsed.QodeVersion != "0.1.0" {
+		t.Errorf("qode_version = %q, want the aliased 0.1.0", reparsed.QodeVersion)
+	}
+}
+
+func TestUpgrade_FlowStyleMappingStaysParseable(t *testing.T) {
+	t.Parallel()
+
+	dir := seedConfig(t, "qode_version: 0.1.0\nide: {cursor: {enabled: false}}\n")
+
+	if _, err := Upgrade(context.Background(), dir, "dev"); err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+
+	rendered := readConfig(t, dir)
+	var got Config
+	if err := yaml.Unmarshal(rendered, &got); err != nil {
+		t.Fatalf("flow-style config no longer parses: %v\n%s", err, rendered)
+	}
+	if got.IDE.Cursor.Enabled {
+		t.Errorf("flow-style enabled: false was overridden:\n%s", rendered)
+	}
+	if !got.IDE.OpenCode.Enabled {
+		t.Errorf("opencode was not appended into the flow-style mapping:\n%s", rendered)
+	}
+	for _, line := range strings.Split(string(rendered), "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "ide:") && strings.Contains(line, "#") {
+			t.Errorf("a comment was rendered inside the flow mapping: %q", line)
+		}
+	}
+}
+
+func TestUpgrade_MergeKeyRendersWithoutExplicitTag(t *testing.T) {
+	t.Parallel()
+
+	dir := seedConfig(t, `qode_version: 0.1.0
+base: &base
+  cursor:
+    enabled: false
+ide:
+  <<: *base
+`)
+
+	if _, err := Upgrade(context.Background(), dir, "dev"); err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+
+	rendered := string(readConfig(t, dir))
+	if strings.Contains(rendered, "!!merge") {
+		t.Errorf("re-encoded merge key carries an explicit tag no human wrote:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "<<: *base") {
+		t.Errorf("merge key was not preserved:\n%s", rendered)
 	}
 }

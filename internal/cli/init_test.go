@@ -18,16 +18,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// isolateHome redirects the user home directory so config.Load cannot read the
-// developer's own ~/.qode/config.yaml. t.Setenv forbids t.Parallel, which is why
-// every test reaching config.Load runs serially.
-func isolateHome(t *testing.T) {
-	t.Helper()
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-}
-
 func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()

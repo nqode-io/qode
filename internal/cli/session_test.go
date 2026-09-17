@@ -13,6 +13,7 @@ import (
 )
 
 func TestLoadSession_HappyPath(t *testing.T) {
+	isolateHome(t)
 	root := t.TempDir()
 	flagRoot = root
 	t.Cleanup(func() { flagRoot = "" })
@@ -50,6 +51,7 @@ func TestLoadSession_HappyPath(t *testing.T) {
 
 func TestLoadSession_NoCurrentContext(t *testing.T) {
 	// Setup root with config but no context symlink (no Init/Switch).
+	isolateHome(t)
 	root := t.TempDir()
 	flagRoot = root
 	t.Cleanup(func() { flagRoot = "" })
