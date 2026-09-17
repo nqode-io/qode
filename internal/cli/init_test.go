@@ -113,6 +113,8 @@ func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
 		filepath.Join(dir, ".claude", "commands", "qode-note-add.md"),
 		filepath.Join(dir, ".cursor", "commands", "qode-note-add.mdc"),
 		filepath.Join(dir, ".agents", "skills", "qode-note-add", "SKILL.md"),
+		filepath.Join(dir, ".opencode", "commands", "qode-plan-refine.md"),
+		filepath.Join(dir, ".opencode", "commands", "qode-note-add.md"),
 	} {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Errorf("%s not created", path)
