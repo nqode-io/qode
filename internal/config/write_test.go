@@ -81,7 +81,7 @@ func collectYAMLKeys(t *testing.T, typ reflect.Type, out map[string]struct{}) {
 			continue
 		}
 		// The deprecated ide: key is read-only: WriteDefault never emits it.
-		if tag == "ide" {
+		if tag == legacyAgentsKey {
 			continue
 		}
 		out[tag] = struct{}{}
@@ -173,11 +173,11 @@ func TestWriteDefault_ThenUpgradeIsNoOp(t *testing.T) {
 
 	dir, before := writeDefaultInto(t, "0.4.0-beta")
 
-	changed, err := Upgrade(context.Background(), dir, "0.4.0-beta")
+	res, err := Upgrade(context.Background(), dir, "0.4.0-beta")
 	if err != nil {
 		t.Fatalf("Upgrade: %v", err)
 	}
-	if changed {
+	if res.Changed {
 		t.Error("Upgrade rewrote a freshly generated config")
 	}
 	if got := readConfig(t, dir); string(got) != string(before) {
@@ -263,11 +263,11 @@ agents:
     enabled: false
 `)
 
-	changed, err := Upgrade(context.Background(), dir, "dev")
+	res, err := Upgrade(context.Background(), dir, "dev")
 	if err != nil {
 		t.Fatalf("Upgrade: %v", err)
 	}
-	if !changed {
+	if !res.Changed {
 		t.Fatal("Upgrade reported no change on a file missing several keys")
 	}
 
@@ -357,12 +357,12 @@ func TestUpgrade_VersionStamping(t *testing.T) {
 				}
 			}
 
-			changed, err := Upgrade(context.Background(), dir, tc.binaryVersion)
+			res, err := Upgrade(context.Background(), dir, tc.binaryVersion)
 			if err != nil {
 				t.Fatalf("Upgrade: %v", err)
 			}
-			if changed != tc.wantChanged {
-				t.Errorf("changed = %v, want %v", changed, tc.wantChanged)
+			if res.Changed != tc.wantChanged {
+				t.Errorf("changed = %v, want %v", res.Changed, tc.wantChanged)
 			}
 			if got := string(readConfig(t, dir)); !strings.Contains(got, tc.wantLine) {
 				t.Errorf("upgraded config does not contain %q:\n%s", tc.wantLine, got)
@@ -399,11 +399,11 @@ func TestUpgrade_SecondPassIsIdempotent(t *testing.T) {
 		t.Fatalf("stat: %v", err)
 	}
 
-	changed, err := Upgrade(context.Background(), dir, "dev")
+	res, err := Upgrade(context.Background(), dir, "dev")
 	if err != nil {
 		t.Fatalf("second Upgrade: %v", err)
 	}
-	if changed {
+	if res.Changed {
 		t.Error("second Upgrade reported a change")
 	}
 	if got := readConfig(t, dir); string(got) != string(before) {
@@ -423,11 +423,11 @@ func TestUpgrade_FillsEmptyFile(t *testing.T) {
 
 	dir := seedConfig(t, "")
 
-	changed, err := Upgrade(context.Background(), dir, "0.4.0-beta")
+	res, err := Upgrade(context.Background(), dir, "0.4.0-beta")
 	if err != nil {
 		t.Fatalf("Upgrade: %v", err)
 	}
-	if !changed {
+	if !res.Changed {
 		t.Fatal("Upgrade reported no change on an empty file")
 	}
 
@@ -449,11 +449,11 @@ func TestUpgrade_FillsCommentOnlyFile(t *testing.T) {
 
 	dir := seedConfig(t, "# hand-written\n")
 
-	changed, err := Upgrade(context.Background(), dir, "dev")
+	res, err := Upgrade(context.Background(), dir, "dev")
 	if err != nil {
 		t.Fatalf("Upgrade: %v", err)
 	}
-	if !changed {
+	if !res.Changed {
 		t.Fatal("Upgrade reported no change on a comment-only file")
 	}
 
@@ -484,11 +484,11 @@ func TestUpgrade_InvalidFile(t *testing.T) {
 
 			dir := seedConfig(t, tc.body)
 
-			changed, err := Upgrade(context.Background(), dir, "0.4.0-beta")
+			res, err := Upgrade(context.Background(), dir, "0.4.0-beta")
 			if !errors.Is(err, ErrConfigInvalid) {
 				t.Fatalf("error = %v, want ErrConfigInvalid", err)
 			}
-			if changed {
+			if res.Changed {
 				t.Error("Upgrade reported a change for an invalid file")
 			}
 			if got := string(readConfig(t, dir)); got != tc.body {
@@ -605,11 +605,11 @@ func TestUpgrade_RefusesSymlinkOutOfTheProject(t *testing.T) {
 		t.Fatalf("symlink: %v", err)
 	}
 
-	changed, err := Upgrade(context.Background(), dir, "dev")
+	res, err := Upgrade(context.Background(), dir, "dev")
 	if !errors.Is(err, ErrConfigInvalid) {
 		t.Fatalf("error = %v, want ErrConfigInvalid", err)
 	}
-	if changed {
+	if res.Changed {
 		t.Error("Upgrade reported a change it must not have made")
 	}
 	got, err := os.ReadFile(outside)
@@ -636,11 +636,11 @@ func TestUpgrade_RefusesComplexMappingKey(t *testing.T) {
 	const body = "base: &base\n  enabled: false\nagents:\n  <<: *base\n  ? [x, y]\n  : 1\n"
 	dir := seedConfig(t, body)
 
-	changed, err := Upgrade(context.Background(), dir, "dev")
+	res, err := Upgrade(context.Background(), dir, "dev")
 	if !errors.Is(err, ErrConfigInvalid) {
 		t.Fatalf("error = %v, want ErrConfigInvalid", err)
 	}
-	if changed {
+	if res.Changed {
 		t.Error("Upgrade reported a change for a file it refused")
 	}
 	if got := string(readConfig(t, dir)); got != body {
@@ -657,11 +657,11 @@ func TestUpgrade_RefusesMergeThatWouldDuplicateAKey(t *testing.T) {
 	const body = "qode_version: 0.1.0\n!!binary cmV2aWV3: {min_code_score: 11}\n"
 	dir := seedConfig(t, body)
 
-	changed, err := Upgrade(context.Background(), dir, "dev")
+	res, err := Upgrade(context.Background(), dir, "dev")
 	if !errors.Is(err, ErrConfigInvalid) {
 		t.Fatalf("error = %v, want ErrConfigInvalid", err)
 	}
-	if changed {
+	if res.Changed {
 		t.Error("Upgrade reported a change for a file it refused")
 	}
 	if got := string(readConfig(t, dir)); got != body {
@@ -754,11 +754,11 @@ func TestUpgrade_FillsValuelessFile(t *testing.T) {
 			t.Parallel()
 
 			dir := seedConfig(t, tc.body)
-			changed, err := Upgrade(context.Background(), dir, "dev")
+			res, err := Upgrade(context.Background(), dir, "dev")
 			if err != nil {
 				t.Fatalf("Upgrade: %v", err)
 			}
-			if !changed {
+			if !res.Changed {
 				t.Fatal("Upgrade reported no change on a file carrying no values")
 			}
 			// An absent qode_version makes every guarded command report "not
@@ -789,11 +789,11 @@ func TestUpgrade_RefusesMultipleDocuments(t *testing.T) {
 
 			dir := seedConfig(t, tc.body)
 
-			changed, err := Upgrade(context.Background(), dir, "dev")
+			res, err := Upgrade(context.Background(), dir, "dev")
 			if !errors.Is(err, ErrConfigInvalid) {
 				t.Fatalf("error = %v, want ErrConfigInvalid", err)
 			}
-			if changed {
+			if res.Changed {
 				t.Error("Upgrade reported a change for a multi-document file")
 			}
 			if got := string(readConfig(t, dir)); got != tc.body {
@@ -819,11 +819,11 @@ func TestUpgrade_ReportsNoWriteOnFailure(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(dir, 0755) })
 
-	changed, err := Upgrade(context.Background(), dir, "dev")
+	res, err := Upgrade(context.Background(), dir, "dev")
 	if err == nil {
 		t.Fatal("expected Upgrade to fail writing into an unwritable directory")
 	}
-	if changed {
+	if res.Changed {
 		t.Error("Upgrade reported a write that did not happen")
 	}
 }
@@ -931,11 +931,11 @@ func TestUpgrade_ReleaseBinaryRefusesUnwritableVersion(t *testing.T) {
 
 			// Skipping silently would leave a stale version behind, and every guarded
 			// command would then tell the user to run the command that just skipped it.
-			changed, err := Upgrade(context.Background(), dir, "0.4.0-beta")
+			res, err := Upgrade(context.Background(), dir, "0.4.0-beta")
 			if !errors.Is(err, ErrConfigInvalid) {
 				t.Fatalf("error = %v, want ErrConfigInvalid", err)
 			}
-			if changed {
+			if res.Changed {
 				t.Error("Upgrade reported a change it could not make")
 			}
 			if got := string(readConfig(t, dir)); got != tc.body {
@@ -1044,11 +1044,11 @@ func TestUpgrade_RefusesUnsafeLinkTargets(t *testing.T) {
 				t.Fatalf("symlink: %v", err)
 			}
 
-			changed, err := Upgrade(context.Background(), dir, "dev")
+			res, err := Upgrade(context.Background(), dir, "dev")
 			if !errors.Is(err, ErrConfigInvalid) {
 				t.Fatalf("error = %v, want ErrConfigInvalid", err)
 			}
-			if changed {
+			if res.Changed {
 				t.Error("Upgrade reported a change it must not have made")
 			}
 			if before == nil {
@@ -1077,11 +1077,11 @@ func TestUpgrade_RefusesOversizedConfig(t *testing.T) {
 		t.Fatalf("seeding: %v", err)
 	}
 
-	changed, err := Upgrade(context.Background(), dir, "dev")
+	res, err := Upgrade(context.Background(), dir, "dev")
 	if !errors.Is(err, ErrConfigInvalid) {
 		t.Fatalf("error = %v, want ErrConfigInvalid", err)
 	}
-	if changed {
+	if res.Changed {
 		t.Error("Upgrade reported a change for a file it refused")
 	}
 }
@@ -1131,5 +1131,141 @@ func TestUpgrade_RefusesNonRegularConfig(t *testing.T) {
 		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("Upgrade blocked reading a named pipe")
+	}
+}
+
+// --- deprecated ide: key ---
+
+const legacyConfig = `qode_version: 0.3.4-beta
+
+# IDE assets generated by 'qode init'. Set false to skip one.
+ide:
+  cursor:
+    enabled: false # .cursor/commands/*.mdc
+`
+
+// countKeyLines counts top-level occurrences of key as a YAML key.
+func countKeyLines(t *testing.T, rendered, key string) int {
+	t.Helper()
+	return len(regexp.MustCompile(`(?m)^`+regexp.QuoteMeta(key)+`:`).FindAllString(rendered, -1))
+}
+
+func TestUpgrade_RenamesLegacyIDEKeyInPlace(t *testing.T) {
+	t.Parallel()
+
+	dir := seedConfig(t, legacyConfig)
+
+	res, err := Upgrade(context.Background(), dir, "0.4.0-beta")
+	if err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+	if !res.Changed || !res.LegacyKeyRenamed {
+		t.Fatalf("Upgrade = %+v, want Changed and LegacyKeyRenamed", res)
+	}
+
+	rendered := string(readConfig(t, dir))
+	if got := countKeyLines(t, rendered, "agents"); got != 1 {
+		t.Errorf("found %d top-level agents: keys, want 1:\n%s", got, rendered)
+	}
+	if got := countKeyLines(t, rendered, legacyAgentsKey); got != 0 {
+		t.Errorf("found %d top-level ide: keys, want 0:\n%s", got, rendered)
+	}
+	if !strings.Contains(rendered, "# Agent assets generated by 'qode init'. Set false to skip one.") {
+		t.Errorf("the renamed key kept the deprecated head comment:\n%s", rendered)
+	}
+
+	var got Config
+	if err := yaml.Unmarshal([]byte(rendered), &got); err != nil {
+		t.Fatalf("unmarshalling upgraded config: %v", err)
+	}
+	if got.Agents.Cursor.Enabled {
+		t.Errorf("cursor was re-enabled by the rename:\n%s", rendered)
+	}
+	if !got.Agents.OpenCode.Enabled {
+		t.Errorf("the renamed section did not gain the newer agent keys:\n%s", rendered)
+	}
+}
+
+func TestUpgrade_DoesNotRenameWhenBothKeysPresent(t *testing.T) {
+	t.Parallel()
+
+	dir := seedConfig(t, `qode_version: 0.3.4-beta
+agents:
+  cursor:
+    enabled: true
+ide:
+  cursor:
+    enabled: false
+`)
+
+	res, err := Upgrade(context.Background(), dir, "dev")
+	if err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+	if res.LegacyKeyRenamed {
+		t.Error("Upgrade renamed a key that would have duplicated the existing agents:")
+	}
+
+	rendered := string(readConfig(t, dir))
+	for _, key := range []string{"agents", legacyAgentsKey} {
+		if got := countKeyLines(t, rendered, key); got != 1 {
+			t.Errorf("found %d top-level %s: keys, want 1:\n%s", got, key, rendered)
+		}
+	}
+	if !strings.Contains(rendered, "ide:\n  cursor:\n    enabled: false\n") {
+		t.Errorf("the deprecated block was modified:\n%s", rendered)
+	}
+}
+
+func TestUpgrade_LegacyRenameIsIdempotent(t *testing.T) {
+	t.Parallel()
+
+	dir := seedConfig(t, legacyConfig)
+
+	if _, err := Upgrade(context.Background(), dir, "dev"); err != nil {
+		t.Fatalf("first Upgrade: %v", err)
+	}
+	before := readConfig(t, dir)
+
+	res, err := Upgrade(context.Background(), dir, "dev")
+	if err != nil {
+		t.Fatalf("second Upgrade: %v", err)
+	}
+	if res.Changed || res.LegacyKeyRenamed {
+		t.Errorf("second Upgrade = %+v, want a no-op", res)
+	}
+	if got := readConfig(t, dir); string(got) != string(before) {
+		t.Errorf("second Upgrade rewrote the file:\ngot\n%s\nwant\n%s", got, before)
+	}
+}
+
+func TestUpgrade_MergeKeyLegacyIDEIsNotRenamed(t *testing.T) {
+	t.Parallel()
+
+	const body = `qode_version: 0.1.0
+base: &base
+  ide:
+    cursor:
+      enabled: false
+<<: *base
+`
+	dir := seedConfig(t, body)
+
+	res, err := Upgrade(context.Background(), dir, "dev")
+	if err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+	if res.LegacyKeyRenamed {
+		t.Error("Upgrade claimed to rename a key it cannot see through a merge")
+	}
+
+	rendered := string(readConfig(t, dir))
+	// Appending agents: here would give Load a canonical block that outranks the
+	// merged ide: values and re-enable cursor behind the user's back.
+	if got := countKeyLines(t, rendered, "agents"); got != 0 {
+		t.Errorf("found %d top-level agents: keys, want 0:\n%s", got, rendered)
+	}
+	if !strings.Contains(rendered, "  ide:\n    cursor:\n      enabled: false\n") {
+		t.Errorf("the merged deprecated block was modified:\n%s", rendered)
 	}
 }

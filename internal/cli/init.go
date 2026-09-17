@@ -83,11 +83,11 @@ func ensureConfig(ctx context.Context, out io.Writer, root, binaryVersion string
 	case statErr != nil:
 		return nil, fmt.Errorf("checking %s: %w", path, statErr)
 	default:
-		changed, err := config.Upgrade(ctx, root, binaryVersion)
+		res, err := config.Upgrade(ctx, root, binaryVersion)
 		if err != nil {
 			return nil, withOverwriteHint(err)
 		}
-		if changed {
+		if res.Changed {
 			_, _ = fmt.Fprintf(out, "Updated: %s\n", path)
 		}
 	}
