@@ -1,6 +1,6 @@
 # qode Tutorial — End-to-End Walkthrough
 
-This tutorial takes you through one full feature, ticket to merge, the way qode is intended to be used. It demonstrates every workflow step, how to split one ticket across multiple subtasks, and the small habits that get the most out of your AI IDE.
+This tutorial takes you through one full feature, ticket to merge, the way qode is intended to be used. It demonstrates every workflow step, how to split one ticket across multiple subtasks, and the small habits that get the most out of your AI agent.
 
 If you only have ten minutes, read **Step 0** and the **Pro tip** boxes — those are the points that change output quality the most.
 
@@ -23,13 +23,13 @@ See the [README](../README.md#installation) for platform-specific commands. Afte
 qode --version
 ```
 
-### Pick an IDE
+### Pick an agent
 
-qode ships the same 11 workflow names for **Claude Code** (CLI / desktop / IDE plugin), **Cursor**, **Codex**, and **OpenCode**. Cursor, Claude Code and OpenCode receive slash commands; Codex receives skills generated under `.agents/skills/`.
+qode ships the same 11 workflow names for **Claude Code** (CLI / desktop / editor plugin), **Cursor**, **Codex**, and **OpenCode**. Cursor, Claude Code and OpenCode receive slash commands; Codex receives skills generated under `.agents/skills/`.
 
 ### Configure MCP servers
 
-Ticket fetching, PR creation, and PR-comment resolution all flow through MCP servers configured in your IDE — qode itself holds no API keys. Set up the servers for your ticketing system (Jira, Linear, GitHub, Azure DevOps, Notion) and any linked-resource services (Figma, Google Drive, Confluence) before you start. The full setup guide is [how-to-use-ticket-fetch.md](how-to-use-ticket-fetch.md).
+Ticket fetching, PR creation, and PR-comment resolution all flow through MCP servers configured in your agent — qode itself holds no API keys. Set up the servers for your ticketing system (Jira, Linear, GitHub, Azure DevOps, Notion) and any linked-resource services (Figma, Google Drive, Confluence) before you start. The full setup guide is [how-to-use-ticket-fetch.md](how-to-use-ticket-fetch.md).
 
 ### Initialise the repo
 
@@ -44,12 +44,12 @@ Prefer to see the config first? `qode init --config-only` writes `qode.yaml` and
 
 You get:
 
-- `qode.yaml` — review thresholds, scoring config, IDE toggles, diff command.
+- `qode.yaml` — review thresholds, scoring config, agent toggles, diff command.
 - `.qode/scoring.yaml` — three rubrics: `refine` (for `/qode-plan-refine`), `review` (for `/qode-review-code`), `security` (for `/qode-review-security`). Each rubric has a `min_*_score` gate in `qode.yaml`. Strict mode (`scoring.strict`, default `false`) makes those gates blocking when flipped to `true`.
 - `.qode/prompts/` — local copies of every prompt template. Edit them to match your project's conventions; the embedded defaults stay as fallback.
-- `.cursor/commands/*.mdc`, `.claude/commands/*.md`, `.agents/skills/*/SKILL.md`, and `.opencode/commands/*.md` — generated IDE workflows wired into your IDEs.
+- `.cursor/commands/*.mdc`, `.claude/commands/*.md`, `.agents/skills/*/SKILL.md`, and `.opencode/commands/*.md` — generated agent workflows wired into your agents.
 
-Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, `.agents/skills/`, and `.opencode/` so the whole team works against the same rubrics, prompts, and IDE workflows. Re-running `qode init` later is safe: your `qode.yaml` keeps the values you set, and new settings are appended with their defaults.
+Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, `.agents/skills/`, and `.opencode/` so the whole team works against the same rubrics, prompts, and agent workflows. Re-running `qode init` later is safe: your `qode.yaml` keeps the values you set, and new settings are appended with their defaults.
 
 > **Invocation syntax.** The examples below use slash-command syntax for brevity, which is what Cursor, Claude Code and OpenCode use. In Codex, invoke the same workflow names as skills instead: `/qode-plan-refine` → `$qode-plan-refine`, `/qode-ticket-fetch` → `$qode-ticket-fetch`, and so on.
 
@@ -71,11 +71,11 @@ qode context init backend-api --auto-switch
 
 This creates `.qode/contexts/backend-api/` and points the `current` symlink at it. Every workflow step from here on reads and writes inside the active context.
 
-> **Worktrees.** qode plays well with `git worktree`. If you want to work on two subtasks in parallel without IDE thrashing, run `git worktree add ../qode-feat-backend feat-user-profile-editing` (or one worktree per context). Each worktree has its own `.qode/contexts/current/` symlink, so contexts in different worktrees do not interfere.
+> **Worktrees.** qode plays well with `git worktree`. If you want to work on two subtasks in parallel without switching branches back and forth, run `git worktree add ../qode-feat-backend feat-user-profile-editing` (or one worktree per context). Each worktree has its own `.qode/contexts/current/` symlink, so contexts in different worktrees do not interfere.
 
 ## Step 2 — fetch the ticket
 
-In your IDE, run:
+In your agent, run:
 
 ```
 /qode-ticket-fetch https://your-org.atlassian.net/browse/ACME-456
@@ -109,7 +109,7 @@ Every downstream qode command reads `notes.md` automatically, which is how you k
 > - `update notes.md to drop the rate-limiting requirement (out of scope for this iteration), then re-run /qode-plan-refine`
 > - `record in notes.md that the auth-session table is on a separate shard, then re-run /qode-plan-spec`
 >
-> This is especially handy on the second or third pass — you nudge the analysis without leaving the IDE.
+> This is especially handy on the second or third pass — you nudge the analysis without leaving the agent.
 
 ## Step 3 — refine the requirements
 
@@ -231,7 +231,7 @@ Same branch. Different context. Same ticket URL.
 qode context init frontend-form --auto-switch
 ```
 
-In the IDE:
+In the agent:
 
 ```
 /qode-ticket-fetch https://your-org.atlassian.net/browse/ACME-456
@@ -245,9 +245,9 @@ This pulls the same ticket again — including any comments posted while you wer
 
 Then walk Steps 3 → 12 again for the frontend subtask. When both subtasks are done, the ticket is done.
 
-## Per-IDE best practices
+## Per-agent best practices
 
-| IDE | Start a new chat between steps | Combine prose + workflow invocation | Course-correct mid-run |
+| Agent | Start a new chat between steps | Combine prose + workflow invocation | Course-correct mid-run |
 | --- | --- | --- | --- |
 | Claude Code | `/clear` between steps; `/compact` if you want to keep context but trim tokens | Yes — chain prose and commands freely | Yes — follow-up messages queue and apply |
 | Cursor | New chat (`Cmd-N` / `Ctrl-N`) between steps | Yes — same as Claude | Model-dependent; verify before relying on it |

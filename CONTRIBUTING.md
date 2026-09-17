@@ -29,28 +29,28 @@ qode init                               # Once per checkout — generates qode.y
                                         # Safe to re-run: a customised qode.yaml keeps its values
 ```
 
-Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, `.agents/skills/`, and `.opencode/` so reviewers work against the same rubrics, prompts, and IDE workflows.
+Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, `.agents/skills/`, and `.opencode/` so reviewers work against the same rubrics, prompts, and agent workflows.
 
 ## Development Workflow
 
 qode uses its own workflow for development. One feature branch can hold multiple subtask contexts (e.g. `backend-api` and `frontend-form` under `feat-user-profile-editing`). Once you have qode installed:
 
-Cursor, Claude Code and OpenCode invoke the IDE workflows below as `/qode-*`. Codex invokes the same workflow names as `$qode-*` skills.
+Cursor, Claude Code and OpenCode invoke the agent workflows below as `/qode-*`. Codex invokes the same workflow names as `$qode-*` skills.
 
 ```bash
 qode context init <name> --auto-switch  # Create a new work context (one per subtask) and switch to it
-/qode-ticket-fetch <url> (in IDE)       # Fetch ticket into context
-/qode-note-add (in IDE)                 # (optional helper) Follow with free-form notes to record scope, constraints, course corrections
-/qode-plan-refine (in IDE)              # Refine requirements — worker + clarification + scoring pass
-/qode-plan-spec (in IDE)                # Generate tech spec
-/qode-start (in IDE)                    # Run implementation prompt
+/qode-ticket-fetch <url> (in agent)     # Fetch ticket into context
+/qode-note-add (in agent)               # (optional helper) Follow with free-form notes to record scope, constraints, course corrections
+/qode-plan-refine (in agent)            # Refine requirements — worker + clarification + scoring pass
+/qode-plan-spec (in agent)              # Generate tech spec
+/qode-start (in agent)                  # Run implementation prompt
 # Test locally (manual)
-/qode-check (in IDE)                    # Run quality gates (tests + lint)
-/qode-review-code (in IDE)              # Code review
-/qode-review-security (in IDE)          # Security review
-/qode-pr-create (in IDE)                # Create pull request via MCP
-/qode-pr-resolve (in IDE)               # Resolve PR review comments via MCP
-/qode-knowledge-add-context (in IDE)    # (optional helper) Capture lessons learned
+/qode-check (in agent)                  # Run quality gates (tests + lint)
+/qode-review-code (in agent)            # Code review
+/qode-review-security (in agent)        # Security review
+/qode-pr-create (in agent)              # Create pull request via MCP
+/qode-pr-resolve (in agent)             # Resolve PR review comments via MCP
+/qode-knowledge-add-context (in agent)  # (optional helper) Capture lessons learned
 qode context remove <name>              # Cleanup per subtask
 ```
 
@@ -78,7 +78,7 @@ All contributions must pass these checks:
 | Unit tests | `go test ./...` |
 | Lint | `golangci-lint run` |
 
-Run `/qode-check` (in IDE) to execute all gates interactively.
+Run `/qode-check` (in agent) to execute all gates interactively.
 
 ## Code Style
 
@@ -94,8 +94,8 @@ Run `/qode-check` (in IDE) to execute all gates interactively.
 2. Create a feature branch (`git checkout -b feat-description`)
 3. Initialise one context per subtask under that branch (`qode context init <subtask> --auto-switch`) — split the work if it spans, e.g. backend and frontend
 4. Make your changes, committing between workflow steps to keep `git diff main` clean for the review prompt
-5. Ensure all quality gates pass (`/qode-check` in IDE)
-6. Open a pull request against `main` (`/qode-pr-create` in IDE)
+5. Ensure all quality gates pass (`/qode-check` in your agent)
+6. Open a pull request against `main` (`/qode-pr-create` in your agent)
 
 ## Reporting Issues
 
