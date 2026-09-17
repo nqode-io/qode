@@ -183,3 +183,127 @@ func diffNode(d DiffConfig) *yaml.Node {
 	cmd.Style = yaml.DoubleQuotedStyle
 	return mappingNode(scalarNode("command"), cmd)
 }
+
+// Upgrade preserves an existing qode.yaml: every value the user set is kept,
+// qode_version is re-stamped on release binaries, and settings the file is missing
+// are appended with their defaults and their comments. It reports whether anything
+// was written; when nothing changed the file's bytes and mtime are untouched.
+// A file that cannot be parsed or fails Validate is left alone and reported as
+// ErrConfigInvalid.
+func Upgrade(ctx context.Context, root, binaryVersion string) (bool, error) {
+	path := filepath.Join(root, ConfigFileName)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false, fmt.Errorf("reading %s: %w", path, err)
+	}
+	var doc yaml.Node
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return false, fmt.Errorf("%w: parsing %s: %v", ErrConfigInvalid, path, err)
+	}
+	// An empty or comment-only file unmarshals to Kind 0 with no Content, which can
+	// be neither decoded nor encoded. Both fields must be set, not just Content.
+	if doc.Kind == 0 {
+		doc.Kind = yaml.DocumentNode
+		doc.Content = []*yaml.Node{{Kind: yaml.MappingNode}}
+	}
+	if err := validateDocument(&doc, path); err != nil {
+		return false, err
+	}
+	rootNode := doc.Content[0]
+	changed := mergeMissing(rootNode, defaultDocument(binaryVersion).Content[0])
+	if stampVersion(rootNode, binaryVersion) {
+		changed = true
+	}
+	if !changed {
+		return false, nil
+	}
+	return true, writeDocument(ctx, path, &doc)
+}
+
+// validateDocument decodes the project file alone onto the defaults and validates it.
+// Node.Decode onto a pre-populated struct merges key-by-key exactly like
+// mergeFromFile, so this reproduces Load's project-file semantics without reading
+// .qode/scoring.yaml or ~/.qode/config.yaml.
+func validateDocument(doc *yaml.Node, path string) error {
+	cfg := DefaultConfig()
+	if err := doc.Decode(&cfg); err != nil {
+		return fmt.Errorf("%w: parsing %s: %v", ErrConfigInvalid, path, err)
+	}
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("%w: %s: %v", ErrConfigInvalid, path, err)
+	}
+	return nil
+}
+
+// mergeMissing appends to dst every (key, value) pair present in def but absent from
+// dst, recursing into mappings the two share. A key dst already has is never read,
+// rewritten or re-marshalled — that single rule is what preserves enabled: false,
+// scoring.strict: true and any threshold the user tuned. Comments therefore arrive
+// only with keys that are added.
+func mergeMissing(dst, def *yaml.Node) bool {
+	if dst.Kind != yaml.MappingNode || def.Kind != yaml.MappingNode {
+		return false
+	}
+	changed := false
+	for i := 0; i+1 < len(def.Content); i += 2 {
+		defKey, defVal := def.Content[i], def.Content[i+1]
+		dstVal := lookupValue(dst, defKey.Value)
+		switch {
+		case dstVal == nil:
+			dst.Content = append(dst.Content, defKey, defVal)
+			changed = true
+		case dstVal.Kind == yaml.MappingNode && defVal.Kind == yaml.MappingNode:
+			if mergeMissing(dstVal, defVal) {
+				changed = true
+			}
+		}
+	}
+	return changed
+}
+
+// lookupValue returns the value node for key in a mapping node, or nil.
+func lookupValue(m *yaml.Node, key string) *yaml.Node {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == key {
+			return m.Content[i+1]
+		}
+	}
+	return nil
+}
+
+// stampVersion refreshes qode_version for release binaries only. A dev build never
+// overwrites an existing value, mirroring the skips in cli.checkVersion and
+// version.CheckCompatibility, which is what keeps a tracked qode_version stable
+// under 'go install' builds. A file missing the key entirely still gets it from
+// mergeMissing (dev value included), because checkVersion treats an absent
+// qode_version as not-initialised.
+func stampVersion(root *yaml.Node, binaryVersion string) bool {
+	if binaryVersion == "" || binaryVersion == devVersion {
+		return false
+	}
+	v := lookupValue(root, "qode_version")
+	if v == nil || v.Value == binaryVersion {
+		return false
+	}
+	v.Value = binaryVersion
+	v.Tag = "!!str"
+	return true
+}
+
+// writeDocument renders doc and writes it atomically. A symlinked qode.yaml is
+// resolved first so a shared config is written through rather than replaced by a
+// regular file (os.Rename would swap the link itself).
+func writeDocument(ctx context.Context, path string, doc *yaml.Node) error {
+	out, err := encodeDocument(doc)
+	if err != nil {
+		return err
+	}
+	target, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return fmt.Errorf("resolving %s: %w", path, err)
+	}
+	if err := iokit.AtomicWriteCtx(ctx, target, out, configFileMode); err != nil {
+		return fmt.Errorf("writing %s: %w", target, err)
+	}
+	return nil
+}
