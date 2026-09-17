@@ -419,6 +419,59 @@ func TestSetupCursor_RefineClarificationPassIsPlainText(t *testing.T) {
 	assertRefineClarificationPass(t, readCursorCommand(t, dir, "qode-plan-refine"), false)
 }
 
+// --- SetupOpenCode ---
+
+func TestSetupOpenCode_WritesAllCommands(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupOpenCode(io.Discard, dir); err != nil {
+		t.Fatalf("SetupOpenCode: %v", err)
+	}
+
+	commandsDir := filepath.Join(dir, ".opencode", "commands")
+	entries, err := os.ReadDir(commandsDir)
+	if err != nil {
+		t.Fatalf("reading opencode commands dir: %v", err)
+	}
+	if len(entries) != len(qodeWorkflows) {
+		t.Errorf("SetupOpenCode: wrote %d commands, want %d", len(entries), len(qodeWorkflows))
+	}
+	for _, workflow := range qodeWorkflows {
+		if _, err := os.Stat(filepath.Join(commandsDir, workflow.Name+".md")); err != nil {
+			t.Errorf("missing %s.md: %v", workflow.Name, err)
+		}
+	}
+}
+
+func TestSetupOpenCode_Idempotent(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	if err := SetupOpenCode(io.Discard, dir); err != nil {
+		t.Fatalf("first SetupOpenCode: %v", err)
+	}
+	firstContents := readAllCommands(t, filepath.Join(dir, ".opencode", "commands"))
+
+	if err := SetupOpenCode(io.Discard, dir); err != nil {
+		t.Fatalf("second SetupOpenCode: %v", err)
+	}
+	secondContents := readAllCommands(t, filepath.Join(dir, ".opencode", "commands"))
+
+	if len(firstContents) != len(secondContents) {
+		t.Fatalf("file count changed: %d → %d", len(firstContents), len(secondContents))
+	}
+	for name, first := range firstContents {
+		second, ok := secondContents[name]
+		if !ok {
+			t.Errorf("file %q missing after second run", name)
+			continue
+		}
+		if first != second {
+			t.Errorf("file %q content changed after second run", name)
+		}
+	}
+}
+
 // --- Setup orchestration ---
 
 func TestSetup_BothIDEs(t *testing.T) {
@@ -488,7 +541,7 @@ func TestSetup_NoIDEs(t *testing.T) {
 	}
 }
 
-func TestSetup_AllThreeIDEs(t *testing.T) {
+func TestSetup_AllFourIDEs(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	cfg := &config.Config{
@@ -496,6 +549,7 @@ func TestSetup_AllThreeIDEs(t *testing.T) {
 			Cursor:     config.CursorIDEConfig{Enabled: true},
 			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: true},
 			Codex:      config.CodexIDEConfig{Enabled: true},
+			OpenCode:   config.OpenCodeIDEConfig{Enabled: true},
 		},
 	}
 	var buf bytes.Buffer
@@ -507,16 +561,41 @@ func TestSetup_AllThreeIDEs(t *testing.T) {
 		filepath.Join(dir, ".cursor", "commands"),
 		filepath.Join(dir, ".claude", "commands"),
 		filepath.Join(dir, ".agents", "skills"),
+		filepath.Join(dir, ".opencode", "commands"),
 	} {
 		if _, err := os.Stat(dir); err != nil {
 			t.Errorf("expected %s to exist: %v", dir, err)
 		}
 	}
 	out := buf.String()
-	for _, ide := range []string{"Cursor", "Claude Code", "Codex"} {
+	for _, ide := range []string{"Cursor", "Claude Code", "Codex", "OpenCode"} {
 		if !strings.Contains(out, ide) {
 			t.Errorf("output should mention %q, got: %q", ide, out)
 		}
+	}
+}
+
+func TestSetup_OpenCodeDisabled(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cfg := &config.Config{
+		IDE: config.IDEConfig{
+			Cursor:     config.CursorIDEConfig{Enabled: true},
+			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: false},
+			Codex:      config.CodexIDEConfig{Enabled: false},
+			OpenCode:   config.OpenCodeIDEConfig{Enabled: false},
+		},
+	}
+	var buf bytes.Buffer
+	if err := Setup(&buf, dir, cfg); err != nil {
+		t.Fatalf("Setup: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, ".opencode")); !os.IsNotExist(err) {
+		t.Errorf("expected no .opencode dir when OpenCode is disabled: %v", err)
+	}
+	if strings.Contains(buf.String(), "OpenCode") {
+		t.Errorf("output should not mention OpenCode, got: %q", buf.String())
 	}
 }
 
