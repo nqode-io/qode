@@ -1,4 +1,4 @@
-{{if eq .IDE "cursor"}}---
+{{if hasFrontmatter .IDE}}---
 description: Add a note to the active qode context for {{.Project.Name}}
 ---
 {{else}}# Add a note — {{.Project.Name}}

@@ -1,4 +1,4 @@
-{{if eq .IDE "cursor"}}---
+{{if hasFrontmatter .IDE}}---
 description: Resolve PR review comments for {{.Project.Name}}
 ---
 {{else}}# Resolve PR Review Comments — {{.Project.Name}}

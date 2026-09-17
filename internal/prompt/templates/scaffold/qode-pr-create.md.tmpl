@@ -1,4 +1,4 @@
-{{if eq .IDE "cursor"}}---
+{{if hasFrontmatter .IDE}}---
 description: Create a pull request for {{.Project.Name}}
 ---
 {{else}}# Create Pull Request — {{.Project.Name}}

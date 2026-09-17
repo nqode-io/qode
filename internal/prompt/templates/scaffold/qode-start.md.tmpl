@@ -1,4 +1,4 @@
-{{if eq .IDE "cursor"}}---
+{{if hasFrontmatter .IDE}}---
 description: Start implementation session for {{.Project.Name}}
 ---
 {{else}}# Start Implementation — {{.Project.Name}}

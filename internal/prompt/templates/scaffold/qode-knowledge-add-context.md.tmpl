@@ -1,4 +1,4 @@
-{{if eq .IDE "cursor"}}---
+{{if hasFrontmatter .IDE}}---
 description: Extract lessons learned from current session for {{.Project.Name}}
 ---
 {{else}}# Extract Lessons Learned — {{.Project.Name}}
