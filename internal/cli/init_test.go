@@ -491,7 +491,7 @@ func TestRunInitExisting_NoAgentsEnabled(t *testing.T) {
 	if err := runInitExisting(context.Background(), &buf, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
-	if !strings.Contains(buf.String(), "No IDEs enabled") {
+	if !strings.Contains(buf.String(), "No agents enabled") {
 		t.Errorf("output does not guide a user with every agent disabled:\n%s", buf.String())
 	}
 }

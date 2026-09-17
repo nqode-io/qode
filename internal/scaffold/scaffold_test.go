@@ -76,7 +76,7 @@ func assertNoteAddPrompt(t *testing.T, content string) {
 	}
 }
 
-// refineClarificationSentinels are the clarification-pass strings every IDE variant of
+// refineClarificationSentinels are the clarification-pass strings every agent variant of
 // qode-plan-refine must carry, regardless of how that variant asks its questions.
 var refineClarificationSentinels = []string{
 	"## Clarification Pass",
@@ -587,7 +587,7 @@ func TestSetup_BothAgents(t *testing.T) {
 	}
 	out := buf.String()
 	if !strings.Contains(out, "Cursor") || !strings.Contains(out, "Claude Code") {
-		t.Errorf("output should mention both IDEs, got: %q", out)
+		t.Errorf("output should mention both agents, got: %q", out)
 	}
 }
 
@@ -626,8 +626,8 @@ func TestSetup_NoAgents(t *testing.T) {
 	if err := Setup(&buf, dir, cfg); err != nil {
 		t.Fatalf("Setup: %v", err)
 	}
-	if !strings.Contains(buf.String(), "No IDEs enabled") {
-		t.Errorf("expected 'No IDEs enabled' message, got: %q", buf.String())
+	if !strings.Contains(buf.String(), "No agents enabled") {
+		t.Errorf("expected 'No agents enabled' message, got: %q", buf.String())
 	}
 }
 

@@ -1,4 +1,4 @@
-// Package scaffold generates IDE-specific configuration files for Cursor, Claude Code, Codex, and OpenCode.
+// Package scaffold generates agent-specific configuration files for Cursor, Claude Code, Codex, and OpenCode.
 package scaffold
 
 import (
@@ -8,7 +8,7 @@ import (
 	"github.com/nqode/qode/internal/config"
 )
 
-// Setup generates IDE configs for all enabled IDEs.
+// Setup generates agent configs for all enabled agents.
 func Setup(out io.Writer, root string, cfg *config.Config) error {
 	var generated []string
 
@@ -41,10 +41,10 @@ func Setup(out io.Writer, root string, cfg *config.Config) error {
 	}
 
 	if len(generated) == 0 {
-		_, _ = fmt.Fprintln(out, "No IDEs enabled. Set ide.cursor/claude_code/codex/opencode.enabled: true in qode.yaml")
+		_, _ = fmt.Fprintln(out, "No agents enabled. Set agents.cursor/claude_code/codex/opencode.enabled: true in qode.yaml")
 		return nil
 	}
 
-	_, _ = fmt.Fprintf(out, "Generated IDE configs for: %v\n", generated)
+	_, _ = fmt.Fprintf(out, "Generated agent configs for: %v\n", generated)
 	return nil
 }

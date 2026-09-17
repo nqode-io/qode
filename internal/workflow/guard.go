@@ -12,7 +12,7 @@ import (
 // CheckResult is the output of CheckStep.
 type CheckResult struct {
 	Blocked bool
-	Message string // actionable message including the next IDE step to run
+	Message string // actionable message including the next agent step to run
 }
 
 // CheckStep returns a CheckResult indicating whether the prerequisites for step
