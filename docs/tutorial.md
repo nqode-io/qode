@@ -25,7 +25,7 @@ qode --version
 
 ### Pick an IDE
 
-qode ships the same 10 workflow names for **Claude Code** (CLI / desktop / IDE plugin), **Cursor**, **Codex**, and **OpenCode**. Cursor, Claude Code and OpenCode receive slash commands; Codex receives skills generated under `.agents/skills/`.
+qode ships the same 11 workflow names for **Claude Code** (CLI / desktop / IDE plugin), **Cursor**, **Codex**, and **OpenCode**. Cursor, Claude Code and OpenCode receive slash commands; Codex receives skills generated under `.agents/skills/`.
 
 ### Configure MCP servers
 
