@@ -32,6 +32,8 @@ diff:
 >
 > Two things follow. New keys land at the end of their section rather than in the order shown below, and the first run that does write re-emits the file: indentation normalises to two spaces, blank lines between blocks are dropped, and CRLF line endings, a byte-order mark, a leading `---`, a trailing `...` and any `%YAML`/`%TAG` directive are not carried over. Your values and your own comments survive; generated comments arrive only with keys that are added.
 >
+> `qode.yaml` may be a symlink to a config shared across a workspace, and `qode init` writes through it, keeping the permissions the target already has. A link pointing outside the project is refused rather than followed.
+>
 > A run that fails later — a malformed `.qode/scoring.yaml`, say — may already have upgraded `qode.yaml` before the failure. Your own values are still there; only missing settings were added.
 >
 > `qode init --config-only` writes `qode.yaml` and stops, so you can review and edit it before anything else is generated. It refuses to overwrite an existing file unless you add `--force`. `qode init --force` is the explicit clean reset — a different meaning from `--force` on `plan`, `review` and `start`, where it bypasses step guard checks.

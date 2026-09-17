@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/nqode/qode/internal/iokit"
 	"gopkg.in/yaml.v3"
@@ -226,7 +227,13 @@ func Upgrade(ctx context.Context, root, binaryVersion string) (bool, error) {
 	if !changed {
 		return false, nil
 	}
-	if err := writeDocument(ctx, path, doc); err != nil {
+	// Validate again: the merge appends keys by raw name while yaml resolves them
+	// by tag, so a file can gain a duplicate the first pass could not see. Better
+	// to refuse than to write a qode.yaml that Load will reject.
+	if err := validateDocument(doc, path); err != nil {
+		return false, err
+	}
+	if err := writeDocument(ctx, root, path, doc); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -264,7 +271,30 @@ func parseDocument(data []byte, path string) (*yaml.Node, error) {
 		doc.Kind = yaml.DocumentNode
 		doc.Content = []*yaml.Node{{Kind: yaml.MappingNode}}
 	}
+	if err := refuseComplexKeys(&doc); err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", ErrConfigInvalid, path, err)
+	}
 	return &doc, nil
+}
+
+// refuseComplexKeys rejects any mapping whose key is not a plain scalar. No qode
+// config has ever had one, and yaml.v3 panics while resolving a complex key that
+// sits beside a merge key — a crash qode init would otherwise inherit from any
+// repository it is run in.
+func refuseComplexKeys(n *yaml.Node) error {
+	if n.Kind == yaml.MappingNode {
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			if n.Content[i].Kind != yaml.ScalarNode {
+				return errors.New("mapping keys must be plain values")
+			}
+		}
+	}
+	for _, c := range n.Content {
+		if err := refuseComplexKeys(c); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func isNull(n *yaml.Node) bool {
@@ -445,23 +475,48 @@ func stampVersion(root *yaml.Node, binaryVersion string) (bool, error) {
 var errUnwritableVersion = errors.New(
 	versionKeyName + " is an alias or a merged value and cannot be refreshed; write it as a plain value")
 
-// writeDocument renders doc and writes it atomically. A symlinked qode.yaml is
-// resolved first so a shared config is written through rather than replaced by a
-// regular file (os.Rename would swap the link itself).
-func writeDocument(ctx context.Context, path string, doc *yaml.Node) error {
+// writeDocument renders doc and writes it atomically, through a symlink when the
+// link stays inside the project and keeping whatever mode the target already has.
+func writeDocument(ctx context.Context, root, path string, doc *yaml.Node) error {
 	stripMergeTags(doc)
 	out, err := encodeDocument(doc)
 	if err != nil {
 		return err
 	}
-	target, err := filepath.EvalSymlinks(path)
+	target, err := resolveTarget(root, path)
 	if err != nil {
-		return fmt.Errorf("resolving %s: %w", path, err)
+		return err
 	}
-	if err := iokit.AtomicWriteCtx(ctx, target, out, configFileMode); err != nil {
-		return fmt.Errorf("writing %s: %w", target, err)
+	mode := os.FileMode(configFileMode)
+	if info, statErr := os.Stat(target); statErr == nil {
+		mode = info.Mode().Perm()
+	}
+	if err := iokit.AtomicWriteCtx(ctx, target, out, mode); err != nil {
+		return fmt.Errorf("writing %s: %w", path, err)
 	}
 	return nil
+}
+
+// resolveTarget follows a symlinked qode.yaml so a config shared across a
+// workspace is written through rather than replaced by a regular file. It refuses
+// to follow one out of the project: a repository can ship qode.yaml as a link to
+// any file its user can write, and init would otherwise rewrite that file and
+// reset its permissions.
+func resolveTarget(root, path string) (string, error) {
+	target, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", fmt.Errorf("resolving %s: %w", path, err)
+	}
+	base, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", fmt.Errorf("resolving %s: %w", root, err)
+	}
+	rel, err := filepath.Rel(base, target)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("%w: %s is a link to %s, outside the project; qode init will not write there",
+			ErrConfigInvalid, path, filepath.Base(target))
+	}
+	return target, nil
 }
 
 // stripMergeTags removes the explicit !!merge tag the parser attaches to every

@@ -531,18 +531,22 @@ func TestUpgrade_DoesNotPersistUserLevelOrRubrics(t *testing.T) {
 	}
 }
 
-func TestUpgrade_FollowsSymlink(t *testing.T) {
+func TestUpgrade_FollowsSymlinkInsideTheProject(t *testing.T) {
 	t.Parallel()
 
 	if runtime.GOOS == "windows" {
 		t.Skip("symlink creation needs elevation on Windows")
 	}
 
-	target := filepath.Join(t.TempDir(), "shared.yaml")
-	if err := os.WriteFile(target, []byte("qode_version: 0.1.0\n"), 0644); err != nil {
+	dir := t.TempDir()
+	shared := filepath.Join(dir, "shared")
+	if err := os.Mkdir(shared, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	target := filepath.Join(shared, "qode.yaml")
+	if err := os.WriteFile(target, []byte("qode_version: 0.1.0\n"), 0600); err != nil {
 		t.Fatalf("writing target: %v", err)
 	}
-	dir := t.TempDir()
 	link := filepath.Join(dir, ConfigFileName)
 	if err := os.Symlink(target, link); err != nil {
 		t.Fatalf("symlink: %v", err)
@@ -565,6 +569,96 @@ func TestUpgrade_FollowsSymlink(t *testing.T) {
 	}
 	if !strings.Contains(string(got), "opencode:") {
 		t.Errorf("symlink target was not upgraded:\n%s", got)
+	}
+	// A config the user restricted must not come back world-readable.
+	targetInfo, err := os.Stat(target)
+	if err != nil {
+		t.Fatalf("stat target: %v", err)
+	}
+	if perm := targetInfo.Mode().Perm(); perm != 0600 {
+		t.Errorf("target mode = %04o, want the 0600 it already had", perm)
+	}
+}
+
+func TestUpgrade_RefusesSymlinkOutOfTheProject(t *testing.T) {
+	t.Parallel()
+
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation needs elevation on Windows")
+	}
+
+	// A repository can ship qode.yaml as a link to any file its user can write.
+	outside := filepath.Join(t.TempDir(), "secrets.yaml")
+	const secret = "token: s3cret\n"
+	if err := os.WriteFile(outside, []byte(secret), 0600); err != nil {
+		t.Fatalf("writing decoy: %v", err)
+	}
+	dir := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(dir, ConfigFileName)); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+
+	changed, err := Upgrade(context.Background(), dir, "dev")
+	if !errors.Is(err, ErrConfigInvalid) {
+		t.Fatalf("error = %v, want ErrConfigInvalid", err)
+	}
+	if changed {
+		t.Error("Upgrade reported a change it must not have made")
+	}
+	got, err := os.ReadFile(outside)
+	if err != nil {
+		t.Fatalf("reading decoy: %v", err)
+	}
+	if string(got) != secret {
+		t.Errorf("a file outside the project was rewritten:\n%s", got)
+	}
+	info, err := os.Stat(outside)
+	if err != nil {
+		t.Fatalf("stat decoy: %v", err)
+	}
+	if perm := info.Mode().Perm(); perm != 0600 {
+		t.Errorf("mode of a file outside the project = %04o, want 0600 untouched", perm)
+	}
+}
+
+func TestUpgrade_RefusesComplexMappingKey(t *testing.T) {
+	t.Parallel()
+
+	// yaml.v3 panics resolving a complex key beside a merge key, so qode init would
+	// crash on any repository carrying one.
+	const body = "base: &base\n  enabled: false\nide:\n  <<: *base\n  ? [x, y]\n  : 1\n"
+	dir := seedConfig(t, body)
+
+	changed, err := Upgrade(context.Background(), dir, "dev")
+	if !errors.Is(err, ErrConfigInvalid) {
+		t.Fatalf("error = %v, want ErrConfigInvalid", err)
+	}
+	if changed {
+		t.Error("Upgrade reported a change for a file it refused")
+	}
+	if got := string(readConfig(t, dir)); got != body {
+		t.Errorf("refused file was modified:\ngot  %q\nwant %q", got, body)
+	}
+}
+
+func TestUpgrade_RefusesMergeThatWouldDuplicateAKey(t *testing.T) {
+	t.Parallel()
+
+	// lookupValue matches the raw key text while yaml resolves it by tag, so a
+	// tag-encoded key is invisible to the merge and the append would produce a
+	// duplicate that Load then rejects.
+	const body = "qode_version: 0.1.0\n!!binary cmV2aWV3: {min_code_score: 11}\n"
+	dir := seedConfig(t, body)
+
+	changed, err := Upgrade(context.Background(), dir, "dev")
+	if !errors.Is(err, ErrConfigInvalid) {
+		t.Fatalf("error = %v, want ErrConfigInvalid", err)
+	}
+	if changed {
+		t.Error("Upgrade reported a change for a file it refused")
+	}
+	if got := string(readConfig(t, dir)); got != body {
+		t.Errorf("refused file was modified:\ngot  %q\nwant %q", got, body)
 	}
 }
 
