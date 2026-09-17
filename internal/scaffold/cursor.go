@@ -23,7 +23,7 @@ func SetupCursor(out io.Writer, root string) error {
 	}
 
 	data := prompt.NewTemplateData(filepath.Base(root)).
-		WithIDE("cursor").
+		WithAgent("cursor").
 		Build()
 
 	for _, workflow := range qodeWorkflows {

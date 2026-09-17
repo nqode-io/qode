@@ -81,42 +81,42 @@ func TestGolden_Templates(t *testing.T) {
 		{
 			name:   "scaffold/qode-plan-refine",
 			golden: "scaffold/qode-plan-refine.claude",
-			data:   NewTemplateData("test-project").WithIDE("claude").Build(),
+			data:   NewTemplateData("test-project").WithAgent("claude").Build(),
 		},
 		{
 			name:   "scaffold/qode-plan-refine",
 			golden: "scaffold/qode-plan-refine.cursor",
-			data:   NewTemplateData("test-project").WithIDE("cursor").Build(),
+			data:   NewTemplateData("test-project").WithAgent("cursor").Build(),
 		},
 		{
 			name:   "scaffold/qode-plan-refine",
 			golden: "scaffold/qode-plan-refine.codex",
-			data:   NewTemplateData("test-project").WithIDE("codex").Build(),
+			data:   NewTemplateData("test-project").WithAgent("codex").Build(),
 		},
 		{
 			name:   "scaffold/qode-plan-refine",
 			golden: "scaffold/qode-plan-refine.opencode",
-			data:   NewTemplateData("test-project").WithIDE("opencode").Build(),
+			data:   NewTemplateData("test-project").WithAgent("opencode").Build(),
 		},
 		{
 			name:   "scaffold/qode-check",
 			golden: "scaffold/qode-check.claude",
-			data:   NewTemplateData("test-project").WithIDE("claude").Build(),
+			data:   NewTemplateData("test-project").WithAgent("claude").Build(),
 		},
 		{
 			name:   "scaffold/qode-check",
 			golden: "scaffold/qode-check.cursor",
-			data:   NewTemplateData("test-project").WithIDE("cursor").Build(),
+			data:   NewTemplateData("test-project").WithAgent("cursor").Build(),
 		},
 		{
 			name:   "scaffold/qode-check",
 			golden: "scaffold/qode-check.codex",
-			data:   NewTemplateData("test-project").WithIDE("codex").Build(),
+			data:   NewTemplateData("test-project").WithAgent("codex").Build(),
 		},
 		{
 			name:   "scaffold/qode-check",
 			golden: "scaffold/qode-check.opencode",
-			data:   NewTemplateData("test-project").WithIDE("opencode").Build(),
+			data:   NewTemplateData("test-project").WithAgent("opencode").Build(),
 		},
 	}
 

@@ -22,7 +22,7 @@ func SetupClaudeCode(out io.Writer, root string) error {
 	}
 
 	data := prompt.NewTemplateData(filepath.Base(root)).
-		WithIDE("claude").
+		WithAgent("claude").
 		Build()
 
 	for _, workflow := range qodeWorkflows {
