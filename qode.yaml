@@ -1,17 +1,19 @@
 qode_version: 0.3.4-beta
 review:
-    min_code_score: 10
-    min_security_score: 10
+  min_code_score: 10
+  min_security_score: 10
 scoring:
-    strict: true
+  strict: true
 ide:
-    cursor:
-        enabled: true
-    claude_code:
-        enabled: true
-    codex:
-        enabled: true
+  cursor:
+    enabled: true
+  claude_code:
+    enabled: true
+  codex:
+    enabled: true
+  opencode:
+    enabled: true # .opencode/commands/*.md
 knowledge:
-    path: .qode/knowledge
+  path: .qode/knowledge
 diff:
-    command: git diff --merge-base origin/HEAD -- :(exclude).qode/
+  command: git diff --merge-base origin/HEAD -- :(exclude).qode/
