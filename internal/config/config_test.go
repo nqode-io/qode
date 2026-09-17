@@ -28,6 +28,9 @@ func TestDefaultConfig(t *testing.T) {
 	if !cfg.IDE.Codex.Enabled {
 		t.Error("expected Codex enabled by default")
 	}
+	if !cfg.IDE.OpenCode.Enabled {
+		t.Error("expected OpenCode enabled by default")
+	}
 	wantRubrics := DefaultRubricConfigs()
 	if len(cfg.Scoring.Rubrics) != len(wantRubrics) {
 		t.Errorf("expected %d default rubrics, got %d", len(wantRubrics), len(cfg.Scoring.Rubrics))
@@ -80,6 +83,32 @@ func TestSave_Load(t *testing.T) {
 	}
 	if len(loaded.Scoring.Rubrics) != len(cfg.Scoring.Rubrics) {
 		t.Errorf("Rubrics count: got %d, want %d", len(loaded.Scoring.Rubrics), len(cfg.Scoring.Rubrics))
+	}
+}
+
+func TestLoad_LegacyConfigWithoutOpenCode(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	legacy := `qode_version: "0.3.0"
+ide:
+    cursor:
+        enabled: true
+    claude_code:
+        enabled: true
+    codex:
+        enabled: true
+`
+	if err := os.WriteFile(filepath.Join(dir, ConfigFileName), []byte(legacy), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if !loaded.IDE.OpenCode.Enabled {
+		t.Error("expected OpenCode enabled when ide.opencode is absent from qode.yaml")
 	}
 }
 
