@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -9,7 +10,9 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -979,5 +982,143 @@ func TestUpgrade_ToleratesEmptyTrailingDocument(t *testing.T) {
 	}
 	if got.IDE.Cursor.Enabled {
 		t.Error("cursor was overridden")
+	}
+}
+
+func TestUpgrade_RefusesUnsafeLinkTargets(t *testing.T) {
+	t.Parallel()
+
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation needs elevation on Windows")
+	}
+
+	tests := []struct {
+		name string
+		// target returns the path the config link points at, given the project root.
+		target func(t *testing.T, root string) string
+	}{
+		{
+			name: "a device, which reads without end",
+			target: func(t *testing.T, _ string) string {
+				t.Helper()
+				if _, err := os.Stat("/dev/zero"); err != nil {
+					t.Skip("no /dev/zero on this platform")
+				}
+				return "/dev/zero"
+			},
+		},
+		{
+			name: "a file inside the project that is not a config",
+			target: func(t *testing.T, root string) string {
+				t.Helper()
+				git := filepath.Join(root, ".git")
+				if err := os.Mkdir(git, 0755); err != nil {
+					t.Fatalf("mkdir: %v", err)
+				}
+				head := filepath.Join(git, "HEAD")
+				if err := os.WriteFile(head, []byte("ref: refs/heads/main\n"), 0644); err != nil {
+					t.Fatalf("writing HEAD: %v", err)
+				}
+				return head
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			target := tc.target(t, dir)
+			// Only a regular file may be read here; reading the device under test
+			// would hang this test rather than the code.
+			var before []byte
+			if info, err := os.Stat(target); err == nil && info.Mode().IsRegular() {
+				before, _ = os.ReadFile(target)
+			}
+			if err := os.Symlink(target, filepath.Join(dir, ConfigFileName)); err != nil {
+				t.Fatalf("symlink: %v", err)
+			}
+
+			changed, err := Upgrade(context.Background(), dir, "dev")
+			if !errors.Is(err, ErrConfigInvalid) {
+				t.Fatalf("error = %v, want ErrConfigInvalid", err)
+			}
+			if changed {
+				t.Error("Upgrade reported a change it must not have made")
+			}
+			if before == nil {
+				return
+			}
+			if after, readErr := os.ReadFile(target); readErr == nil && string(after) != string(before) {
+				t.Errorf("the link target was modified:\n%s", after)
+			}
+		})
+	}
+}
+
+func TestUpgrade_RefusesOversizedConfig(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	body := append([]byte("qode_version: 0.1.0\n# "), bytes.Repeat([]byte("a"), maxConfigBytes)...)
+	if err := os.WriteFile(filepath.Join(dir, ConfigFileName), body, 0644); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	changed, err := Upgrade(context.Background(), dir, "dev")
+	if !errors.Is(err, ErrConfigInvalid) {
+		t.Fatalf("error = %v, want ErrConfigInvalid", err)
+	}
+	if changed {
+		t.Error("Upgrade reported a change for a file it refused")
+	}
+}
+
+func TestUpgrade_AcceptsRelativeRoot(t *testing.T) {
+	// t.Chdir forbids t.Parallel.
+	dir := t.TempDir()
+	seedConfig := filepath.Join(dir, ConfigFileName)
+	if err := os.WriteFile(seedConfig, []byte("qode_version: 0.1.0\n"), 0644); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+	t.Chdir(dir)
+
+	// A relative root must resolve the same way an absolute one does.
+	if _, err := Upgrade(context.Background(), ".", "dev"); err != nil {
+		t.Fatalf("Upgrade with a relative root: %v", err)
+	}
+	if !strings.Contains(string(readConfig(t, dir)), "opencode:") {
+		t.Error("config was not upgraded under a relative root")
+	}
+}
+
+func TestUpgrade_RefusesNonRegularConfig(t *testing.T) {
+	t.Parallel()
+
+	if runtime.GOOS == "windows" {
+		t.Skip("mkfifo is not available on Windows")
+	}
+
+	// A named pipe at the config path has the right name and sits inside the
+	// project, so only the regular-file check stops the read blocking for ever.
+	dir := t.TempDir()
+	if err := syscall.Mkfifo(filepath.Join(dir, ConfigFileName), 0644); err != nil {
+		t.Skipf("mkfifo unavailable: %v", err)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := Upgrade(context.Background(), dir, "dev")
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		if !errors.Is(err, ErrConfigInvalid) {
+			t.Fatalf("error = %v, want ErrConfigInvalid", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Upgrade blocked reading a named pipe")
 	}
 }

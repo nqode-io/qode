@@ -619,12 +619,17 @@ func TestRunInitExisting_UpgradeOutputLine(t *testing.T) {
 
 func TestRunInitExisting_UnreadableConfigHasNoOverwriteHint(t *testing.T) {
 	isolateHome(t)
-	dir := t.TempDir()
-	// A directory where qode.yaml belongs makes Upgrade fail on the read, which is
-	// not ErrConfigInvalid, so the overwrite hint must not be attached.
-	if err := os.Mkdir(filepath.Join(dir, config.ConfigFileName), 0755); err != nil {
-		t.Fatalf("mkdir: %v", err)
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores file permissions")
 	}
+	dir := t.TempDir()
+	// An unreadable qode.yaml makes Upgrade fail on the read, which is not
+	// ErrConfigInvalid, so the overwrite hint must not be attached.
+	path := filepath.Join(dir, config.ConfigFileName)
+	if err := os.WriteFile(path, []byte("qode_version: 0.1.0\n"), 0000); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0644) })
 
 	err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false)
 	if err == nil {

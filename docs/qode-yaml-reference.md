@@ -32,7 +32,7 @@ diff:
 >
 > Two things follow. New keys land at the end of their section rather than in the order shown below, and the first run that does write re-emits the file: indentation normalises to two spaces, blank lines between blocks are dropped, and CRLF line endings, a byte-order mark, a leading `---`, a trailing `...` and any `%YAML`/`%TAG` directive are not carried over. Your values and your own comments survive; generated comments arrive only with keys that are added.
 >
-> `qode.yaml` may be a symlink to a config shared across a workspace, and `qode init` writes through it, keeping the permissions the target already has. A link pointing outside the project is refused rather than followed.
+> `qode.yaml` may be a symlink to a config shared across a workspace, and `qode init` writes through it, keeping the permissions the target already has. The link must lead to a regular file named `qode.yaml` inside the project; anything else is refused rather than followed.
 >
 > A run that fails later — a malformed `.qode/scoring.yaml`, say — may already have upgraded `qode.yaml` before the failure. Your own values are still there; only missing settings were added.
 >

@@ -31,6 +31,11 @@ const mergeTag = "!!merge"
 // versionKeyName is the config key carrying the format version.
 const versionKeyName = "qode_version"
 
+// maxConfigBytes caps how much of qode.yaml is read. A real config is a few
+// hundred bytes; the ceiling stops a link to an endless file from exhausting
+// memory before the parser's own guards ever see the input.
+const maxConfigBytes = 1 << 20
+
 // configFileMode is the permission for qode.yaml. It is committed and team-readable,
 // so 0644 rather than the 0600 used for prompt scratch files.
 const configFileMode = 0644
@@ -203,7 +208,13 @@ func diffNode(d DiffConfig) *yaml.Node {
 // ErrConfigInvalid.
 func Upgrade(ctx context.Context, root, binaryVersion string) (bool, error) {
 	path := filepath.Join(root, ConfigFileName)
-	data, err := os.ReadFile(path)
+	// Resolve before reading, not just before writing: a repository can ship
+	// qode.yaml as a link to a device or a pipe, and reading one is unbounded.
+	target, err := resolveTarget(root, path)
+	if err != nil {
+		return false, err
+	}
+	data, err := os.ReadFile(target)
 	if err != nil {
 		return false, fmt.Errorf("reading %s: %w", path, err)
 	}
@@ -233,7 +244,7 @@ func Upgrade(ctx context.Context, root, binaryVersion string) (bool, error) {
 	if err := validateDocument(doc, path); err != nil {
 		return false, err
 	}
-	if err := writeDocument(ctx, root, path, doc); err != nil {
+	if err := writeDocument(ctx, target, path, doc); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -475,15 +486,11 @@ func stampVersion(root *yaml.Node, binaryVersion string) (bool, error) {
 var errUnwritableVersion = errors.New(
 	versionKeyName + " is an alias or a merged value and cannot be refreshed; write it as a plain value")
 
-// writeDocument renders doc and writes it atomically, through a symlink when the
-// link stays inside the project and keeping whatever mode the target already has.
-func writeDocument(ctx context.Context, root, path string, doc *yaml.Node) error {
+// writeDocument renders doc and writes it atomically to target, which Upgrade has
+// already resolved and contained, keeping whatever mode the target already has.
+func writeDocument(ctx context.Context, target, path string, doc *yaml.Node) error {
 	stripMergeTags(doc)
 	out, err := encodeDocument(doc)
-	if err != nil {
-		return err
-	}
-	target, err := resolveTarget(root, path)
 	if err != nil {
 		return err
 	}
@@ -498,25 +505,62 @@ func writeDocument(ctx context.Context, root, path string, doc *yaml.Node) error
 }
 
 // resolveTarget follows a symlinked qode.yaml so a config shared across a
-// workspace is written through rather than replaced by a regular file. It refuses
-// to follow one out of the project: a repository can ship qode.yaml as a link to
-// any file its user can write, and init would otherwise rewrite that file and
-// reset its permissions.
+// workspace is written through rather than replaced by a regular file, and vets
+// what the link leads to before a single byte is read. A repository can ship
+// qode.yaml as a link to anything its user can reach, so the target must sit
+// inside the project, be named like a config rather than some other file that
+// happens to parse, be a regular file rather than a device or a pipe, and be
+// small enough to be a configuration.
 func resolveTarget(root, path string) (string, error) {
-	target, err := filepath.EvalSymlinks(path)
+	abs, err := filepath.Abs(path)
 	if err != nil {
 		return "", fmt.Errorf("resolving %s: %w", path, err)
 	}
-	base, err := filepath.EvalSymlinks(root)
+	target, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return "", fmt.Errorf("resolving %s: %w", path, err)
+	}
+	base, err := resolveRootDir(root)
+	if err != nil {
+		return "", err
+	}
+	rel, relErr := filepath.Rel(base, target)
+	switch {
+	case relErr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)):
+		return "", fmt.Errorf("%w: %s leads to %s, outside the project; qode init will not write there",
+			ErrConfigInvalid, path, filepath.Base(target))
+	case filepath.Base(target) != ConfigFileName:
+		// Keeps a link from turning init into "append YAML to .git/HEAD", or to a
+		// workflow file, or to anything else that happens to parse as a mapping.
+		return "", fmt.Errorf("%w: %s leads to %s, which is not a %s",
+			ErrConfigInvalid, path, filepath.Base(target), ConfigFileName)
+	}
+	info, err := os.Stat(target)
+	if err != nil {
+		return "", fmt.Errorf("checking %s: %w", path, err)
+	}
+	switch {
+	case !info.Mode().IsRegular():
+		return "", fmt.Errorf("%w: %s is not a regular file", ErrConfigInvalid, path)
+	case info.Size() > maxConfigBytes:
+		return "", fmt.Errorf("%w: %s is %d bytes, past the %d-byte limit for a configuration",
+			ErrConfigInvalid, path, info.Size(), maxConfigBytes)
+	}
+	return target, nil
+}
+
+// resolveRootDir gives the project root in the same absolute, link-free form as a
+// resolved target, so the two can be compared.
+func resolveRootDir(root string) (string, error) {
+	abs, err := filepath.Abs(root)
 	if err != nil {
 		return "", fmt.Errorf("resolving %s: %w", root, err)
 	}
-	rel, err := filepath.Rel(base, target)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return "", fmt.Errorf("%w: %s is a link to %s, outside the project; qode init will not write there",
-			ErrConfigInvalid, path, filepath.Base(target))
+	base, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return "", fmt.Errorf("resolving %s: %w", root, err)
 	}
-	return target, nil
+	return base, nil
 }
 
 // stripMergeTags removes the explicit !!merge tag the parser attaches to every
