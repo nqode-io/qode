@@ -25,7 +25,7 @@ const (
 
 // Load reads and merges configuration from:
 //  1. Default values
-//  2. qode.yaml in root (or closest ancestor)
+//  2. qode.yaml in root (FindRoot walks ancestors; Load does not)
 //  3. ~/.qode/config.yaml (user-level overrides)
 //
 // CLI flags override all of these at call site.
