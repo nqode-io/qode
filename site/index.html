@@ -1239,7 +1239,8 @@
           <button class="copy" data-copy="go install github.com/nqode-io/qode/cmd/qode@latest">Copy</button>
         </div>
       </div>
-      <p class="install-note">Then run <code>qode init</code> in your project root. <a
+      <p class="install-note">Then run <code>qode init</code> in your project root — or <code>qode init
+          --config-only</code> first to review <code>qode.yaml</code> before anything else is generated. <a
           href="https://github.com/nqode-io/qode#advanced--supply-chain-verification">Cosign supply-chain verification
           →</a></p>
     </div>
@@ -1297,7 +1298,7 @@
           <strong>Every gate above is yours to shape.</strong> Adjust thresholds in
           <code>qode.yaml</code> (<code>review.min_code_score</code>, <code>review.min_security_score</code>,
           <code>scoring.target_score</code>) and rewrite rubric dimensions, weights, and criteria in
-          <code>.qode/scoring.yaml</code> — survives <code>qode init</code>, version-controlled with the repo.
+          <code>.qode/scoring.yaml</code> — both survive <code>qode init</code>, version-controlled with the repo.
           <a href="https://github.com/nqode-io/qode/blob/main/docs/scoring-yaml-reference.md">Rubric reference →</a>
         </div>
       </div>
@@ -1310,7 +1311,9 @@
         <span class="eyebrow">// IDE support</span>
         <h2>Four IDEs. One vocabulary.</h2>
         <p>Cursor, Claude Code and OpenCode receive slash commands. Codex receives skills that surface the same
-          workflow names. Toggle in <code>qode.yaml</code>; re-run <code>qode init</code>.</p>
+          workflow names. Toggle in <code>qode.yaml</code>; re-run <code>qode init</code> and the toggle is
+          honoured — your config is preserved, not reset. Run <code>qode init --config-only</code> to write
+          <code>qode.yaml</code> and stop.</p>
       </div>
 
       <div class="ide-table-scroll">

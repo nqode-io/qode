@@ -40,6 +40,8 @@ cd your-project
 qode init
 ```
 
+Prefer to see the config first? `qode init --config-only` writes `qode.yaml` and stops; edit it, then run `qode init` to scaffold only what it enables.
+
 You get:
 
 - `qode.yaml` — review thresholds, scoring config, IDE toggles, diff command.
@@ -47,7 +49,7 @@ You get:
 - `.qode/prompts/` — local copies of every prompt template. Edit them to match your project's conventions; the embedded defaults stay as fallback.
 - `.cursor/commands/*.mdc`, `.claude/commands/*.md`, `.agents/skills/*/SKILL.md`, and `.opencode/commands/*.md` — generated IDE workflows wired into your IDEs.
 
-Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, `.agents/skills/`, and `.opencode/` so the whole team works against the same rubrics, prompts, and IDE workflows.
+Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, `.agents/skills/`, and `.opencode/` so the whole team works against the same rubrics, prompts, and IDE workflows. Re-running `qode init` later is safe: your `qode.yaml` keeps the values you set, and new settings are appended with their defaults.
 
 > **Invocation syntax.** The examples below use slash-command syntax for brevity, which is what Cursor, Claude Code and OpenCode use. In Codex, invoke the same workflow names as skills instead: `/qode-plan-refine` → `$qode-plan-refine`, `/qode-ticket-fetch` → `$qode-ticket-fetch`, and so on.
 
@@ -262,7 +264,8 @@ For all four:
 
 | Command | When |
 | --- | --- |
-| `qode init` | Once per project |
+| `qode init` | Once per project, and safe to re-run |
+| `qode init --config-only` | When you want to review `qode.yaml` before anything else is generated |
 | `qode context init <name> --auto-switch` | Per subtask |
 | `/qode-ticket-fetch <url>` | After context init |
 | `/qode-note-add` | Any time you want to record scope, constraints, corrections with free-form note text |
