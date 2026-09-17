@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -19,6 +20,9 @@ import (
 // build does not participate in version enforcement, and Upgrade does not re-stamp
 // qode_version for one either.
 const devVersion = "dev"
+
+// mergeKey is YAML's merge key, which injects another mapping's entries.
+const mergeKey = "<<"
 
 // configFileMode is the permission for qode.yaml. It is committed and team-readable,
 // so 0644 rather than the 0600 used for prompt scratch files.
@@ -196,17 +200,11 @@ func Upgrade(ctx context.Context, root, binaryVersion string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("reading %s: %w", path, err)
 	}
-	var doc yaml.Node
-	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return false, fmt.Errorf("%w: parsing %s: %v", ErrConfigInvalid, path, err)
+	doc, err := parseDocument(data, path)
+	if err != nil {
+		return false, err
 	}
-	// An empty or comment-only file unmarshals to Kind 0 with no Content, which can
-	// be neither decoded nor encoded. Both fields must be set, not just Content.
-	if doc.Kind == 0 {
-		doc.Kind = yaml.DocumentNode
-		doc.Content = []*yaml.Node{{Kind: yaml.MappingNode}}
-	}
-	if err := validateDocument(&doc, path); err != nil {
+	if err := validateDocument(doc, path); err != nil {
 		return false, err
 	}
 	rootNode := doc.Content[0]
@@ -217,7 +215,41 @@ func Upgrade(ctx context.Context, root, binaryVersion string) (bool, error) {
 	if !changed {
 		return false, nil
 	}
-	return true, writeDocument(ctx, path, &doc)
+	if err := writeDocument(ctx, path, doc); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// parseDocument parses qode.yaml into a document node whose root is always a
+// mapping, so the caller can decode, merge into and encode it unconditionally.
+// A file with nothing to carry a value — empty, comment-only, "---" or "~" —
+// becomes an empty mapping and is filled from the defaults. A file holding more
+// than one YAML document is refused rather than silently rewritten, because only
+// the first document is ever read and re-encoding would drop the rest.
+func parseDocument(data []byte, path string) (*yaml.Node, error) {
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	var doc yaml.Node
+	if err := dec.Decode(&doc); err != nil && !errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("%w: parsing %s: %v", ErrConfigInvalid, path, err)
+	}
+	var extra yaml.Node
+	if err := dec.Decode(&extra); err == nil {
+		return nil, fmt.Errorf("%w: %s holds more than one YAML document; qode reads only the first", ErrConfigInvalid, path)
+	}
+	// Kind 0 is an empty or comment-only file; a document whose root is a null
+	// scalar ("---" or "~") carries no mapping to merge into either. Both fields
+	// must be set, not just Content: a node left at Kind 0 can be neither decoded
+	// nor encoded.
+	if doc.Kind == 0 || len(doc.Content) == 0 || isNull(doc.Content[0]) {
+		doc.Kind = yaml.DocumentNode
+		doc.Content = []*yaml.Node{{Kind: yaml.MappingNode}}
+	}
+	return &doc, nil
+}
+
+func isNull(n *yaml.Node) bool {
+	return n.Kind == yaml.ScalarNode && n.Tag == "!!null"
 }
 
 // validateDocument decodes the project file alone onto the defaults and validates it.
@@ -244,21 +276,67 @@ func mergeMissing(dst, def *yaml.Node) bool {
 	if dst.Kind != yaml.MappingNode || def.Kind != yaml.MappingNode {
 		return false
 	}
+	merged := mergedKeys(dst)
 	changed := false
 	for i := 0; i+1 < len(def.Content); i += 2 {
 		defKey, defVal := def.Content[i], def.Content[i+1]
 		dstVal := lookupValue(dst, defKey.Value)
 		switch {
-		case dstVal == nil:
-			dst.Content = append(dst.Content, defKey, defVal)
-			changed = true
-		case dstVal.Kind == yaml.MappingNode && defVal.Kind == yaml.MappingNode:
-			if mergeMissing(dstVal, defVal) {
-				changed = true
+		case dstVal != nil:
+			if dstVal.Kind == yaml.MappingNode && defVal.Kind == yaml.MappingNode {
+				if mergeMissing(dstVal, defVal) {
+					changed = true
+				}
 			}
+		case merged[defKey.Value]:
+			// The key is supplied through a YAML merge key, so the user has set it
+			// even though no literal entry carries it. An explicit key beats a
+			// merged one, so appending the default here would silently override
+			// their value — exactly what this function exists to prevent.
+		default:
+			dst.Content = append(dst.Content, adopt(defKey, dst), adopt(defVal, dst))
+			changed = true
 		}
 	}
 	return changed
+}
+
+// mergedKeys returns the keys a mapping resolves to through YAML merge keys (<<),
+// which lookupValue cannot see because no literal entry carries them. Mappings
+// without a merge key — every ordinary config — skip the decode entirely.
+func mergedKeys(m *yaml.Node) map[string]bool {
+	if lookupValue(m, mergeKey) == nil {
+		return nil
+	}
+	var resolved map[string]yaml.Node
+	if err := m.Decode(&resolved); err != nil {
+		return nil
+	}
+	out := make(map[string]bool, len(resolved))
+	for k := range resolved {
+		out[k] = true
+	}
+	return out
+}
+
+// adopt copies a default node for insertion into dst, dropping the comments when
+// dst is written in flow style ({a: 1}), where a comment would render inside the
+// braces. The copy keeps the default node itself reusable across calls.
+func adopt(n, dst *yaml.Node) *yaml.Node {
+	if dst.Style&yaml.FlowStyle == 0 {
+		return n
+	}
+	clone := *n
+	clone.HeadComment = ""
+	clone.LineComment = ""
+	clone.FootComment = ""
+	if len(n.Content) > 0 {
+		clone.Content = make([]*yaml.Node, len(n.Content))
+		for i, c := range n.Content {
+			clone.Content[i] = adopt(c, dst)
+		}
+	}
+	return &clone
 }
 
 // lookupValue returns the value node for key in a mapping node, or nil.

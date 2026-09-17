@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -96,8 +97,11 @@ func TestWriteDefault_CoversEveryConfigKey(t *testing.T) {
 	}
 
 	for key := range keys {
-		if !strings.Contains(rendered, key) {
-			t.Errorf("generated qode.yaml never mentions schema key %q", key)
+		// Match the key as a YAML key — active or commented out — so comment prose
+		// that happens to contain the word cannot satisfy the assertion.
+		pattern := regexp.MustCompile(`(?m)^\s*(#\s*)?` + regexp.QuoteMeta(key) + `:`)
+		if !pattern.MatchString(rendered) {
+			t.Errorf("generated qode.yaml has no %q key, active or commented", key)
 		}
 	}
 }
@@ -561,5 +565,133 @@ func TestUpgrade_FollowsSymlink(t *testing.T) {
 	}
 	if !strings.Contains(string(got), "opencode:") {
 		t.Errorf("symlink target was not upgraded:\n%s", got)
+	}
+}
+
+func TestUpgrade_PreservesMergeKeyValues(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		body string
+	}{
+		{
+			name: "merged ide mapping",
+			body: `qode_version: 0.1.0
+base: &base
+  cursor:
+    enabled: false
+  claude_code:
+    enabled: false
+ide:
+  <<: *base
+`,
+		},
+		{
+			name: "merged single ide entry",
+			body: `qode_version: 0.1.0
+off: &off
+  enabled: false
+ide:
+  cursor:
+    <<: *off
+`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := seedConfig(t, tc.body)
+			if _, err := Upgrade(context.Background(), dir, "dev"); err != nil {
+				t.Fatalf("Upgrade: %v", err)
+			}
+
+			var got Config
+			if err := yaml.Unmarshal(readConfig(t, dir), &got); err != nil {
+				t.Fatalf("unmarshalling upgraded config: %v", err)
+			}
+			if got.IDE.Cursor.Enabled {
+				t.Errorf("a value set through a merge key was overridden by the default:\n%s", readConfig(t, dir))
+			}
+		})
+	}
+}
+
+func TestUpgrade_FillsValuelessFile(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "empty", body: ""},
+		{name: "comment only", body: "# hand-written\n"},
+		{name: "document marker only", body: "---\n"},
+		{name: "explicit null", body: "~\n"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := seedConfig(t, tc.body)
+			changed, err := Upgrade(context.Background(), dir, "dev")
+			if err != nil {
+				t.Fatalf("Upgrade: %v", err)
+			}
+			if !changed {
+				t.Fatal("Upgrade reported no change on a file carrying no values")
+			}
+			// An absent qode_version makes every guarded command report "not
+			// initialised", whose remediation is the command that just ran.
+			if got := string(readConfig(t, dir)); !strings.Contains(got, "qode_version: dev") {
+				t.Errorf("filled file has no qode_version:\n%s", got)
+			}
+		})
+	}
+}
+
+func TestUpgrade_RefusesMultipleDocuments(t *testing.T) {
+	t.Parallel()
+
+	const body = "qode_version: 0.1.0\n---\nreview:\n  min_code_score: 11\n"
+	dir := seedConfig(t, body)
+
+	changed, err := Upgrade(context.Background(), dir, "dev")
+	if !errors.Is(err, ErrConfigInvalid) {
+		t.Fatalf("error = %v, want ErrConfigInvalid", err)
+	}
+	if changed {
+		t.Error("Upgrade reported a change for a multi-document file")
+	}
+	if got := string(readConfig(t, dir)); got != body {
+		t.Errorf("multi-document file was modified:\ngot  %q\nwant %q", got, body)
+	}
+}
+
+func TestUpgrade_ReportsNoWriteOnFailure(t *testing.T) {
+	t.Parallel()
+
+	if runtime.GOOS == "windows" {
+		t.Skip("directory permissions are not enforced the same way on Windows")
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+
+	dir := seedConfig(t, "qode_version: 0.1.0\n")
+	if err := os.Chmod(dir, 0555); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0755) })
+
+	changed, err := Upgrade(context.Background(), dir, "dev")
+	if err == nil {
+		t.Fatal("expected Upgrade to fail writing into an unwritable directory")
+	}
+	if changed {
+		t.Error("Upgrade reported a write that did not happen")
 	}
 }

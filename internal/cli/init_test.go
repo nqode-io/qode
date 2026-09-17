@@ -29,6 +29,7 @@ func isolateHome(t *testing.T) {
 }
 
 func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
@@ -54,6 +55,7 @@ func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 }
 
 func TestRunInitExisting_CreatesDirs(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
@@ -69,6 +71,7 @@ func TestRunInitExisting_CreatesDirs(t *testing.T) {
 }
 
 func TestRunInitExisting_CopiesTemplates(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
@@ -102,6 +105,7 @@ func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 }
 
 func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
@@ -140,6 +144,7 @@ func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
 }
 
 func TestRunInitExisting_NoCursorRules(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
@@ -157,6 +162,7 @@ func TestRunInitExisting_NoCursorRules(t *testing.T) {
 }
 
 func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
 	var buf bytes.Buffer
@@ -179,6 +185,7 @@ func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 }
 
 func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
@@ -192,6 +199,7 @@ func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
 }
 
 func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
+	isolateHome(t)
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
@@ -616,5 +624,26 @@ func TestRunInitExisting_UpgradeOutputLine(t *testing.T) {
 		if strings.Contains(out, banned) {
 			t.Errorf("output reintroduced %q:\n%s", banned, out)
 		}
+	}
+}
+
+func TestRunInitExisting_UnreadableConfigHasNoOverwriteHint(t *testing.T) {
+	isolateHome(t)
+	dir := t.TempDir()
+	// A directory where qode.yaml belongs makes Upgrade fail on the read, which is
+	// not ErrConfigInvalid, so the overwrite hint must not be attached.
+	if err := os.Mkdir(filepath.Join(dir, config.ConfigFileName), 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false)
+	if err == nil {
+		t.Fatal("expected an error when qode.yaml cannot be read")
+	}
+	if errors.Is(err, config.ErrConfigInvalid) {
+		t.Errorf("an unreadable file is not an invalid one: %v", err)
+	}
+	if strings.Contains(err.Error(), "--config-only --force") {
+		t.Errorf("hint attached to an error that overwriting will not fix: %v", err)
 	}
 }

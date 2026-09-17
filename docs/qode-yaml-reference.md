@@ -28,7 +28,7 @@ diff:
   command: "git diff --merge-base origin/HEAD -- :(exclude).qode/"
 ```
 
-> **Re-running `qode init` preserves your `qode.yaml`.** Every value you set is kept, `qode_version` is refreshed, and settings added by newer qode versions are appended with their defaults and their comments. Nothing is reset, and the file is only rewritten when something actually changes.
+> **Re-running `qode init` preserves your `qode.yaml`.** Every value you set is kept, `qode_version` is refreshed on released builds, and settings added by newer qode versions are appended with their defaults and their comments. Nothing is reset, and the file is only rewritten when something actually changes.
 >
 > Two things follow. New keys land at the end of their section rather than in the order shown below, and the first run that does write normalises indentation to two spaces and drops blank lines between blocks. Your values and your own comments survive; generated comments arrive only with keys that are added.
 >
@@ -71,7 +71,7 @@ diff:
 
 ### `qode_version`
 
-Written by `qode init`. Identifies the qode configuration format version. Currently informational; version enforcement is planned for a future release.
+Written by `qode init`. Identifies the qode configuration format version. A released binary compares it against its own version and refuses to run guarded commands when the two are incompatible; an absent value reads as "not initialised". `dev` builds skip the check entirely.
 
 `qode init` re-stamps this key on every run of a released binary. A `dev` build — anything installed with `go install` from a source checkout — leaves an existing value alone, so working on qode itself does not churn the tracked version string. A file that lacks the key receives it either way, because an absent `qode_version` reads as "not initialised".
 
