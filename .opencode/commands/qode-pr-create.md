@@ -1,8 +1,7 @@
-{{if hasFrontmatter .IDE}}---
-description: Create a pull request for {{.Project.Name}}
 ---
-{{else}}# Create Pull Request — {{.Project.Name}}
-{{end}}
+description: Create a pull request for qode
+---
+
 
 You are a Senior Software Engineer opening a PR for your completed work.
 

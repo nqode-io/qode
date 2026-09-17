@@ -192,8 +192,8 @@ const workflowList = `qode Workflow
 =============
 
 IDE invocation surface:
-  Cursor / Claude Code: /qode-*
-  Codex:                $qode-*  (skills generated under .agents/skills/)
+  Cursor / Claude Code / OpenCode: /qode-*
+  Codex:                           $qode-*  (skills generated under .agents/skills/)
 
 1.  Manually create a branch, then initialise the qode context
     qode context init <name>

@@ -1,4 +1,4 @@
-// Package scaffold generates IDE-specific configuration files for Cursor, Claude Code, and Codex.
+// Package scaffold generates IDE-specific configuration files for Cursor, Claude Code, Codex, and OpenCode.
 package scaffold
 
 import (
@@ -33,8 +33,15 @@ func Setup(out io.Writer, root string, cfg *config.Config) error {
 		generated = append(generated, "Codex")
 	}
 
+	if cfg.IDE.OpenCode.Enabled {
+		if err := SetupOpenCode(out, root); err != nil {
+			return fmt.Errorf("opencode setup: %w", err)
+		}
+		generated = append(generated, "OpenCode")
+	}
+
 	if len(generated) == 0 {
-		_, _ = fmt.Fprintln(out, "No IDEs enabled. Set ide.cursor/claude_code/codex.enabled: true in qode.yaml")
+		_, _ = fmt.Fprintln(out, "No IDEs enabled. Set ide.cursor/claude_code/codex/opencode.enabled: true in qode.yaml")
 		return nil
 	}
 

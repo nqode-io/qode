@@ -25,16 +25,16 @@ git clone https://github.com/nqode-io/qode.git
 cd qode
 go test ./...
 go install ./cmd/qode/
-qode init                               # Once per checkout — generates qode.yaml, .qode/, .cursor/, .claude/
+qode init                               # Once per checkout — generates qode.yaml, .qode/, .cursor/, .claude/, .agents/skills/, .opencode/
 ```
 
-Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, and `.agents/skills/` so reviewers work against the same rubrics, prompts, and IDE workflows.
+Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, `.agents/skills/`, and `.opencode/` so reviewers work against the same rubrics, prompts, and IDE workflows.
 
 ## Development Workflow
 
 qode uses its own workflow for development. One feature branch can hold multiple subtask contexts (e.g. `backend-api` and `frontend-form` under `feat-user-profile-editing`). Once you have qode installed:
 
-Cursor and Claude Code invoke the IDE workflows below as `/qode-*`. Codex invokes the same workflow names as `$qode-*` skills.
+Cursor, Claude Code and OpenCode invoke the IDE workflows below as `/qode-*`. Codex invokes the same workflow names as `$qode-*` skills.
 
 ```bash
 qode context init <name> --auto-switch  # Create a new work context (one per subtask) and switch to it

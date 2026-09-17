@@ -25,7 +25,7 @@ qode --version
 
 ### Pick an IDE
 
-qode ships the same 10 workflow names for **Claude Code** (CLI / desktop / IDE plugin), **Cursor**, and **Codex**. Cursor and Claude Code receive slash commands; Codex receives skills generated under `.agents/skills/`.
+qode ships the same 11 workflow names for **Claude Code** (CLI / desktop / IDE plugin), **Cursor**, **Codex**, and **OpenCode**. Cursor, Claude Code and OpenCode receive slash commands; Codex receives skills generated under `.agents/skills/`.
 
 ### Configure MCP servers
 
@@ -45,13 +45,13 @@ You get:
 - `qode.yaml` — review thresholds, scoring config, IDE toggles, diff command.
 - `.qode/scoring.yaml` — three rubrics: `refine` (for `/qode-plan-refine`), `review` (for `/qode-review-code`), `security` (for `/qode-review-security`). Each rubric has a `min_*_score` gate in `qode.yaml`. Strict mode (`scoring.strict`, default `false`) makes those gates blocking when flipped to `true`.
 - `.qode/prompts/` — local copies of every prompt template. Edit them to match your project's conventions; the embedded defaults stay as fallback.
-- `.cursor/commands/*.mdc`, `.claude/commands/*.md`, and `.agents/skills/*/SKILL.md` — generated IDE workflows wired into your IDEs.
+- `.cursor/commands/*.mdc`, `.claude/commands/*.md`, `.agents/skills/*/SKILL.md`, and `.opencode/commands/*.md` — generated IDE workflows wired into your IDEs.
 
-Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, and `.agents/skills/` so the whole team works against the same rubrics, prompts, and IDE workflows.
+Commit `qode.yaml`, `.qode/scoring.yaml`, `.qode/prompts/`, `.cursor/`, `.claude/`, `.agents/skills/`, and `.opencode/` so the whole team works against the same rubrics, prompts, and IDE workflows.
 
-> **Invocation syntax.** The examples below use slash-command syntax for brevity. In Codex, invoke the same workflow names as skills instead: `/qode-plan-refine` → `$qode-plan-refine`, `/qode-ticket-fetch` → `$qode-ticket-fetch`, and so on.
+> **Invocation syntax.** The examples below use slash-command syntax for brevity, which is what Cursor, Claude Code and OpenCode use. In Codex, invoke the same workflow names as skills instead: `/qode-plan-refine` → `$qode-plan-refine`, `/qode-ticket-fetch` → `$qode-ticket-fetch`, and so on.
 
-> **Pro tip — keep your AI's context fresh.** AI assistants degrade as their conversation history grows: more drift, more hallucination, more "I forgot what we were doing." **Start a new chat (`/clear` in Claude Code, `New chat` in Cursor, new chat in Codex) between every workflow step.** Each qode slash command writes its output to disk under `.qode/contexts/current/`, so the next step always picks up exactly where the previous one left off — chat history is not load-bearing. This single habit moves output quality more than any other tweak.
+> **Pro tip — keep your AI's context fresh.** AI assistants degrade as their conversation history grows: more drift, more hallucination, more "I forgot what we were doing." **Start a new chat (`/clear` in Claude Code, `New chat` in Cursor, new chat in Codex or OpenCode) between every workflow step.** Each qode slash command writes its output to disk under `.qode/contexts/current/`, so the next step always picks up exactly where the previous one left off — chat history is not load-bearing. This single habit moves output quality more than any other tweak.
 
 ## Step 1 — create the branch and the first context
 
@@ -101,7 +101,7 @@ Everything after `/qode-note-add` is treated as note content, so both single-lin
 
 Every downstream qode command reads `notes.md` automatically, which is how you keep refinements and specs scoped to the current subtask.
 
-> **Combining workflows in one prompt.** In Cursor and Claude Code, qode workflows are slash commands, so you can chain them with prose freely. In Codex, use the matching `$qode-*` skill names instead.
+> **Combining workflows in one prompt.** In Cursor, Claude Code and OpenCode, qode workflows are slash commands, so you can chain them with prose freely. In Codex, use the matching `$qode-*` skill names instead.
 >
 > - `add a note to notes.md saying we must keep the existing GET /users/:id response shape unchanged, then run /qode-plan-refine`
 > - `update notes.md to drop the rate-limiting requirement (out of scope for this iteration), then re-run /qode-plan-refine`
@@ -125,7 +125,7 @@ This runs in three passes:
 
 Iterate until the judge score clears `scoring.target_score` (default 25/25). Each pass is preserved as `refined-analysis-N-score-S.md`, so you can diff iterations.
 
-> **Course-correct mid-run.** If you notice while the prompt is executing that it's heading the wrong way — wrong scope, missing constraint, ignoring a comment — you can send a follow-up message **without stopping the run**. Claude Code handles this cleanly: the message gets queued and applied during or after the current turn. Codex behaves the same way in most setups. Cursor's behaviour depends on which model you've selected — verify before relying on it. When in doubt: stop, course-correct in `notes.md`, re-run.
+> **Course-correct mid-run.** If you notice while the prompt is executing that it's heading the wrong way — wrong scope, missing constraint, ignoring a comment — you can send a follow-up message **without stopping the run**. Claude Code handles this cleanly: the message gets queued and applied during or after the current turn. Codex and OpenCode behave the same way in most setups. Cursor's behaviour depends on which model you've selected — verify before relying on it. When in doubt: stop, course-correct in `notes.md`, re-run.
 
 When the score clears the target, **start a new chat** before moving on.
 
@@ -250,8 +250,9 @@ Then walk Steps 3 → 12 again for the frontend subtask. When both subtasks are 
 | Claude Code | `/clear` between steps; `/compact` if you want to keep context but trim tokens | Yes — chain prose and commands freely | Yes — follow-up messages queue and apply |
 | Cursor | New chat (`Cmd-N` / `Ctrl-N`) between steps | Yes — same as Claude | Model-dependent; verify before relying on it |
 | Codex | New chat between steps | Yes — same as Claude | Yes |
+| OpenCode | New chat between steps | Yes — same as Claude | Yes |
 
-For all three:
+For all four:
 
 - **Commit between steps**, even if it feels excessive. Small commits (one per workflow step) keep `git diff main` clean for the review prompt and make rollback trivial when an AI step goes sideways.
 - **Use the installed `qode` binary**, never `go run` from a checkout. The local source might be mid-edit and broken; the installed binary is the contract.

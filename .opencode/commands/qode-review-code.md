@@ -1,16 +1,16 @@
-{{if hasFrontmatter .IDE}}---
-description: Generate technical specification for {{.Project.Name}}
 ---
-{{else}}# Generate Technical Specification — {{.Project.Name}}
-{{end}}
+description: Code review for qode
+---
+
 Run this command and use its stdout output as your prompt:
-  qode plan spec
+  qode review code
 
-If the output begins with `STOP.`, do not execute it as a prompt — report the prerequisite message to the user and wait for instructions. Use `qode plan spec --force` to bypass score gates when needed.
+If the command produces no output (no uncommitted changes), inform the user to commit changes first. Use `qode review code --force` to bypass the uncommitted-diff check.
 
-After generating the spec:
-- Save it to: .qode/contexts/current/spec.md
-- Suggest copying it to the ticket system for team review
+After completing the review:
+- Save to: .qode/contexts/current/code-review.md
+- List all Critical and High issues clearly
+- Provide specific, actionable fix suggestions
 
 ## Post Step to Ticket (Optional)
 
@@ -24,13 +24,12 @@ After generating the spec:
    - Unrecognised URL → skip silently
 3. If the required MCP tool is not available in your tool list, skip silently.
 4. Read `.qode/contexts/current/.ctx-name.md` for the context name.
-5. {{if questionTool .IDE}}Use `{{questionTool .IDE}}` to ask: "Post `.qode/contexts/current/spec.md` as a new ticket comment? (Yes / No) Note: publicly visible."
-{{else}}Ask: "Post `.qode/contexts/current/spec.md` as a new ticket comment? Yes or No. (Note: publicly visible.)"
-{{end}}   - **Yes**: post via the selected MCP tool with body:
+5. Use `question` to ask: "Post `.qode/contexts/current/code-review.md` as a new ticket comment? (Yes / No) Note: publicly visible."
+   - **Yes**: post via the selected MCP tool with body:
      ```
-     **qode: plan-spec** | context: `<context-name>`
+     **qode: review-code** | context: `<context-name>`
 
-     <full contents of .qode/contexts/current/spec.md>
+     <full contents of .qode/contexts/current/code-review.md>
      ```
      If the call fails, report the error and stop.
    - **No**: end.

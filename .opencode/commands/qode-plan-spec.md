@@ -1,8 +1,7 @@
-{{if hasFrontmatter .IDE}}---
-description: Generate technical specification for {{.Project.Name}}
 ---
-{{else}}# Generate Technical Specification — {{.Project.Name}}
-{{end}}
+description: Generate technical specification for qode
+---
+
 Run this command and use its stdout output as your prompt:
   qode plan spec
 
@@ -24,9 +23,8 @@ After generating the spec:
    - Unrecognised URL → skip silently
 3. If the required MCP tool is not available in your tool list, skip silently.
 4. Read `.qode/contexts/current/.ctx-name.md` for the context name.
-5. {{if questionTool .IDE}}Use `{{questionTool .IDE}}` to ask: "Post `.qode/contexts/current/spec.md` as a new ticket comment? (Yes / No) Note: publicly visible."
-{{else}}Ask: "Post `.qode/contexts/current/spec.md` as a new ticket comment? Yes or No. (Note: publicly visible.)"
-{{end}}   - **Yes**: post via the selected MCP tool with body:
+5. Use `question` to ask: "Post `.qode/contexts/current/spec.md` as a new ticket comment? (Yes / No) Note: publicly visible."
+   - **Yes**: post via the selected MCP tool with body:
      ```
      **qode: plan-spec** | context: `<context-name>`
 

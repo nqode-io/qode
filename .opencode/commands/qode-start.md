@@ -1,8 +1,7 @@
-{{if hasFrontmatter .IDE}}---
-description: Start implementation session for {{.Project.Name}}
 ---
-{{else}}# Start Implementation — {{.Project.Name}}
-{{end}}
+description: Start implementation session for qode
+---
+
 Run this command and use its stdout output as your prompt:
   qode start
 

@@ -42,6 +42,16 @@ func readCursorCommand(t *testing.T, root, name string) string {
 	return string(data)
 }
 
+func readOpenCodeCommand(t *testing.T, root, name string) string {
+	t.Helper()
+	path := filepath.Join(root, ".opencode", "commands", name+".md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s.md: %v", name, err)
+	}
+	return string(data)
+}
+
 func assertNoteAddPrompt(t *testing.T, content string) {
 	t.Helper()
 
@@ -86,18 +96,42 @@ var refineClarificationSentinels = []string{
 }
 
 // askUserQuestionSentinels are the clarification-pass strings only the Claude Code variant
-// may carry; plainTextAskSentinels are the ones only the other variants may carry.
+// may carry; questionToolSentinels are the ones only the OpenCode variant may carry; and
+// plainTextAskSentinels are the ones only the remaining variants may carry.
 var (
 	askUserQuestionSentinels = []string{"AskUserQuestion", `the tool's built-in "Other" choice`}
+	questionToolSentinels    = []string{"Use `question`:", "the tool's free-text answer", "`question` is unavailable"}
 	plainTextAskSentinels    = []string{"or type your own answer", "End your turn after printing a batch", "nobody at the keyboard"}
 )
 
-func assertRefineClarificationPass(t *testing.T, content string, wantAskUserQuestion bool) {
+// askMode selects which mechanism a qode-plan-refine variant must use to ask its
+// clarification questions. Each mode's sentinels must be present and the union of
+// the other two modes' sentinels must be absent.
+type askMode string
+
+const (
+	askModeAskUserQuestion askMode = "AskUserQuestion"
+	askModeQuestionTool    askMode = "question tool"
+	askModePlainText       askMode = "plain text"
+)
+
+func assertRefineClarificationPass(t *testing.T, content string, mode askMode) {
 	t.Helper()
 
-	wanted, banned := plainTextAskSentinels, askUserQuestionSentinels
-	if wantAskUserQuestion {
-		wanted, banned = askUserQuestionSentinels, plainTextAskSentinels
+	sentinelsByMode := map[askMode][]string{
+		askModeAskUserQuestion: askUserQuestionSentinels,
+		askModeQuestionTool:    questionToolSentinels,
+		askModePlainText:       plainTextAskSentinels,
+	}
+	wanted, ok := sentinelsByMode[mode]
+	if !ok {
+		t.Fatalf("unknown ask mode %q", mode)
+	}
+	var banned []string
+	for m, sentinels := range sentinelsByMode {
+		if m != mode {
+			banned = append(banned, sentinels...)
+		}
 	}
 
 	for _, want := range refineClarificationSentinels {
@@ -286,7 +320,7 @@ func TestSetupClaudeCode_RefineIncludesClarificationPass(t *testing.T) {
 		t.Fatalf("SetupClaudeCode: %v", err)
 	}
 
-	assertRefineClarificationPass(t, readClaudeCommand(t, dir, "qode-plan-refine"), true)
+	assertRefineClarificationPass(t, readClaudeCommand(t, dir, "qode-plan-refine"), askModeAskUserQuestion)
 }
 
 // --- SetupCursor ---
@@ -416,7 +450,116 @@ func TestSetupCursor_RefineClarificationPassIsPlainText(t *testing.T) {
 		t.Fatalf("SetupCursor: %v", err)
 	}
 
-	assertRefineClarificationPass(t, readCursorCommand(t, dir, "qode-plan-refine"), false)
+	assertRefineClarificationPass(t, readCursorCommand(t, dir, "qode-plan-refine"), askModePlainText)
+}
+
+// --- SetupOpenCode ---
+
+func TestSetupOpenCode_WritesAllCommands(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupOpenCode(io.Discard, dir); err != nil {
+		t.Fatalf("SetupOpenCode: %v", err)
+	}
+
+	commandsDir := filepath.Join(dir, ".opencode", "commands")
+	entries, err := os.ReadDir(commandsDir)
+	if err != nil {
+		t.Fatalf("reading opencode commands dir: %v", err)
+	}
+	if len(entries) != len(qodeWorkflows) {
+		t.Errorf("SetupOpenCode: wrote %d commands, want %d", len(entries), len(qodeWorkflows))
+	}
+	for _, workflow := range qodeWorkflows {
+		if _, err := os.Stat(filepath.Join(commandsDir, workflow.Name+".md")); err != nil {
+			t.Errorf("missing %s.md: %v", workflow.Name, err)
+		}
+	}
+}
+
+func TestSetupOpenCode_WritesFrontmatter(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupOpenCode(io.Discard, dir); err != nil {
+		t.Fatalf("SetupOpenCode: %v", err)
+	}
+
+	content := readOpenCodeCommand(t, dir, "qode-plan-refine")
+	if !strings.Contains(content, "description:") {
+		t.Error("qode-plan-refine.md missing YAML frontmatter")
+	}
+	if strings.Contains(content, "# Refine Requirements") {
+		t.Error("qode-plan-refine.md must not carry the Markdown title heading")
+	}
+}
+
+func TestSetupOpenCode_RefineUsesQuestionTool(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupOpenCode(io.Discard, dir); err != nil {
+		t.Fatalf("SetupOpenCode: %v", err)
+	}
+
+	assertRefineClarificationPass(t, readOpenCodeCommand(t, dir, "qode-plan-refine"), askModeQuestionTool)
+}
+
+func TestSetupOpenCode_NoAskUserQuestion(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupOpenCode(io.Discard, dir); err != nil {
+		t.Fatalf("SetupOpenCode: %v", err)
+	}
+
+	for _, workflow := range qodeWorkflows {
+		t.Run(workflow.Name, func(t *testing.T) {
+			t.Parallel()
+			if strings.Contains(readOpenCodeCommand(t, dir, workflow.Name), "AskUserQuestion") {
+				t.Errorf("%s.md contains AskUserQuestion (not available in OpenCode)", workflow.Name)
+			}
+		})
+	}
+}
+
+func TestSetupOpenCode_CheckNamesQuestionTool(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := SetupOpenCode(io.Discard, dir); err != nil {
+		t.Fatalf("SetupOpenCode: %v", err)
+	}
+
+	const gate = ", using the question tool,"
+	if got := strings.Count(readOpenCodeCommand(t, dir, "qode-check"), gate); got != 2 {
+		t.Errorf("qode-check.md names %q %d times, want 2", gate, got)
+	}
+}
+
+func TestSetupOpenCode_Idempotent(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	if err := SetupOpenCode(io.Discard, dir); err != nil {
+		t.Fatalf("first SetupOpenCode: %v", err)
+	}
+	firstContents := readAllCommands(t, filepath.Join(dir, ".opencode", "commands"))
+
+	if err := SetupOpenCode(io.Discard, dir); err != nil {
+		t.Fatalf("second SetupOpenCode: %v", err)
+	}
+	secondContents := readAllCommands(t, filepath.Join(dir, ".opencode", "commands"))
+
+	if len(firstContents) != len(secondContents) {
+		t.Fatalf("file count changed: %d → %d", len(firstContents), len(secondContents))
+	}
+	for name, first := range firstContents {
+		second, ok := secondContents[name]
+		if !ok {
+			t.Errorf("file %q missing after second run", name)
+			continue
+		}
+		if first != second {
+			t.Errorf("file %q content changed after second run", name)
+		}
+	}
 }
 
 // --- Setup orchestration ---
@@ -488,7 +631,7 @@ func TestSetup_NoIDEs(t *testing.T) {
 	}
 }
 
-func TestSetup_AllThreeIDEs(t *testing.T) {
+func TestSetup_AllFourIDEs(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	cfg := &config.Config{
@@ -496,6 +639,7 @@ func TestSetup_AllThreeIDEs(t *testing.T) {
 			Cursor:     config.CursorIDEConfig{Enabled: true},
 			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: true},
 			Codex:      config.CodexIDEConfig{Enabled: true},
+			OpenCode:   config.OpenCodeIDEConfig{Enabled: true},
 		},
 	}
 	var buf bytes.Buffer
@@ -507,16 +651,41 @@ func TestSetup_AllThreeIDEs(t *testing.T) {
 		filepath.Join(dir, ".cursor", "commands"),
 		filepath.Join(dir, ".claude", "commands"),
 		filepath.Join(dir, ".agents", "skills"),
+		filepath.Join(dir, ".opencode", "commands"),
 	} {
 		if _, err := os.Stat(dir); err != nil {
 			t.Errorf("expected %s to exist: %v", dir, err)
 		}
 	}
 	out := buf.String()
-	for _, ide := range []string{"Cursor", "Claude Code", "Codex"} {
+	for _, ide := range []string{"Cursor", "Claude Code", "Codex", "OpenCode"} {
 		if !strings.Contains(out, ide) {
 			t.Errorf("output should mention %q, got: %q", ide, out)
 		}
+	}
+}
+
+func TestSetup_OpenCodeDisabled(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cfg := &config.Config{
+		IDE: config.IDEConfig{
+			Cursor:     config.CursorIDEConfig{Enabled: true},
+			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: false},
+			Codex:      config.CodexIDEConfig{Enabled: false},
+			OpenCode:   config.OpenCodeIDEConfig{Enabled: false},
+		},
+	}
+	var buf bytes.Buffer
+	if err := Setup(&buf, dir, cfg); err != nil {
+		t.Fatalf("Setup: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, ".opencode")); !os.IsNotExist(err) {
+		t.Errorf("expected no .opencode dir when OpenCode is disabled: %v", err)
+	}
+	if strings.Contains(buf.String(), "OpenCode") {
+		t.Errorf("output should not mention OpenCode, got: %q", buf.String())
 	}
 }
 
@@ -696,7 +865,7 @@ func TestSetupCodex_RefineIncludesClarificationPass(t *testing.T) {
 		t.Fatalf("SetupCodex: %v", err)
 	}
 
-	assertRefineClarificationPass(t, readCodexSkill(t, dir, "qode-plan-refine"), false)
+	assertRefineClarificationPass(t, readCodexSkill(t, dir, "qode-plan-refine"), askModePlainText)
 }
 
 func TestSetupCodex_WritesNoteAddSkill(t *testing.T) {

@@ -1,8 +1,7 @@
-{{if hasFrontmatter .IDE}}---
-description: Fetch a ticket into the current context for {{.Project.Name}}
 ---
-{{else}}# Fetch Ticket via MCP — {{.Project.Name}}
-{{end}}
+description: Fetch a ticket into the current context for qode
+---
+
 Fetch the ticket at the URL or ID provided in $ARGUMENTS using your available MCP tools.
 
 **Steps:**

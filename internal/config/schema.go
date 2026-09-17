@@ -41,6 +41,7 @@ type IDEConfig struct {
 	Cursor     CursorIDEConfig     `yaml:"cursor,omitempty"`
 	ClaudeCode ClaudeCodeIDEConfig `yaml:"claude_code,omitempty"`
 	Codex      CodexIDEConfig      `yaml:"codex,omitempty"`
+	OpenCode   OpenCodeIDEConfig   `yaml:"opencode,omitempty"`
 }
 
 // CursorIDEConfig controls Cursor IDE integration.
@@ -55,6 +56,11 @@ type ClaudeCodeIDEConfig struct {
 
 // CodexIDEConfig controls Codex IDE integration.
 type CodexIDEConfig struct {
+	Enabled bool `yaml:"enabled,omitempty"`
+}
+
+// OpenCodeIDEConfig controls OpenCode integration.
+type OpenCodeIDEConfig struct {
 	Enabled bool `yaml:"enabled,omitempty"`
 }
 

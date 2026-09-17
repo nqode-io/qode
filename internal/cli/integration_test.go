@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -244,5 +245,34 @@ func TestIntegration_PlanRefine_CancelledContext(t *testing.T) {
 
 	if err == nil {
 		t.Fatal("expected error for cancelled context")
+	}
+}
+
+// TestIntegration_Init_CreatesOpenCodeCommands drives runInitExisting directly rather
+// than the package-global rootCmd, so it constructs no command instance and resets no
+// global state.
+func TestIntegration_Init_CreatesOpenCodeCommands(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	if err := runInitExisting(&bytes.Buffer{}, root); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	for _, name := range []string{"qode-plan-refine.md", "qode-note-add.md"} {
+		if _, err := os.Stat(filepath.Join(root, ".opencode", "commands", name)); err != nil {
+			t.Errorf(".opencode/commands/%s not created: %v", name, err)
+		}
+	}
+
+	data, err := os.ReadFile(filepath.Join(root, ".opencode", "commands", "qode-plan-refine.md"))
+	if err != nil {
+		t.Fatalf("reading qode-plan-refine.md: %v", err)
+	}
+	content := string(data)
+	if !strings.Contains(content, "Use `question`:") {
+		t.Error("qode-plan-refine.md must use the OpenCode question tool")
+	}
+	if strings.Contains(content, "AskUserQuestion") {
+		t.Error("qode-plan-refine.md must not reference AskUserQuestion")
 	}
 }

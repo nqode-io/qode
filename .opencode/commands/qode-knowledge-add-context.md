@@ -1,8 +1,7 @@
-{{if hasFrontmatter .IDE}}---
-description: Extract lessons learned from current session for {{.Project.Name}}
 ---
-{{else}}# Extract Lessons Learned — {{.Project.Name}}
-{{end}}
+description: Extract lessons learned from current session for qode
+---
+
 Reflect on the current session and extract actionable lessons learned.
 
 1. First, check existing lessons by running: qode knowledge list

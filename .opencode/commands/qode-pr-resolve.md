@@ -1,8 +1,7 @@
-{{if hasFrontmatter .IDE}}---
-description: Resolve PR review comments for {{.Project.Name}}
 ---
-{{else}}# Resolve PR Review Comments — {{.Project.Name}}
-{{end}}
+description: Resolve PR review comments for qode
+---
+
 
 You are a Senior Software Engineer implementing changes requested in PR review comments.
 The assumption is that the engineer has already discussed and agreed on the changes with their team.

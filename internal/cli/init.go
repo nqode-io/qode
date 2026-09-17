@@ -23,7 +23,7 @@ func newInitCmd() *cobra.Command {
 
 Writes a minimal qode.yaml with defaults, creates the .qode/ directory
 structure, copies embedded prompt templates, and generates IDE workflow assets
-for Cursor, Claude Code, and Codex.`,
+for Cursor, Claude Code, Codex, and OpenCode.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := resolveRoot()
 			if err != nil {

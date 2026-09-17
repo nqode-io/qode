@@ -1,8 +1,7 @@
-{{if hasFrontmatter .IDE}}---
-description: Add a note to the active qode context for {{.Project.Name}}
 ---
-{{else}}# Add a note — {{.Project.Name}}
-{{end}}
+description: Add a note to the active qode context for qode
+---
+
 Treat all text after this command or skill invocation as note content. The note content may be a single line or multiple paragraphs. If the user includes a line containing only `end note`, stop reading note content at that line; otherwise use all trailing text.
 
 1. Confirm there is a currently active qode context at `.qode/contexts/current/notes.md`.

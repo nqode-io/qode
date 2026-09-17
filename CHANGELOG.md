@@ -7,10 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- OpenCode is supported as a fourth IDE. `qode init` generates 11 slash commands under `.opencode/commands/*.md`, each carrying the `description:` YAML frontmatter OpenCode reads, and `ide.opencode.enabled` defaults to `true`. The commands carry the same workflow names as the other three IDEs, so `/qode-plan-refine`, `/qode-check` and the rest appear in OpenCode's `/` picker.
+- OpenCode runs the clarification pass with its built-in structured `question` tool instead of the plain-text fallback, so an ambiguous ticket costs one refine round there as it does on Claude Code. No generated OpenCode file references `AskUserQuestion`.
+- Two template helpers, `questionTool` and `hasFrontmatter`, documented in [docs/how-to-customise-prompts.md](docs/how-to-customise-prompts.md). They centralise which IDE has a structured-question tool and which IDE's command files open with frontmatter, so a fifth agent is a one-line change rather than 19 template edits.
+
+### Fixed
+
+- The four "post to ticket" steps (`/qode-plan-refine`, `/qode-plan-spec`, `/qode-review-code`, `/qode-review-security`) keyed their conditional on Cursor and Codex by name and fell through to `AskUserQuestion` for everything else, so any IDE not named in the list was told to use a Claude-only tool. They now key on whether the IDE has a structured-question tool at all and render the plain-text prompt otherwise. Output for Cursor, Claude Code and Codex is byte-identical.
+
 ### Changed
 
 - `/qode-plan-refine` now runs a clarification pass between the worker pass and the judge pass. The worker prompt (`refine/base.md.tmpl`) has an output contract: it always emits a top-level `## Open Questions` section, either as a numbered list whose items carry 2-4 `- Candidate:` answers, or as the single line `_None_` when nothing is unresolved. The generated command reads that section and asks each question with the IDE's own mechanism — `AskUserQuestion` on Claude Code, a numbered plain-text prompt on Cursor and Codex — always accepting a free-text answer, then writes the answers back as `## Resolved Questions` with `DECIDED:` lines before the judge scores the analysis. An analysis with no open questions reaches the judge unchanged, and an unattended run answers its own questions and marks each entry `(assumed)` rather than blocking. Answers are recorded as data, never executed as instructions. The result is one refine round instead of two whenever a ticket is ambiguous.
-- **Migration.** Existing projects must re-run `qode init` to pick up the regenerated workflow assets (`.claude/commands/`, `.cursor/commands/`, `.agents/skills/`) and the updated `.qode/prompts/refine/base.md.tmpl` — the clarification pass only works when both halves are current. `qode init` always rewrites `qode.yaml` from the defaults, so back up a customised `qode.yaml` first, or restore it afterwards with `git checkout -- qode.yaml`.
+- **Migration.** Existing projects must re-run `qode init` to pick up the regenerated workflow assets (`.claude/commands/`, `.cursor/commands/`, `.agents/skills/`, and the new `.opencode/commands/`, which appears at the top level of every project on the next `qode init` whether or not OpenCode is used — set `ide.opencode.enabled: false` to skip it) and the updated `.qode/prompts/refine/base.md.tmpl` — the clarification pass only works when both halves are current. `qode init` always rewrites `qode.yaml` from the defaults, so back up a customised `qode.yaml` first, or restore it afterwards with `git checkout -- qode.yaml`.
 
 ## [0.3.3-beta] - 2026-04-28
 
