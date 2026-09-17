@@ -820,8 +820,14 @@
     }
 
     /* IDE matrix */
+    .ide-table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
     .ide-table {
       width: 100%;
+      min-width: 720px;
       border-collapse: collapse;
       border: 1px solid var(--border);
       border-radius: var(--r-3);
@@ -832,7 +838,7 @@
 
     .ide-table th,
     .ide-table td {
-      padding: 14px 18px;
+      padding: 14px 14px;
       text-align: left;
       border-bottom: 1px solid var(--border);
     }
@@ -1012,6 +1018,7 @@
           <span class="pill"><span class="dot"></span> Cursor</span>
           <span class="pill"><span class="dot"></span> Claude Code</span>
           <span class="pill"><span class="dot"></span> Codex</span>
+          <span class="pill"><span class="dot"></span> OpenCode</span>
           <span class="pill">MCP-native</span>
           <span class="pill">No API keys</span>
         </div>
@@ -1063,8 +1070,8 @@
         <div class="feature">
           <div class="icon">/</div>
           <h3>Slash-command native</h3>
-          <p>Cursor and Claude Code call workflows as <code>/qode-*</code>. Codex picks them up as <code>$qode-*</code>
-            skills. One CLI generates assets for all three.</p>
+          <p>Cursor, Claude Code and OpenCode call workflows as <code>/qode-*</code>. Codex picks them up as
+            <code>$qode-*</code> skills. One CLI generates assets for all four.</p>
         </div>
         <div class="feature">
           <div class="icon">⊕</div>
@@ -1301,41 +1308,47 @@
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">// IDE support</span>
-        <h2>Three IDEs. One vocabulary.</h2>
-        <p>Cursor and Claude Code receive slash commands. Codex receives skills that surface the same workflow names.
-          Toggle in <code>qode.yaml</code>; re-run <code>qode init</code>.</p>
+        <h2>Four IDEs. One vocabulary.</h2>
+        <p>Cursor, Claude Code and OpenCode receive slash commands. Codex receives skills that surface the same
+          workflow names. Toggle in <code>qode.yaml</code>; re-run <code>qode init</code>.</p>
       </div>
 
-      <table class="ide-table">
-        <thead>
-          <tr>
-            <th></th>
-            <th>Cursor</th>
-            <th>Claude Code</th>
-            <th>Codex</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <th>Generated assets</th>
-            <td><code>.cursor/commands/*.mdc</code></td>
-            <td><code>.claude/commands/*.md</code></td>
-            <td><code>.agents/skills/*/SKILL.md</code></td>
-          </tr>
-          <tr>
-            <th>Enable</th>
-            <td><code>ide.cursor.enabled: true</code></td>
-            <td><code>ide.claude_code.enabled: true</code></td>
-            <td><code>ide.codex.enabled: true</code></td>
-          </tr>
-          <tr>
-            <th>Invoke</th>
-            <td><code>/qode-*</code></td>
-            <td><code>/qode-*</code></td>
-            <td><code>$qode-*</code></td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="ide-table-scroll">
+        <table class="ide-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Cursor</th>
+              <th>Claude Code</th>
+              <th>Codex</th>
+              <th>OpenCode</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>Generated assets</th>
+              <td><code>.cursor/commands/*.mdc</code></td>
+              <td><code>.claude/commands/*.md</code></td>
+              <td><code>.agents/skills/*/SKILL.md</code></td>
+              <td><code>.opencode/commands/*.md</code></td>
+            </tr>
+            <tr>
+              <th>Enable</th>
+              <td><code>ide.cursor.enabled: true</code></td>
+              <td><code>ide.claude_code.enabled: true</code></td>
+              <td><code>ide.codex.enabled: true</code></td>
+              <td><code>ide.opencode.enabled: true</code></td>
+            </tr>
+            <tr>
+              <th>Invoke</th>
+              <td><code>/qode-*</code></td>
+              <td><code>/qode-*</code></td>
+              <td><code>$qode-*</code></td>
+              <td><code>/qode-*</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
 
