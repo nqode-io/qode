@@ -24,6 +24,9 @@ const devVersion = "dev"
 // mergeKey is YAML's merge key, which injects another mapping's entries.
 const mergeKey = "<<"
 
+// mergeTag is the resolved tag yaml.v3 gives a merge key.
+const mergeTag = "!!merge"
+
 // versionKeyName is the config key carrying the format version.
 const versionKeyName = "qode_version"
 
@@ -356,12 +359,14 @@ func mergedKeys(m *yaml.Node) (map[string]bool, error) {
 	return out, nil
 }
 
-// hasMergeKey reports whether a mapping carries YAML's merge key. The test matches
-// yaml.v3's own: a quoted "<<" is an ordinary string key, not a merge.
+// hasMergeKey reports whether a mapping carries YAML's merge key, testing the
+// resolved tag exactly as yaml.v3's own isMerge does. A quoted "<<" resolves to
+// !!str and is an ordinary string key; both the bare "<<:" and the explicitly
+// tagged "!!merge <<:" the encoder emits are merges.
 func hasMergeKey(m *yaml.Node) bool {
 	for i := 0; i+1 < len(m.Content); i += 2 {
 		k := m.Content[i]
-		if k.Value == mergeKey && k.Style == 0 && (k.Tag == "" || k.Tag == "!!merge") {
+		if k.Value == mergeKey && (k.Tag == "" || k.Tag == mergeTag) {
 			return true
 		}
 	}
@@ -465,7 +470,7 @@ func writeDocument(ctx context.Context, path string, doc *yaml.Node) error {
 func stripMergeTags(n *yaml.Node) {
 	if n.Kind == yaml.MappingNode {
 		for i := 0; i+1 < len(n.Content); i += 2 {
-			if k := n.Content[i]; k.Value == mergeKey && k.Tag == "!!merge" {
+			if k := n.Content[i]; k.Value == mergeKey && k.Tag == mergeTag {
 				k.Tag = ""
 			}
 		}

@@ -588,6 +588,18 @@ ide:
 `,
 		},
 		{
+			// The form yaml.v3's own encoder emits, so a config round-tripped
+			// through any yaml tool arrives in this shape.
+			name: "explicitly tagged merge key",
+			body: `qode_version: 0.1.0
+base: &base
+  cursor:
+    enabled: false
+ide:
+  !!merge <<: *base
+`,
+		},
+		{
 			name: "merged single ide entry",
 			body: `qode_version: 0.1.0
 off: &off
