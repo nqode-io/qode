@@ -32,9 +32,13 @@ const mergeTag = "!!merge"
 const versionKeyName = "qode_version"
 
 // maxConfigBytes caps how much of qode.yaml is read. A real config is a few
-// hundred bytes; the ceiling stops a link to an endless file from exhausting
-// memory before the parser's own guards ever see the input.
-const maxConfigBytes = 1 << 20
+// hundred bytes, and the fullest one this tool generates is under 2 KiB, so
+// 64 KiB is generous. The ceiling is deliberately not larger: yaml.v3's
+// duplicate-key check is quadratic in a mapping's key count, so bytes bound
+// decode cost only while they stay small. At 64 KiB the worst case measured is
+// a quarter of a second; at 1 MiB it was 56 seconds and 321 MB, on the first
+// command a user runs in a fresh clone.
+const maxConfigBytes = 64 << 10
 
 // configFileMode is the permission for qode.yaml. It is committed and team-readable,
 // so 0644 rather than the 0600 used for prompt scratch files.
@@ -504,9 +508,11 @@ func writeDocument(ctx context.Context, target, path string, doc *yaml.Node) err
 	return nil
 }
 
-// resolveTarget follows a symlinked qode.yaml so a config shared across a
-// workspace is written through rather than replaced by a regular file, and vets
-// what the link leads to before a single byte is read. A repository can ship
+// resolveTarget follows a symlinked qode.yaml — so a config shared between
+// sibling modules of one project is written through rather than replaced by a
+// regular file — and vets what the link leads to before a single byte is read.
+// The target must be inside the project: a config shared from outside it is
+// refused, deliberately. A repository can ship
 // qode.yaml as a link to anything its user can reach, so the target must sit
 // inside the project, be named like a config rather than some other file that
 // happens to parse, be a regular file rather than a device or a pipe, and be

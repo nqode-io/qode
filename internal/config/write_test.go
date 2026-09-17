@@ -1060,6 +1060,13 @@ func TestUpgrade_RefusesUnsafeLinkTargets(t *testing.T) {
 func TestUpgrade_RefusesOversizedConfig(t *testing.T) {
 	t.Parallel()
 
+	// The ceiling bounds decode cost, not just bytes: yaml.v3's duplicate-key
+	// check is quadratic in a mapping's key count. Raising this is not a free
+	// generosity, so the limit itself is asserted.
+	if maxConfigBytes > 64<<10 {
+		t.Fatalf("maxConfigBytes = %d; above 64 KiB a hostile config costs tens of seconds to decode", maxConfigBytes)
+	}
+
 	dir := t.TempDir()
 	body := append([]byte("qode_version: 0.1.0\n# "), bytes.Repeat([]byte("a"), maxConfigBytes)...)
 	if err := os.WriteFile(filepath.Join(dir, ConfigFileName), body, 0644); err != nil {
