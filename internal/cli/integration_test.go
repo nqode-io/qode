@@ -252,9 +252,12 @@ func TestIntegration_PlanRefine_CancelledContext(t *testing.T) {
 // than the package-global rootCmd, so it constructs no command instance and resets no
 // global state.
 func TestIntegration_Init_CreatesOpenCodeCommands(t *testing.T) {
-	t.Parallel()
+	// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	root := t.TempDir()
-	if err := runInitExisting(&bytes.Buffer{}, root); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, root, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 

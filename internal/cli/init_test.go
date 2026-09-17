@@ -4,6 +4,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,10 +15,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// isolateHome redirects the user home directory so config.Load cannot read the
+// developer's own ~/.qode/config.yaml. t.Setenv forbids t.Parallel, which is why
+// every test reaching config.Load runs serially.
+func isolateHome(t *testing.T) {
+	t.Helper()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+}
+
 func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -42,7 +53,7 @@ func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 func TestRunInitExisting_CreatesDirs(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -57,7 +68,7 @@ func TestRunInitExisting_CreatesDirs(t *testing.T) {
 func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -90,7 +101,7 @@ func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -128,7 +139,7 @@ func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
 func TestRunInitExisting_NoCursorRules(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -146,7 +157,7 @@ func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 	dir := t.TempDir()
 
 	var buf bytes.Buffer
-	if err := runInitExisting(&buf, dir); err != nil {
+	if err := runInitExisting(context.Background(), &buf, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -167,7 +178,7 @@ func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -180,7 +191,7 @@ func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
 func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("first runInitExisting: %v", err)
 	}
 
@@ -192,7 +203,7 @@ func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 	}
 
 	// Second run must succeed and must not overwrite .qode/scoring.yaml.
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("second runInitExisting: %v", err)
 	}
 
@@ -207,10 +218,10 @@ func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 }
 
 func TestRunInitExisting_AppendsGitignoreRules(t *testing.T) {
-	t.Parallel()
+	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -228,13 +239,13 @@ func TestRunInitExisting_AppendsGitignoreRules(t *testing.T) {
 }
 
 func TestRunInitExisting_GitignoreIsIdempotent(t *testing.T) {
-	t.Parallel()
+	isolateHome(t)
 	dir := t.TempDir()
 
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("first runInitExisting: %v", err)
 	}
-	if err := runInitExisting(&bytes.Buffer{}, dir); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 		t.Fatalf("second runInitExisting: %v", err)
 	}
 
