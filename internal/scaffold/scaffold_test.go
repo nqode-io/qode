@@ -564,13 +564,13 @@ func TestSetupOpenCode_Idempotent(t *testing.T) {
 
 // --- Setup orchestration ---
 
-func TestSetup_BothIDEs(t *testing.T) {
+func TestSetup_BothAgents(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	cfg := &config.Config{
-		IDE: config.IDEConfig{
-			Cursor:     config.CursorIDEConfig{Enabled: true},
-			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: true},
+		Agents: config.AgentsConfig{
+			Cursor:     config.CursorAgentConfig{Enabled: true},
+			ClaudeCode: config.ClaudeCodeAgentConfig{Enabled: true},
 		},
 	}
 	var buf bytes.Buffer
@@ -591,13 +591,13 @@ func TestSetup_BothIDEs(t *testing.T) {
 	}
 }
 
-func TestSetup_OnlyOneIDE(t *testing.T) {
+func TestSetup_OnlyOneAgent(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	cfg := &config.Config{
-		IDE: config.IDEConfig{
-			Cursor:     config.CursorIDEConfig{Enabled: true},
-			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: false},
+		Agents: config.AgentsConfig{
+			Cursor:     config.CursorAgentConfig{Enabled: true},
+			ClaudeCode: config.ClaudeCodeAgentConfig{Enabled: false},
 		},
 	}
 	var buf bytes.Buffer
@@ -613,13 +613,13 @@ func TestSetup_OnlyOneIDE(t *testing.T) {
 	}
 }
 
-func TestSetup_NoIDEs(t *testing.T) {
+func TestSetup_NoAgents(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	cfg := &config.Config{
-		IDE: config.IDEConfig{
-			Cursor:     config.CursorIDEConfig{Enabled: false},
-			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: false},
+		Agents: config.AgentsConfig{
+			Cursor:     config.CursorAgentConfig{Enabled: false},
+			ClaudeCode: config.ClaudeCodeAgentConfig{Enabled: false},
 		},
 	}
 	var buf bytes.Buffer
@@ -631,15 +631,15 @@ func TestSetup_NoIDEs(t *testing.T) {
 	}
 }
 
-func TestSetup_AllFourIDEs(t *testing.T) {
+func TestSetup_AllFourAgents(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	cfg := &config.Config{
-		IDE: config.IDEConfig{
-			Cursor:     config.CursorIDEConfig{Enabled: true},
-			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: true},
-			Codex:      config.CodexIDEConfig{Enabled: true},
-			OpenCode:   config.OpenCodeIDEConfig{Enabled: true},
+		Agents: config.AgentsConfig{
+			Cursor:     config.CursorAgentConfig{Enabled: true},
+			ClaudeCode: config.ClaudeCodeAgentConfig{Enabled: true},
+			Codex:      config.CodexAgentConfig{Enabled: true},
+			OpenCode:   config.OpenCodeAgentConfig{Enabled: true},
 		},
 	}
 	var buf bytes.Buffer
@@ -658,9 +658,9 @@ func TestSetup_AllFourIDEs(t *testing.T) {
 		}
 	}
 	out := buf.String()
-	for _, ide := range []string{"Cursor", "Claude Code", "Codex", "OpenCode"} {
-		if !strings.Contains(out, ide) {
-			t.Errorf("output should mention %q, got: %q", ide, out)
+	for _, agent := range []string{"Cursor", "Claude Code", "Codex", "OpenCode"} {
+		if !strings.Contains(out, agent) {
+			t.Errorf("output should mention %q, got: %q", agent, out)
 		}
 	}
 }
@@ -669,11 +669,11 @@ func TestSetup_OpenCodeDisabled(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	cfg := &config.Config{
-		IDE: config.IDEConfig{
-			Cursor:     config.CursorIDEConfig{Enabled: true},
-			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: false},
-			Codex:      config.CodexIDEConfig{Enabled: false},
-			OpenCode:   config.OpenCodeIDEConfig{Enabled: false},
+		Agents: config.AgentsConfig{
+			Cursor:     config.CursorAgentConfig{Enabled: true},
+			ClaudeCode: config.ClaudeCodeAgentConfig{Enabled: false},
+			Codex:      config.CodexAgentConfig{Enabled: false},
+			OpenCode:   config.OpenCodeAgentConfig{Enabled: false},
 		},
 	}
 	var buf bytes.Buffer
@@ -693,10 +693,10 @@ func TestSetup_OnlyCodex(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	cfg := &config.Config{
-		IDE: config.IDEConfig{
-			Cursor:     config.CursorIDEConfig{Enabled: false},
-			ClaudeCode: config.ClaudeCodeIDEConfig{Enabled: false},
-			Codex:      config.CodexIDEConfig{Enabled: true},
+		Agents: config.AgentsConfig{
+			Cursor:     config.CursorAgentConfig{Enabled: false},
+			ClaudeCode: config.ClaudeCodeAgentConfig{Enabled: false},
+			Codex:      config.CodexAgentConfig{Enabled: true},
 		},
 	}
 	if err := Setup(io.Discard, dir, cfg); err != nil {

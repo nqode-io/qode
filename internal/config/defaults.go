@@ -11,11 +11,11 @@ func DefaultConfig() Config {
 			Strict:  false, // backward compatible default
 			Rubrics: DefaultRubricConfigs(),
 		},
-		IDE: IDEConfig{
-			Cursor:     CursorIDEConfig{Enabled: true},
-			ClaudeCode: ClaudeCodeIDEConfig{Enabled: true},
-			Codex:      CodexIDEConfig{Enabled: true},
-			OpenCode:   OpenCodeIDEConfig{Enabled: true},
+		Agents: AgentsConfig{
+			Cursor:     CursorAgentConfig{Enabled: true},
+			ClaudeCode: ClaudeCodeAgentConfig{Enabled: true},
+			Codex:      CodexAgentConfig{Enabled: true},
+			OpenCode:   OpenCodeAgentConfig{Enabled: true},
 		},
 		Knowledge: KnowledgeConfig{
 			Path: ".qode/knowledge",

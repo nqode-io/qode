@@ -94,7 +94,7 @@ func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 	}
 }
 
-func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
+func TestRunInitExisting_CreatesAgentConfigs(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()
 
@@ -263,11 +263,11 @@ func TestRunInitExisting_GitignoreIsIdempotent(t *testing.T) {
 	}
 }
 
-func TestRootCmd_NoIDESubcommand(t *testing.T) {
-	// Confirm 'ide' is not a registered subcommand.
-	ideCmd, _, findErr := rootCmd.Find([]string{"ide"})
-	if findErr == nil && ideCmd != rootCmd {
-		t.Error("'ide' subcommand must not be registered on rootCmd")
+func TestRootCmd_NoAgentsSubcommand(t *testing.T) {
+	// Confirm 'agents' is not a registered subcommand.
+	agentsCmd, _, findErr := rootCmd.Find([]string{"agents"})
+	if findErr == nil && agentsCmd != rootCmd {
+		t.Error("'agents' subcommand must not be registered on rootCmd")
 	}
 }
 
@@ -343,14 +343,14 @@ func TestRunInitExisting_ConfigOnly_ForceOverwrites(t *testing.T) {
 }
 
 // customisedConfig is a hand-tuned project config: three non-default values, a
-// hand-written comment, and no ide.opencode block.
+// hand-written comment, and no agents.opencode block.
 const customisedConfig = `# keep me
 qode_version: 0.1.0
 review:
   min_security_score: 10
 scoring:
   strict: true
-ide:
+agents:
   cursor:
     enabled: false
   claude_code:
@@ -373,7 +373,7 @@ func TestRunInitExisting_UpgradesExistingConfig(t *testing.T) {
 		t.Errorf("hand-written comment was dropped:\n%s", rendered)
 	}
 	if !strings.Contains(rendered, "  opencode:\n    enabled: true") {
-		t.Errorf("opencode was not appended under the existing ide mapping:\n%s", rendered)
+		t.Errorf("opencode was not appended under the existing agents mapping:\n%s", rendered)
 	}
 
 	cfg, err := config.Load(dir)
@@ -386,8 +386,8 @@ func TestRunInitExisting_UpgradesExistingConfig(t *testing.T) {
 	if !cfg.Scoring.Strict {
 		t.Error("scoring.strict was reset to false")
 	}
-	if cfg.IDE.Cursor.Enabled {
-		t.Error("ide.cursor.enabled was reset to true")
+	if cfg.Agents.Cursor.Enabled {
+		t.Error("agents.cursor.enabled was reset to true")
 	}
 	if cfg.QodeVersion != "0.4.0-beta" {
 		t.Errorf("qode_version = %q, want it re-stamped to 0.4.0-beta", cfg.QodeVersion)
@@ -424,7 +424,7 @@ func TestRunInitExisting_SecondRunIsNoOp(t *testing.T) {
 	}
 }
 
-func TestRunInitExisting_SkipsDisabledIDEs(t *testing.T) {
+func TestRunInitExisting_SkipsDisabledAgents(t *testing.T) {
 	tests := []struct {
 		name     string
 		key      string
@@ -454,14 +454,14 @@ func TestRunInitExisting_SkipsDisabledIDEs(t *testing.T) {
 			// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
 			isolateHome(t)
 			dir := t.TempDir()
-			seedProjectConfig(t, dir, "ide:\n  "+tc.key+":\n    enabled: false\n")
+			seedProjectConfig(t, dir, "agents:\n  "+tc.key+":\n    enabled: false\n")
 
 			if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
 				t.Fatalf("runInitExisting: %v", err)
 			}
 
 			if _, err := os.Stat(filepath.Join(dir, tc.skipped)); !errors.Is(err, fs.ErrNotExist) {
-				t.Errorf("%s was generated for a disabled IDE", tc.skipped)
+				t.Errorf("%s was generated for a disabled agent", tc.skipped)
 			}
 			for _, rel := range tc.expected {
 				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
@@ -472,10 +472,10 @@ func TestRunInitExisting_SkipsDisabledIDEs(t *testing.T) {
 	}
 }
 
-func TestRunInitExisting_NoIDEsEnabled(t *testing.T) {
+func TestRunInitExisting_NoAgentsEnabled(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()
-	seedProjectConfig(t, dir, `ide:
+	seedProjectConfig(t, dir, `agents:
   cursor:
     enabled: false
   claude_code:
@@ -491,7 +491,7 @@ func TestRunInitExisting_NoIDEsEnabled(t *testing.T) {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 	if !strings.Contains(buf.String(), "No IDEs enabled") {
-		t.Errorf("output does not guide a user with every IDE disabled:\n%s", buf.String())
+		t.Errorf("output does not guide a user with every agent disabled:\n%s", buf.String())
 	}
 }
 

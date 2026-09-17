@@ -32,7 +32,7 @@ func TestLoadSession_HappyPath(t *testing.T) {
 	if sess.Config == nil {
 		t.Fatal("Config is nil")
 	}
-	if !sess.Config.IDE.ClaudeCode.Enabled {
+	if !sess.Config.Agents.ClaudeCode.Enabled {
 		t.Error("expected ClaudeCode enabled from default config")
 	}
 	if sess.Context == nil {

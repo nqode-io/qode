@@ -19,16 +19,16 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Scoring.TargetScore != 0 {
 		t.Errorf("expected TargetScore 0 (use rubric max), got %d", cfg.Scoring.TargetScore)
 	}
-	if !cfg.IDE.Cursor.Enabled {
+	if !cfg.Agents.Cursor.Enabled {
 		t.Error("expected Cursor enabled by default")
 	}
-	if !cfg.IDE.ClaudeCode.Enabled {
+	if !cfg.Agents.ClaudeCode.Enabled {
 		t.Error("expected ClaudeCode enabled by default")
 	}
-	if !cfg.IDE.Codex.Enabled {
+	if !cfg.Agents.Codex.Enabled {
 		t.Error("expected Codex enabled by default")
 	}
-	if !cfg.IDE.OpenCode.Enabled {
+	if !cfg.Agents.OpenCode.Enabled {
 		t.Error("expected OpenCode enabled by default")
 	}
 	wantRubrics := DefaultRubricConfigs()
@@ -79,23 +79,23 @@ func TestSave_Load(t *testing.T) {
 	if loaded.Scoring.TargetScore != cfg.Scoring.TargetScore {
 		t.Errorf("TargetScore: got %d, want %d", loaded.Scoring.TargetScore, cfg.Scoring.TargetScore)
 	}
-	if loaded.IDE.Cursor.Enabled != cfg.IDE.Cursor.Enabled {
-		t.Errorf("Cursor.Enabled: got %v, want %v", loaded.IDE.Cursor.Enabled, cfg.IDE.Cursor.Enabled)
+	if loaded.Agents.Cursor.Enabled != cfg.Agents.Cursor.Enabled {
+		t.Errorf("Cursor.Enabled: got %v, want %v", loaded.Agents.Cursor.Enabled, cfg.Agents.Cursor.Enabled)
 	}
-	if loaded.IDE.ClaudeCode.Enabled != cfg.IDE.ClaudeCode.Enabled {
-		t.Errorf("ClaudeCode.Enabled: got %v, want %v", loaded.IDE.ClaudeCode.Enabled, cfg.IDE.ClaudeCode.Enabled)
+	if loaded.Agents.ClaudeCode.Enabled != cfg.Agents.ClaudeCode.Enabled {
+		t.Errorf("ClaudeCode.Enabled: got %v, want %v", loaded.Agents.ClaudeCode.Enabled, cfg.Agents.ClaudeCode.Enabled)
 	}
 	if len(loaded.Scoring.Rubrics) != len(cfg.Scoring.Rubrics) {
 		t.Errorf("Rubrics count: got %d, want %d", len(loaded.Scoring.Rubrics), len(cfg.Scoring.Rubrics))
 	}
 }
 
-func TestLoad_LegacyConfigWithoutOpenCode(t *testing.T) {
+func TestLoad_ConfigWithoutOpenCode_DefaultsEnabled(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
 	legacy := `qode_version: "0.3.0"
-ide:
+agents:
     cursor:
         enabled: true
     claude_code:
@@ -111,8 +111,8 @@ ide:
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	if !loaded.IDE.OpenCode.Enabled {
-		t.Error("expected OpenCode enabled when ide.opencode is absent from qode.yaml")
+	if !loaded.Agents.OpenCode.Enabled {
+		t.Error("expected OpenCode enabled when agents.opencode is absent from qode.yaml")
 	}
 }
 
@@ -145,8 +145,8 @@ func TestDiffConfig_YAMLRoundTrip(t *testing.T) {
 	if len(loaded.Scoring.Rubrics) != len(cfg.Scoring.Rubrics) {
 		t.Errorf("Rubrics count: got %d, want %d", len(loaded.Scoring.Rubrics), len(cfg.Scoring.Rubrics))
 	}
-	if loaded.IDE.Cursor.Enabled != cfg.IDE.Cursor.Enabled {
-		t.Errorf("Cursor.Enabled: got %v, want %v", loaded.IDE.Cursor.Enabled, cfg.IDE.Cursor.Enabled)
+	if loaded.Agents.Cursor.Enabled != cfg.Agents.Cursor.Enabled {
+		t.Errorf("Cursor.Enabled: got %v, want %v", loaded.Agents.Cursor.Enabled, cfg.Agents.Cursor.Enabled)
 	}
 }
 

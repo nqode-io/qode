@@ -1,13 +1,20 @@
 package config
 
+import "gopkg.in/yaml.v3"
+
 // Config is the root configuration loaded from qode.yaml.
 type Config struct {
-	QodeVersion string          `yaml:"qode_version,omitempty"`
-	Review      ReviewConfig    `yaml:"review,omitempty"`
-	Scoring     ScoringConfig   `yaml:"scoring,omitempty"`
-	IDE         IDEConfig       `yaml:"ide,omitempty"`
-	Knowledge   KnowledgeConfig `yaml:"knowledge,omitempty"`
-	Diff        DiffConfig      `yaml:"diff,omitempty"`
+	QodeVersion string        `yaml:"qode_version,omitempty"`
+	Review      ReviewConfig  `yaml:"review,omitempty"`
+	Scoring     ScoringConfig `yaml:"scoring,omitempty"`
+	Agents      AgentsConfig  `yaml:"agents,omitempty"`
+	// IDE is the deprecated spelling of Agents. It is read-only: Load decodes it over
+	// Agents and zeroes it, so it is never marshalled back. Declared as a yaml.Node,
+	// not a *AgentsConfig, so that a partial block decodes over the seeded defaults
+	// instead of over a fresh zero struct.
+	IDE       yaml.Node       `yaml:"ide,omitempty"`
+	Knowledge KnowledgeConfig `yaml:"knowledge,omitempty"`
+	Diff      DiffConfig      `yaml:"diff,omitempty"`
 }
 
 // ReviewConfig sets thresholds for code and security reviews.
@@ -36,31 +43,31 @@ type ScoringConfig struct {
 	Rubrics     map[string]RubricConfig `yaml:"rubrics,omitempty"`
 }
 
-// IDEConfig controls which IDE integrations are generated.
-type IDEConfig struct {
-	Cursor     CursorIDEConfig     `yaml:"cursor,omitempty"`
-	ClaudeCode ClaudeCodeIDEConfig `yaml:"claude_code,omitempty"`
-	Codex      CodexIDEConfig      `yaml:"codex,omitempty"`
-	OpenCode   OpenCodeIDEConfig   `yaml:"opencode,omitempty"`
+// AgentsConfig controls which agent integrations are generated.
+type AgentsConfig struct {
+	Cursor     CursorAgentConfig     `yaml:"cursor,omitempty"`
+	ClaudeCode ClaudeCodeAgentConfig `yaml:"claude_code,omitempty"`
+	Codex      CodexAgentConfig      `yaml:"codex,omitempty"`
+	OpenCode   OpenCodeAgentConfig   `yaml:"opencode,omitempty"`
 }
 
-// CursorIDEConfig controls Cursor IDE integration.
-type CursorIDEConfig struct {
+// CursorAgentConfig controls Cursor agent integration.
+type CursorAgentConfig struct {
 	Enabled bool `yaml:"enabled,omitempty"`
 }
 
-// ClaudeCodeIDEConfig controls Claude Code integration.
-type ClaudeCodeIDEConfig struct {
+// ClaudeCodeAgentConfig controls Claude Code integration.
+type ClaudeCodeAgentConfig struct {
 	Enabled bool `yaml:"enabled,omitempty"`
 }
 
-// CodexIDEConfig controls Codex IDE integration.
-type CodexIDEConfig struct {
+// CodexAgentConfig controls Codex agent integration.
+type CodexAgentConfig struct {
 	Enabled bool `yaml:"enabled,omitempty"`
 }
 
-// OpenCodeIDEConfig controls OpenCode integration.
-type OpenCodeIDEConfig struct {
+// OpenCodeAgentConfig controls OpenCode integration.
+type OpenCodeAgentConfig struct {
 	Enabled bool `yaml:"enabled,omitempty"`
 }
 
