@@ -24,7 +24,7 @@ Default sequence, in dependency order — do not reorder:
 - [#74](https://github.com/nqode-io/qode/issues/74) `qode init --config`; init reads an existing config and scaffolds only enabled entries
 - [#75](https://github.com/nqode-io/qode/issues/75) rename IDEs to Agents, release `v0.4.0-beta`
 
-**Progress as of 2026-09-17:** #72 (PR #77) and #73 (PR #78) merged; the next ticket is **74**. Update this line when a
+**Progress as of 2026-09-17:** #72 (PR #77), #73 (PR #78) and #74 (PR #79) merged; the next ticket is **75**, which cuts the `v0.4.0-beta` release. Update this line when a
 ticket merges; the loop itself infers state from `.qode/contexts/`, not from here.
 
 ## Model assignments (owner decision, 2026-09-16)
