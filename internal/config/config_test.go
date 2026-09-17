@@ -2,8 +2,10 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -223,5 +225,264 @@ func TestLoad_InvalidScoringYAML(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "scoring") {
 		t.Errorf("expected error to mention 'scoring', got: %v", err)
+	}
+}
+
+// --- deprecated ide: key ---
+
+// seedLegacyHome isolates HOME so Load's user-level merge is deterministic and
+// returns the isolated home directory.
+func seedLegacyHome(t *testing.T) string {
+	t.Helper()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	return home
+}
+
+// writeProjectConfig writes body as the project qode.yaml and returns its path.
+func writeProjectConfig(t *testing.T, dir, body string) string {
+	t.Helper()
+	path := filepath.Join(dir, ConfigFileName)
+	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
+		t.Fatalf("writing %s: %v", path, err)
+	}
+	return path
+}
+
+// writeUserConfig writes body as ~/.qode/config.yaml and returns its path.
+func writeUserConfig(t *testing.T, home, body string) string {
+	t.Helper()
+	path := filepath.Join(home, QodeDir, "config.yaml")
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
+		t.Fatalf("writing %s: %v", path, err)
+	}
+	return path
+}
+
+// assertAgents compares the four toggles in cursor, claude_code, codex, opencode
+// order and fails with the whole vector, which is what makes a dropped setting
+// readable rather than a single boolean mismatch.
+func assertAgents(t *testing.T, cfg *Config, want [4]bool) {
+	t.Helper()
+	got := [4]bool{
+		cfg.Agents.Cursor.Enabled,
+		cfg.Agents.ClaudeCode.Enabled,
+		cfg.Agents.Codex.Enabled,
+		cfg.Agents.OpenCode.Enabled,
+	}
+	if got != want {
+		t.Errorf("agents = %v, want %v", got, want)
+	}
+	if cfg.IDE.Kind != 0 {
+		t.Errorf("cfg.IDE.Kind = %d, want 0: the legacy node must never survive a load", cfg.IDE.Kind)
+	}
+}
+
+func TestLoad_LegacyIDEPartialBlock_KeepsUnmentionedAgentDefaults(t *testing.T) {
+	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
+	seedLegacyHome(t)
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, "ide:\n  cursor:\n    enabled: false\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{false, true, true, true})
+}
+
+func TestLoad_LegacyIDEPartialBlockInUserConfig_KeepsUnmentionedAgentDefaults(t *testing.T) {
+	// t.Setenv forbids t.Parallel; the legacy block lives under HOME.
+	home := seedLegacyHome(t)
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, "qode_version: 0.4.0-beta\n")
+	writeUserConfig(t, home, "ide:\n  codex:\n    enabled: false\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{true, true, false, true})
+}
+
+func TestLoad_LegacyIDEThroughMergeKey_KeepsUnmentionedAgentDefaults(t *testing.T) {
+	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
+	seedLegacyHome(t)
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, "base: &base\n  ide:\n    cursor:\n      enabled: false\n<<: *base\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{false, true, true, true})
+}
+
+func TestLoad_LegacyIDEInProjectAndUserConfig_AppliesBoth(t *testing.T) {
+	// t.Setenv forbids t.Parallel; one of the two legacy blocks lives under HOME.
+	home := seedLegacyHome(t)
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, "ide:\n  cursor:\n    enabled: false\n")
+	writeUserConfig(t, home, "ide:\n  codex:\n    enabled: false\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	// Promotion must run per file: the user file's ide: node replaces the project
+	// file's in cfg.IDE, so a single promotion at the end loses cursor: false.
+	assertAgents(t, cfg, [4]bool{false, true, false, true})
+}
+
+func TestLoad_LegacyIDENullSection_KeepsAllAgentsEnabled(t *testing.T) {
+	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
+	seedLegacyHome(t)
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, "ide:\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{true, true, true, true})
+}
+
+func TestLoad_LegacyIDEWithAgents_AgentsWins(t *testing.T) {
+	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
+	seedLegacyHome(t)
+	dir := t.TempDir()
+	writeProjectConfig(t, dir,
+		"agents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n    enabled: false\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{true, true, true, true})
+}
+
+func TestLoad_LegacyKeyNotices(t *testing.T) {
+	// t.Setenv forbids t.Parallel; every case isolates HOME.
+	tests := []struct {
+		name    string
+		project string
+		user    string
+		want    func(projectPath, userPath string) []string
+	}{
+		{
+			name:    "legacy key alone",
+			project: "ide:\n  cursor:\n    enabled: false\n",
+			want: func(p, _ string) []string {
+				return []string{fmt.Sprintf(legacyKeyNotice, p)}
+			},
+		},
+		{
+			name:    "canonical key alone",
+			project: "agents:\n  cursor:\n    enabled: false\n",
+			want:    func(string, string) []string { return nil },
+		},
+		{
+			name:    "both keys",
+			project: "agents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n    enabled: false\n",
+			want: func(p, _ string) []string {
+				return []string{fmt.Sprintf(bothKeysNotice, p)}
+			},
+		},
+		{
+			name:    "null agents key beside a legacy block",
+			project: "agents:\nide:\n  cursor:\n    enabled: false\n",
+			want: func(p, _ string) []string {
+				return []string{fmt.Sprintf(legacyKeyNotice, p)}
+			},
+		},
+		{
+			name:    "legacy key in the user config",
+			project: "qode_version: 0.4.0-beta\n",
+			user:    "ide:\n  codex:\n    enabled: false\n",
+			want: func(_, u string) []string {
+				return []string{fmt.Sprintf(legacyKeyNotice, u)}
+			},
+		},
+		{
+			name:    "neither key",
+			project: "qode_version: 0.4.0-beta\n",
+			want:    func(string, string) []string { return nil },
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			home := seedLegacyHome(t)
+			dir := t.TempDir()
+			projectPath := writeProjectConfig(t, dir, tc.project)
+			userPath := filepath.Join(home, QodeDir, "config.yaml")
+			if tc.user != "" {
+				userPath = writeUserConfig(t, home, tc.user)
+			}
+
+			cfg, err := Load(dir)
+			if err != nil {
+				t.Fatalf("load: %v", err)
+			}
+			got := cfg.Notices()
+			want := tc.want(projectPath, userPath)
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("Notices() =\n%#v\nwant\n%#v", got, want)
+			}
+		})
+	}
+}
+
+func TestLoad_LegacyKeyNotices_BothFilesOrderedProjectFirst(t *testing.T) {
+	// t.Setenv forbids t.Parallel; one of the two legacy blocks lives under HOME.
+	home := seedLegacyHome(t)
+	dir := t.TempDir()
+	projectPath := writeProjectConfig(t, dir, "ide:\n  cursor:\n    enabled: false\n")
+	userPath := writeUserConfig(t, home, "ide:\n  codex:\n    enabled: false\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	want := []string{
+		fmt.Sprintf(legacyKeyNotice, projectPath),
+		fmt.Sprintf(legacyKeyNotice, userPath),
+	}
+	if !reflect.DeepEqual(cfg.Notices(), want) {
+		t.Errorf("Notices() =\n%#v\nwant\n%#v", cfg.Notices(), want)
+	}
+}
+
+func TestSave_NeverEmitsLegacyKeys(t *testing.T) {
+	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
+	seedLegacyHome(t)
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, "ide:\n  cursor:\n    enabled: false\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{false, true, true, true})
+
+	out := t.TempDir()
+	if err := Save(out, cfg); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(out, ConfigFileName))
+	if err != nil {
+		t.Fatalf("reading saved config: %v", err)
+	}
+	for _, banned := range []string{"ide:", "legacy:"} {
+		if strings.Contains(string(data), banned) {
+			t.Errorf("saved config contains %q:\n%s", banned, data)
+		}
+	}
+	if !strings.Contains(string(data), "agents:") {
+		t.Errorf("saved config has no agents: block:\n%s", data)
 	}
 }

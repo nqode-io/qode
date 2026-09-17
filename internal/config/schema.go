@@ -15,6 +15,9 @@ type Config struct {
 	IDE       yaml.Node       `yaml:"ide,omitempty"`
 	Knowledge KnowledgeConfig `yaml:"knowledge,omitempty"`
 	Diff      DiffConfig      `yaml:"diff,omitempty"`
+	// Legacy records deprecated keys seen while loading. yaml:"-" keeps Save from
+	// writing it back into qode.yaml.
+	Legacy LegacyKeys `yaml:"-"`
 }
 
 // ReviewConfig sets thresholds for code and security reviews.

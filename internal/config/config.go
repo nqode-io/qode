@@ -104,10 +104,76 @@ func FindRoot(dir string) (string, error) {
 	}
 }
 
+// Deprecation notice wording. %s is the path of the file that carried the key.
+const (
+	bothKeysNotice = "warning: %s: both 'agents:' and 'ide:' are set — " +
+		"'agents:' wins, 'ide:' is ignored. Delete the 'ide:' block."
+	legacyKeyNotice = "warning: %s: 'ide:' is deprecated — read as 'agents:'. " +
+		"Rename the key to 'agents:'."
+)
+
+// LegacyKeys records deprecated configuration keys seen while loading, in load
+// order: the project qode.yaml before ~/.qode/config.yaml.
+type LegacyKeys struct {
+	IDEKeyPaths  []string // files that carried `ide:` alone
+	BothKeyPaths []string // files that carried both `ide:` and `agents:`
+}
+
+// Notices returns the user-facing lines for those observations: the both-keys
+// warnings first, then the deprecation warnings, each in load order. Pure: it
+// formats strings and performs no I/O, so config stays printer-free.
+func (c *Config) Notices() []string {
+	var out []string
+	for _, p := range c.Legacy.BothKeyPaths {
+		out = append(out, fmt.Sprintf(bothKeysNotice, p))
+	}
+	for _, p := range c.Legacy.IDEKeyPaths {
+		out = append(out, fmt.Sprintf(legacyKeyNotice, p))
+	}
+	return out
+}
+
+// legacyProbe detects which agent keys ONE file carries. It is needed because
+// mergeFromFile unmarshals every file into the same Config, so a legacy project
+// file followed by a modern user file is otherwise indistinguishable from one
+// file carrying both keys.
+type legacyProbe struct {
+	Agents *AgentsConfig `yaml:"agents"`
+	IDE    *AgentsConfig `yaml:"ide"`
+}
+
 func mergeFromFile(path string, cfg *Config) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	return yaml.Unmarshal(data, cfg)
+	var probe legacyProbe
+	if err := yaml.Unmarshal(data, &probe); err != nil {
+		return fmt.Errorf("parsing %s: %w", path, err)
+	}
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return err
+	}
+	return promoteLegacy(cfg, path, probe.Agents != nil)
+}
+
+// promoteLegacy applies this file's deprecated ide: block over cfg.Agents key by
+// key, so an agent the block does not name keeps the value it already has. A file
+// that also carries agents: is not promoted: agents: wins. The node is zeroed
+// either way, so it can never survive into the next file or into Save.
+func promoteLegacy(cfg *Config, path string, sawAgents bool) error {
+	node := cfg.IDE
+	cfg.IDE = yaml.Node{}
+	if node.Kind == 0 {
+		return nil
+	}
+	if sawAgents {
+		cfg.Legacy.BothKeyPaths = append(cfg.Legacy.BothKeyPaths, path)
+		return nil
+	}
+	cfg.Legacy.IDEKeyPaths = append(cfg.Legacy.IDEKeyPaths, path)
+	if err := node.Decode(&cfg.Agents); err != nil {
+		return fmt.Errorf("parsing %s: decoding deprecated 'ide:' block: %w", path, err)
+	}
+	return nil
 }
