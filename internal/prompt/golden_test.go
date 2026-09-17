@@ -94,6 +94,11 @@ func TestGolden_Templates(t *testing.T) {
 			data:   NewTemplateData("test-project").WithIDE("codex").Build(),
 		},
 		{
+			name:   "scaffold/qode-plan-refine",
+			golden: "scaffold/qode-plan-refine.opencode",
+			data:   NewTemplateData("test-project").WithIDE("opencode").Build(),
+		},
+		{
 			name:   "scaffold/qode-check",
 			golden: "scaffold/qode-check.claude",
 			data:   NewTemplateData("test-project").WithIDE("claude").Build(),
@@ -107,6 +112,11 @@ func TestGolden_Templates(t *testing.T) {
 			name:   "scaffold/qode-check",
 			golden: "scaffold/qode-check.codex",
 			data:   NewTemplateData("test-project").WithIDE("codex").Build(),
+		},
+		{
+			name:   "scaffold/qode-check",
+			golden: "scaffold/qode-check.opencode",
+			data:   NewTemplateData("test-project").WithIDE("opencode").Build(),
 		},
 	}
 
