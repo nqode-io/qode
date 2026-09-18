@@ -365,6 +365,61 @@ func TestLoad_LegacyIDEWithAgents_AgentsWins(t *testing.T) {
 	assertAgents(t, cfg, [4]bool{true, true, true, true})
 }
 
+func TestLoad_LegacyIDEWithAgentsInUserConfig_AgentsWins(t *testing.T) {
+	// t.Setenv forbids t.Parallel; both keys live in ~/.qode/config.yaml.
+	home := seedLegacyHome(t)
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, "qode_version: 0.4.0-beta\n")
+	writeUserConfig(t, home,
+		"agents:\n  codex:\n    enabled: true\nide:\n  codex:\n    enabled: false\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{true, true, true, true})
+}
+
+func TestLoad_LegacyIDEWrongType_IsRefused(t *testing.T) {
+	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "sequence", body: "qode_version: 0.4.0-beta\nide: [cursor]\n"},
+		{name: "scalar", body: "qode_version: 0.4.0-beta\nide: cursor\n"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			seedLegacyHome(t)
+			dir := t.TempDir()
+			path := writeProjectConfig(t, dir, tc.body)
+
+			_, err := Load(dir)
+			if err == nil {
+				t.Fatalf("Load accepted an ide: key that is not a mapping")
+			}
+			if !strings.Contains(err.Error(), "cannot unmarshal") {
+				t.Errorf("error = %v, want it to say what could not be unmarshalled", err)
+			}
+			// The path belongs in the message once. Load adds it; the probe
+			// unmarshal must not add it a second time.
+			if got := strings.Count(err.Error(), path); got != 1 {
+				t.Errorf("the config path appears %d times in %v, want 1", got, err)
+			}
+
+			after, readErr := os.ReadFile(path)
+			if readErr != nil {
+				t.Fatalf("reading %s: %v", path, readErr)
+			}
+			if string(after) != tc.body {
+				t.Errorf("a refused load rewrote the file:\ngot\n%s\nwant\n%s", after, tc.body)
+			}
+		})
+	}
+}
+
 func TestLoad_LegacyKeyNotices(t *testing.T) {
 	// t.Setenv forbids t.Parallel; every case isolates HOME.
 	tests := []struct {
@@ -397,6 +452,14 @@ func TestLoad_LegacyKeyNotices(t *testing.T) {
 			project: "agents:\nide:\n  cursor:\n    enabled: false\n",
 			want: func(p, _ string) []string {
 				return []string{fmt.Sprintf(legacyKeyNotice, p)}
+			},
+		},
+		{
+			name:    "both keys in the user config",
+			project: "qode_version: 0.4.0-beta\n",
+			user:    "agents:\n  codex:\n    enabled: true\nide:\n  codex:\n    enabled: false\n",
+			want: func(_, u string) []string {
+				return []string{fmt.Sprintf(bothKeysNotice, u)}
 			},
 		},
 		{

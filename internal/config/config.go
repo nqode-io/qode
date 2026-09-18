@@ -148,8 +148,11 @@ func mergeFromFile(path string, cfg *Config) error {
 		return err
 	}
 	var probe legacyProbe
+	// Bare, like the unmarshal below it: Load already names the file, and the
+	// probe is the first thing to reject a mistyped agents: or ide: block, so a
+	// wrapper here would stamp the path into the message twice.
 	if err := yaml.Unmarshal(data, &probe); err != nil {
-		return fmt.Errorf("parsing %s: %w", path, err)
+		return err
 	}
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return err
