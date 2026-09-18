@@ -182,7 +182,7 @@ qode supports four agents out of the box. Cursor, Claude Code and OpenCode recei
 | Enable in `qode.yaml` | `agents.cursor.enabled: true`    | `agents.claude_code.enabled: true` | `agents.codex.enabled: true`     | `agents.opencode.enabled: true`  |
 | Regenerate            | Run `qode init` after toggling   | Run `qode init` after toggling     | Run `qode init` after toggling   | Run `qode init` after toggling   |
 
-A toggle set to `false` is honoured: `qode init` skips that agent's assets and leaves your `qode.yaml` untouched.
+A toggle set to `false` is honoured: `qode init` skips that agent's assets and never resets the toggle — your values survive the upgrade.
 
 Workflow names available in all agents:
 

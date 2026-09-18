@@ -41,7 +41,7 @@ tools/             Release scripts
 
 Config (`config`) -> Context (`qodecontext`) -> Prompt engine (`prompt`) -> Domain builders (`plan`, `review`) -> CLI commands (`cli`) -> Output
 
-- **Config** loads `qode.yaml`; provides scoring rubrics, review thresholds, diff command, and IDE settings
+- **Config** loads `qode.yaml`; provides scoring rubrics, review thresholds, diff command, and agent settings
 - **Context** reads per-context state from `.qode/contexts/<name>/` via the `current` symlink (ticket, analysis, spec, reviews)
 - **Prompt engine** resolves templates local-override-first: `.qode/prompts/` before `go:embed` fallback. `TemplateData` is the single struct for all templates
 - **Workflow guards** (`workflow`) enforce step ordering — e.g. spec requires minimum refine score
