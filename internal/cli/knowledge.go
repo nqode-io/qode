@@ -89,7 +89,7 @@ func runKnowledgeAdd(out io.Writer, src string) error {
 	if err := iokit.WriteFile(dest, data, 0644); err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintf(out, "Added to knowledge base: %s\n", dest)
+	_, _ = fmt.Fprintf(out, "Added to knowledge base: %s\n", iokit.DisplayPath(dest))
 	return nil
 }
 
@@ -122,7 +122,7 @@ func runKnowledgeSearch(out, errOut io.Writer, query string) error {
 		return nil
 	}
 	for _, r := range results {
-		_, _ = fmt.Fprintf(out, "%s: %s\n", r.File, r.Snippet)
+		_, _ = fmt.Fprintf(out, "%s: %s\n", iokit.DisplayPath(r.File), r.Snippet)
 	}
 	return nil
 }
@@ -164,7 +164,7 @@ func runKnowledgeAddContext(out, errOut io.Writer, toFile bool) error {
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintf(errOut, "Lesson extraction prompt saved to:\n  %s\n", promptPath)
+		_, _ = fmt.Fprintf(errOut, "Lesson extraction prompt saved to:\n  %s\n", iokit.DisplayPath(promptPath))
 		return nil
 	}
 

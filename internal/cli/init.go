@@ -58,7 +58,7 @@ func runInitExisting(ctx context.Context, out, errOut io.Writer, root, binaryVer
 		if err := config.WriteDefault(ctx, root, binaryVersion, force); err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintf(out, "Generated: %s\n", filepath.Join(root, config.ConfigFileName))
+		_, _ = fmt.Fprintf(out, "Generated: %s\n", iokit.DisplayPath(filepath.Join(root, config.ConfigFileName)))
 		return nil
 	}
 	cfg, err := ensureConfig(ctx, out, errOut, root, binaryVersion, force)
@@ -79,7 +79,7 @@ func ensureConfig(ctx context.Context, out, errOut io.Writer, root, binaryVersio
 		if err := config.WriteDefault(ctx, root, binaryVersion, true); err != nil {
 			return nil, err
 		}
-		_, _ = fmt.Fprintf(out, "Generated: %s\n", path)
+		_, _ = fmt.Fprintf(out, "Generated: %s\n", iokit.DisplayPath(path))
 	case statErr != nil:
 		return nil, fmt.Errorf("checking %s: %w", path, statErr)
 	default:
@@ -88,7 +88,7 @@ func ensureConfig(ctx context.Context, out, errOut io.Writer, root, binaryVersio
 			return nil, withOverwriteHint(err)
 		}
 		if res.Changed {
-			_, _ = fmt.Fprintf(out, "Updated: %s\n", path)
+			_, _ = fmt.Fprintf(out, "Updated: %s\n", iokit.DisplayPath(path))
 		}
 		if res.LegacyKeyRenamed {
 			_, _ = fmt.Fprintln(out, "qode.yaml: 'ide:' has been renamed to 'agents:' — updated in place.")
@@ -141,7 +141,7 @@ func scaffoldFromConfig(ctx context.Context, out io.Writer, root string, cfg *co
 		if err := iokit.WriteFile(scoringPath, scoringData, 0644); err != nil {
 			return fmt.Errorf("writing %s: %w", scoringPath, err)
 		}
-		_, _ = fmt.Fprintf(out, "Generated: %s\n", scoringPath)
+		_, _ = fmt.Fprintf(out, "Generated: %s\n", iokit.DisplayPath(scoringPath))
 	}
 
 	// Copy embedded prompt templates.

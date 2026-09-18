@@ -581,16 +581,18 @@ func TestLoad_LegacyKeyNotices(t *testing.T) {
 			name:    "both keys in the user config",
 			project: "qode_version: 0.4.0-beta\n",
 			user:    "agents:\n  codex:\n    enabled: true\nide:\n  codex:\n    enabled: false\n",
-			want: func(_, u string) []string {
-				return []string{fmt.Sprintf(bothKeysNotice, u)}
+			want: func(string, string) []string {
+				// The machine-local file is named the way the user would type it,
+				// not by an absolute path carrying their account name.
+				return []string{fmt.Sprintf(bothKeysNotice, userConfigDisplayPath)}
 			},
 		},
 		{
 			name:    "legacy key in the user config",
 			project: "qode_version: 0.4.0-beta\n",
 			user:    "ide:\n  codex:\n    enabled: false\n",
-			want: func(_, u string) []string {
-				return []string{fmt.Sprintf(legacyKeyNotice, u)}
+			want: func(string, string) []string {
+				return []string{fmt.Sprintf(legacyKeyNotice, userConfigDisplayPath)}
 			},
 		},
 		{
@@ -673,12 +675,57 @@ func TestUpgrade_AcceptsWhatTheEmptyAgentsNoticeTellsTheUserToDo(t *testing.T) {
 	}
 }
 
+func TestNotices_EscapeAControlCharacterInAPath(t *testing.T) {
+	t.Parallel()
+
+	// A project root can be a directory a clone brought with it, so a notice's path
+	// is untrusted text: this one erases the line it is printed on.
+	hostile := "/tmp/evil\x1b[2K\r/qode.yaml"
+	cfg := &Config{}
+	cfg.Legacy.IDEKeyPaths = []string{hostile}
+	cfg.Legacy.BothKeyPaths = []string{hostile}
+	cfg.Legacy.EmptyAgentsPaths = []string{hostile}
+
+	for _, n := range cfg.Notices() {
+		if strings.ContainsAny(n, "\x1b\r") {
+			t.Errorf("notice carries a raw control character:\n%q", n)
+		}
+		if !strings.Contains(n, `evil\x1b[2K\r`) {
+			t.Errorf("notice does not carry the escaped path:\n%q", n)
+		}
+	}
+}
+
+func TestLoad_NamesTheMachineLocalConfigWithoutTheHomePath(t *testing.T) {
+	// t.Setenv forbids t.Parallel; the legacy block lives under HOME.
+	home := seedLegacyHome(t)
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, "qode_version: 0.4.0-beta\n")
+	writeUserConfig(t, home, "ide:\n  codex:\n    enabled: false\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+
+	notices := cfg.Notices()
+	if len(notices) != 1 {
+		t.Fatalf("Notices() = %#v, want one deprecation line", notices)
+	}
+	if strings.Contains(notices[0], home) {
+		t.Errorf("the notice prints the home directory:\n%s", notices[0])
+	}
+	if !strings.Contains(notices[0], userConfigDisplayPath) {
+		t.Errorf("the notice does not name %s:\n%s", userConfigDisplayPath, notices[0])
+	}
+}
+
 func TestLoad_LegacyKeyNotices_BothFilesOrderedProjectFirst(t *testing.T) {
 	// t.Setenv forbids t.Parallel; one of the two legacy blocks lives under HOME.
 	home := seedLegacyHome(t)
 	dir := t.TempDir()
 	projectPath := writeProjectConfig(t, dir, "ide:\n  cursor:\n    enabled: false\n")
-	userPath := writeUserConfig(t, home, "ide:\n  codex:\n    enabled: false\n")
+	writeUserConfig(t, home, "ide:\n  codex:\n    enabled: false\n")
 
 	cfg, err := Load(dir)
 	if err != nil {
@@ -686,7 +733,7 @@ func TestLoad_LegacyKeyNotices_BothFilesOrderedProjectFirst(t *testing.T) {
 	}
 	want := []string{
 		fmt.Sprintf(legacyKeyNotice, projectPath),
-		fmt.Sprintf(legacyKeyNotice, userPath),
+		fmt.Sprintf(legacyKeyNotice, userConfigDisplayPath),
 	}
 	if !reflect.DeepEqual(cfg.Notices(), want) {
 		t.Errorf("Notices() =\n%#v\nwant\n%#v", cfg.Notices(), want)

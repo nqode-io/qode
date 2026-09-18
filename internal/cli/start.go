@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/knowledge"
 	"github.com/nqode/qode/internal/plan"
 	"github.com/nqode/qode/internal/workflow"
@@ -53,7 +54,7 @@ func runStart(ctx context.Context, out, errOut io.Writer, toFile, force bool) er
 
 	if !sess.Context.HasSpec() {
 		_, _ = fmt.Fprintln(errOut, "No spec.md found.")
-		_, _ = fmt.Fprintf(errOut, "Run the `qode-plan-spec` step first and save the output to:\n  %s/spec.md\n", sess.Context.ContextDir)
+		_, _ = fmt.Fprintf(errOut, "Run the `qode-plan-spec` step first and save the output to:\n  %s/spec.md\n", iokit.DisplayPath(sess.Context.ContextDir))
 		return ErrNoSpec
 	}
 
@@ -81,7 +82,7 @@ func runStart(ctx context.Context, out, errOut io.Writer, toFile, force bool) er
 		if err := writePromptToFile(outPath, p); err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintf(errOut, "Implementation prompt saved to:\n  %s\n", outPath)
+		_, _ = fmt.Fprintf(errOut, "Implementation prompt saved to:\n  %s\n", iokit.DisplayPath(outPath))
 		return nil
 	}
 

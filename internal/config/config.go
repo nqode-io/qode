@@ -34,7 +34,7 @@ func Load(root string) (*Config, error) {
 
 	// Try to load project config.
 	projectPath := filepath.Join(root, ConfigFileName)
-	if err := mergeFromFile(projectPath, &cfg); err != nil && !os.IsNotExist(err) {
+	if err := mergeFromFile(configFile{path: projectPath, display: projectPath}, &cfg); err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("loading %s: %w", projectPath, err)
 	}
 
@@ -48,7 +48,7 @@ func Load(root string) (*Config, error) {
 	home, err := os.UserHomeDir()
 	if err == nil {
 		userPath := filepath.Join(home, QodeDir, "config.yaml")
-		if err := mergeFromFile(userPath, &cfg); err != nil && !os.IsNotExist(err) {
+		if err := mergeFromFile(configFile{path: userPath, display: userConfigDisplayPath}, &cfg); err != nil && !os.IsNotExist(err) {
 			return nil, fmt.Errorf("loading %s: %w", userPath, err)
 		}
 	}
@@ -104,7 +104,8 @@ func FindRoot(dir string) (string, error) {
 	}
 }
 
-// Deprecation notice wording. %s is the path of the file that carried the key.
+// Deprecation notice wording. %s is how the file that carried the key is named,
+// which is the display form of its path — see configFile.
 const (
 	bothKeysNotice = "warning: %s: both 'agents:' and 'ide:' are set — " +
 		"'agents:' wins, 'ide:' is ignored. Delete the 'ide:' block."
@@ -118,8 +119,24 @@ const (
 		"Delete the empty 'agents:' line first, then rename 'ide:' to 'agents:'."
 )
 
-// LegacyKeys records deprecated configuration keys seen while loading. Within
-// each field the paths are in load order, the project qode.yaml before
+// userConfigDisplayPath is how a notice names the machine-local config. Its
+// absolute form carries the user's OS account name, and Upgrade never migrates that
+// file, so the absolute path would be printed on every command for as long as the
+// deprecated key is there. The tilde form is what the user would type anyway.
+const userConfigDisplayPath = "~/" + QodeDir + "/config.yaml"
+
+// configFile is one file Load merges: the path it reads, and the form a notice
+// names it by. The two are the same for the project file, which the user acts on by
+// path; they differ for the machine-local one, see userConfigDisplayPath. Errors
+// still name the real path, because a load that fails has to say which file failed.
+type configFile struct {
+	path    string
+	display string
+}
+
+// LegacyKeys records deprecated configuration keys seen while loading, as the
+// display form of each file's path rather than the path Load read. Within
+// each field the files are in load order, the project qode.yaml before
 // ~/.qode/config.yaml; across fields they are not, because Notices drains the
 // fields in turn. Every line names its own file, so the order is presentational.
 type LegacyKeys struct {
@@ -137,13 +154,13 @@ type LegacyKeys struct {
 func (c *Config) Notices() []string {
 	var out []string
 	for _, p := range c.Legacy.BothKeyPaths {
-		out = append(out, fmt.Sprintf(bothKeysNotice, p))
+		out = append(out, fmt.Sprintf(bothKeysNotice, iokit.DisplayPath(p)))
 	}
 	for _, p := range c.Legacy.IDEKeyPaths {
-		out = append(out, fmt.Sprintf(legacyKeyNotice, p))
+		out = append(out, fmt.Sprintf(legacyKeyNotice, iokit.DisplayPath(p)))
 	}
 	for _, p := range c.Legacy.EmptyAgentsPaths {
-		out = append(out, fmt.Sprintf(emptyAgentsNotice, p))
+		out = append(out, fmt.Sprintf(emptyAgentsNotice, iokit.DisplayPath(p)))
 	}
 	return out
 }
@@ -185,8 +202,8 @@ func readConfigFile(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
-func mergeFromFile(path string, cfg *Config) error {
-	data, err := readConfigFile(path)
+func mergeFromFile(f configFile, cfg *Config) error {
+	data, err := readConfigFile(f.path)
 	if err != nil {
 		return err
 	}
@@ -212,7 +229,7 @@ func mergeFromFile(path string, cfg *Config) error {
 	if err := doc.Decode(cfg); err != nil {
 		return err
 	}
-	return promoteLegacy(cfg, path, &probe.Agents)
+	return promoteLegacy(cfg, f, &probe.Agents)
 }
 
 // promoteLegacy applies this file's deprecated ide: block over cfg.Agents key by
@@ -220,7 +237,8 @@ func mergeFromFile(path string, cfg *Config) error {
 // that also carries agents: with a value is not promoted: agents: wins. The node
 // is zeroed either way, so it can never survive into the next file or into Save.
 // agentsKey is this file's agents: value node, left at Kind 0 when the file has
-// no such key.
+// no such key. A notice names f the way the user should read it, an error names the
+// file that actually failed.
 //
 // "Carries agents:" means something narrower here than on the write side, and the
 // difference is deliberate. A null agents: counts as unset here, so the ide: block
@@ -230,7 +248,7 @@ func mergeFromFile(path string, cfg *Config) error {
 // until the empty agents: key is deleted by hand — which is why it gets its own
 // notice, the ordinary "rename the key" advice being the one thing that does not
 // work there.
-func promoteLegacy(cfg *Config, path string, agentsKey *yaml.Node) error {
+func promoteLegacy(cfg *Config, f configFile, agentsKey *yaml.Node) error {
 	node := cfg.IDE
 	cfg.IDE = yaml.Node{}
 	if node.Kind == 0 {
@@ -238,15 +256,15 @@ func promoteLegacy(cfg *Config, path string, agentsKey *yaml.Node) error {
 	}
 	switch {
 	case agentsKey.Kind != 0 && !isNull(agentsKey):
-		cfg.Legacy.BothKeyPaths = append(cfg.Legacy.BothKeyPaths, path)
+		cfg.Legacy.BothKeyPaths = append(cfg.Legacy.BothKeyPaths, f.display)
 		return nil
 	case agentsKey.Kind != 0:
-		cfg.Legacy.EmptyAgentsPaths = append(cfg.Legacy.EmptyAgentsPaths, path)
+		cfg.Legacy.EmptyAgentsPaths = append(cfg.Legacy.EmptyAgentsPaths, f.display)
 	default:
-		cfg.Legacy.IDEKeyPaths = append(cfg.Legacy.IDEKeyPaths, path)
+		cfg.Legacy.IDEKeyPaths = append(cfg.Legacy.IDEKeyPaths, f.display)
 	}
 	if err := node.Decode(&cfg.Agents); err != nil {
-		return fmt.Errorf("parsing %s: decoding deprecated 'ide:' block: %w", path, err)
+		return fmt.Errorf("parsing %s: decoding deprecated 'ide:' block: %w", f.path, err)
 	}
 	return nil
 }

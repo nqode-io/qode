@@ -96,7 +96,7 @@ func runReview(ctx context.Context, out, errOut io.Writer, kind string, toFile, 
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintf(errOut, "%s review prompt saved to:\n  %s\n", capitalize(kind), promptPath)
+		_, _ = fmt.Fprintf(errOut, "%s review prompt saved to:\n  %s\n", capitalize(kind), iokit.DisplayPath(promptPath))
 		return nil
 	}
 

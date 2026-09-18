@@ -19,6 +19,32 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// hostileDirName carries an ANSI erase-line sequence and a carriage return: printed
+// raw, it wipes the line it appears on and lets whatever follows read as qode's own
+// output. A clone can ship a directory named like this.
+const hostileDirName = "evil\x1b[2K\r"
+
+func TestRunInitExisting_EscapesAControlCharacterInThePathItPrints(t *testing.T) {
+	isolateHome(t)
+	root := filepath.Join(t.TempDir(), hostileDirName)
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Skipf("cannot create a directory named with control characters: %v", err)
+	}
+
+	var out bytes.Buffer
+	if err := runInitExisting(context.Background(), &out, io.Discard, root, "0.4.0-beta", true, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	printed := out.String()
+	if strings.ContainsAny(printed, "\x1b\r") {
+		t.Errorf("printed a raw control character:\n%q", printed)
+	}
+	if !strings.Contains(printed, `evil\x1b[2K\r`) {
+		t.Errorf("the escaped path is not in the output:\n%q", printed)
+	}
+}
+
 func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 	isolateHome(t)
 	dir := t.TempDir()

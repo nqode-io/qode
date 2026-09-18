@@ -6,6 +6,7 @@ import (
 	"io"
 	"path/filepath"
 
+	"github.com/nqode/qode/internal/iokit"
 	"github.com/nqode/qode/internal/plan"
 	"github.com/nqode/qode/internal/workflow"
 	"github.com/spf13/cobra"
@@ -93,7 +94,7 @@ func runPlanJudge(ctx context.Context, out, errOut io.Writer, toFile bool) error
 
 	if !sess.Context.HasRefinedAnalysis() {
 		_, _ = fmt.Fprintln(errOut, "No refined analysis found.")
-		_, _ = fmt.Fprintf(errOut, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", sess.Context.ContextDir)
+		_, _ = fmt.Fprintf(errOut, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", iokit.DisplayPath(sess.Context.ContextDir))
 		return ErrNoAnalysis
 	}
 
@@ -109,7 +110,7 @@ func runPlanJudge(ctx context.Context, out, errOut io.Writer, toFile bool) error
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintf(errOut, "Judge prompt saved to:\n  %s\n", promptPath)
+		_, _ = fmt.Fprintf(errOut, "Judge prompt saved to:\n  %s\n", iokit.DisplayPath(promptPath))
 		return nil
 	}
 
@@ -136,7 +137,7 @@ func runPlanRefine(ctx context.Context, out, errOut io.Writer, ticketURL string,
 		if err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintf(errOut, "Iteration %d — worker prompt saved to:\n  %s\n", refOut.Iteration, workerPath)
+		_, _ = fmt.Fprintf(errOut, "Iteration %d — worker prompt saved to:\n  %s\n", refOut.Iteration, iokit.DisplayPath(workerPath))
 		return nil
 	}
 
@@ -165,7 +166,7 @@ func runPlanSpec(ctx context.Context, out, errOut io.Writer, toFile, force bool)
 
 	if !sess.Context.HasRefinedAnalysis() {
 		_, _ = fmt.Fprintln(errOut, "No refined analysis found.")
-		_, _ = fmt.Fprintf(errOut, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", sess.Context.ContextDir)
+		_, _ = fmt.Fprintf(errOut, "Run 'qode plan refine' first and save the AI output to:\n  %s/refined-analysis.md\n", iokit.DisplayPath(sess.Context.ContextDir))
 		return ErrNoAnalysis
 	}
 
@@ -182,7 +183,7 @@ func runPlanSpec(ctx context.Context, out, errOut io.Writer, toFile, force bool)
 		if err := writePromptToFile(promptPath, p); err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintf(errOut, "Spec prompt saved to:\n  %s\n", promptPath)
+		_, _ = fmt.Fprintf(errOut, "Spec prompt saved to:\n  %s\n", iokit.DisplayPath(promptPath))
 		return nil
 	}
 
