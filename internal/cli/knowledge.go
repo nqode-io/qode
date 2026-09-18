@@ -53,7 +53,7 @@ func runKnowledgeList(out, errOut io.Writer) error {
 		return nil
 	}
 	for _, f := range files {
-		_, _ = fmt.Fprintln(out, f)
+		_, _ = fmt.Fprintln(out, iokit.DisplayPath(f))
 	}
 	return nil
 }
