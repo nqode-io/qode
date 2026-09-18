@@ -21,7 +21,7 @@ Default sequence, in dependency order — do not reorder:
 
 - [#72](https://github.com/nqode-io/qode/issues/72) plan refine resolves open questions interactively before the judge pass
 - [#73](https://github.com/nqode-io/qode/issues/73) OpenCode agent support (`question` tool handling)
-- [#74](https://github.com/nqode-io/qode/issues/74) `qode init --config`; init reads an existing config and scaffolds only enabled entries
+- [#74](https://github.com/nqode-io/qode/issues/74) `qode init --config-only`; init reads an existing config and scaffolds only enabled entries
 - [#75](https://github.com/nqode-io/qode/issues/75) rename IDEs to Agents, release `v0.4.0-beta`
 
 **Progress as of 2026-09-17:** #72 (PR #77), #73 (PR #78) and #74 (PR #79) merged; the next ticket is **75**, which cuts the `v0.4.0-beta` release. Update this line when a

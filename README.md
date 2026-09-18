@@ -76,14 +76,14 @@ Releases tagged before this change shipped `checksums.txt.sig` + `checksums.txt.
 qode.yaml: 'ide:' has been renamed to 'agents:' — updated in place.
 ```
 
-confirms it. Until you run it, every command exits 1 with
+confirms it. Until you run it, every command except `qode init` exits 1 with
 
 ```text
 Error: qode binary (0.4.0-beta) is incompatible with this project's config (0.3.4-beta)
 Run 'qode init' to refresh your configuration, prompts, and agent assets
 ```
 
-An `ide:` block in `~/.qode/config.yaml`, or one pulled in through a `<<:` merge key, is still read but never rewritten — rename those by hand. If a file carries both keys, `agents:` wins, a warning is printed, and the file is left alone for you to delete the `ide:` block yourself.
+An `ide:` block in `~/.qode/config.yaml`, or one pulled in through a `<<:` merge key, is still read but never rewritten — rename those by hand. If a file carries both keys, `agents:` wins, a warning is printed, and the `ide:` block is left exactly as written for you to delete yourself — the rest of the file is upgraded as usual.
 
 ## Quick Start
 

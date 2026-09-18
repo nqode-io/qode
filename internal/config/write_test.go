@@ -1186,24 +1186,64 @@ func TestUpgrade_RenamesLegacyIDEKeyInPlace(t *testing.T) {
 	}
 }
 
+// sectionText returns a top-level section of a rendered config verbatim, from its
+// key line to the next top-level line or the end of the document, so a test can
+// assert that a section was not touched at all rather than that one substring of
+// it survived.
+func sectionText(t *testing.T, rendered, key string) string {
+	t.Helper()
+	var out strings.Builder
+	inSection := false
+	for _, line := range strings.SplitAfter(rendered, "\n") {
+		switch {
+		case line == "":
+		case inSection && (line == "\n" || line[0] == ' ' || line[0] == '\t'):
+			out.WriteString(line)
+		case inSection:
+			return out.String()
+		case strings.HasPrefix(line, key+":"):
+			inSection = true
+			out.WriteString(line)
+		}
+	}
+	if !inSection {
+		t.Fatalf("no top-level %s: section in:\n%s", key, rendered)
+	}
+	return out.String()
+}
+
+// trimSectionTail drops the blank separator line the encoder writes before the
+// next section's head comment, which belongs to that comment rather than to the
+// section sectionText was asked for.
+func trimSectionTail(section string) string {
+	return strings.TrimRight(section, "\n") + "\n"
+}
+
+// TestUpgrade_DoesNotRenameWhenBothKeysPresent holds the contract the CHANGELOG,
+// the README and docs/qode-yaml-reference.md state for a both-keys file: the
+// ide: block is left exactly as written, and only that block. Everything else —
+// the missing agents: toggles, the missing sections, qode_version — is upgraded
+// as it would be in any other file, which is why the docs may not say the file
+// is left alone.
 func TestUpgrade_DoesNotRenameWhenBothKeysPresent(t *testing.T) {
 	t.Parallel()
 
+	const legacyBlock = "ide:\n  cursor:\n    enabled: false\n"
 	dir := seedConfig(t, `qode_version: 0.3.4-beta
 agents:
   cursor:
     enabled: true
-ide:
-  cursor:
-    enabled: false
-`)
+`+legacyBlock)
 
-	res, err := Upgrade(context.Background(), dir, "dev")
+	res, err := Upgrade(context.Background(), dir, "0.4.0-beta")
 	if err != nil {
 		t.Fatalf("Upgrade: %v", err)
 	}
 	if res.LegacyKeyRenamed {
 		t.Error("Upgrade renamed a key that would have duplicated the existing agents:")
+	}
+	if !res.Changed {
+		t.Error("Upgrade = no-op, want the rest of the file upgraded")
 	}
 
 	rendered := string(readConfig(t, dir))
@@ -1212,8 +1252,21 @@ ide:
 			t.Errorf("found %d top-level %s: keys, want 1:\n%s", got, key, rendered)
 		}
 	}
-	if !strings.Contains(rendered, "ide:\n  cursor:\n    enabled: false\n") {
-		t.Errorf("the deprecated block was modified:\n%s", rendered)
+	if got := trimSectionTail(sectionText(t, rendered, legacyAgentsKey)); got != legacyBlock {
+		t.Errorf("the deprecated block was modified:\ngot\n%s\nwant\n%s", got, legacyBlock)
+	}
+
+	// The documented flip side: the file is not left alone.
+	if !strings.Contains(sectionText(t, rendered, "agents"), "opencode:") {
+		t.Errorf("agents: did not gain the keys it was missing:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "0.4.0-beta") {
+		t.Errorf("qode_version was not re-stamped:\n%s", rendered)
+	}
+	for _, key := range []string{"review", "scoring", "knowledge", "diff"} {
+		if countKeyLines(t, rendered, key) != 1 {
+			t.Errorf("the missing %s: section was not appended:\n%s", key, rendered)
+		}
 	}
 }
 
