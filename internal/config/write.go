@@ -429,8 +429,38 @@ func validateDocument(doc *yaml.Node, path string) error {
 	if err := doc.Decode(&cfg); err != nil {
 		return fmt.Errorf("%w: parsing %s: %v", ErrConfigInvalid, path, err)
 	}
+	if err := checkLegacyBlock(&cfg, path); err != nil {
+		return err
+	}
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("%w: %s: %v", ErrConfigInvalid, path, err)
+	}
+	return nil
+}
+
+// checkLegacyBlock type-checks the deprecated ide: block, which the surrounding
+// decode does not: Config.IDE is a yaml.Node, so any shape at all satisfies it.
+// Without this, a malformed ide: sitting beside a literal agents: passes both of
+// Upgrade's validate passes — the rename is what would otherwise move the bad
+// value under agents: where the second pass catches it, and a literal agents:
+// stops the rename. The file was then rewritten and only afterwards rejected by
+// Load, with neither ErrConfigInvalid nor the overwrite hint that goes with it.
+//
+// Only the shape is checked; the decoded values are dropped. Load promotes the
+// block over the real Agents defaults, and duplicating that here would let the
+// two disagree. A null ide: and one carrying keys this release does not know
+// both decode cleanly, so neither is refused.
+//
+// The wrapper names the key as it is spelled in the file, because yaml.v3's own
+// message names a Go type: "cannot unmarshal !!seq into config.AgentsConfig"
+// is unhelpful for a block the user wrote as ide:.
+func checkLegacyBlock(cfg *Config, path string) error {
+	if cfg.IDE.Kind == 0 {
+		return nil
+	}
+	var legacy AgentsConfig
+	if err := cfg.IDE.Decode(&legacy); err != nil {
+		return fmt.Errorf("%w: parsing %s: deprecated 'ide:' block: %v", ErrConfigInvalid, path, err)
 	}
 	return nil
 }

@@ -476,6 +476,10 @@ func TestUpgrade_InvalidFile(t *testing.T) {
 	}{
 		{name: "parse error", body: "scoring: [\n"},
 		{name: "validate failure", body: "review:\n  min_code_score: -1\n"},
+		// Config.IDE is a yaml.Node, which accepts any shape, and the literal
+		// agents: stops the rename that would otherwise move the bad value
+		// somewhere the second validate pass can see it.
+		{name: "malformed ide: beside a literal agents:", body: "agents:\n  cursor:\n    enabled: true\nide: [cursor]\n"},
 	}
 
 	for _, tc := range tests {
@@ -1420,5 +1424,58 @@ func TestUpgrade_DoesNotRenameWhenTheAgentsKeyIsNull(t *testing.T) {
 	}
 	if !strings.Contains(rendered, "ide:\n  cursor:\n    enabled: false\n") {
 		t.Errorf("the deprecated block was modified:\n%s", rendered)
+	}
+}
+
+func TestUpgrade_MalformedLegacyBlockErrorNamesTheDeprecatedKey(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "sequence", body: "agents:\n  cursor:\n    enabled: true\nide: [cursor]\n"},
+		{name: "scalar", body: "agents:\n  cursor:\n    enabled: true\nide: cursor\n"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := seedConfig(t, tc.body)
+
+			_, err := Upgrade(context.Background(), dir, "0.4.0-beta")
+			if !errors.Is(err, ErrConfigInvalid) {
+				t.Fatalf("error = %v, want ErrConfigInvalid", err)
+			}
+			// yaml.v3 names the Go type it could not decode into, so without the
+			// wrapper nothing in the message points at the key the user wrote.
+			if !strings.Contains(err.Error(), legacyAgentsKey+":") {
+				t.Errorf("error = %v, want it to name the %s: key", err, legacyAgentsKey)
+			}
+		})
+	}
+}
+
+func TestUpgrade_LegacyBlockWithUnknownAgentKeysIsAccepted(t *testing.T) {
+	t.Parallel()
+
+	// A block written by a newer qode can name an agent this release has never
+	// heard of. That is a config from the future, not a broken one, so the
+	// shape check must let it through and the rename must keep it.
+	const body = "qode_version: 0.3.4-beta\nide:\n  cursor:\n    enabled: false\n  hypothetical:\n    enabled: true\n"
+	dir := seedConfig(t, body)
+
+	res, err := Upgrade(context.Background(), dir, "0.4.0-beta")
+	if err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+	if !res.LegacyKeyRenamed {
+		t.Fatalf("Upgrade = %+v, want the key renamed", res)
+	}
+
+	rendered := string(readConfig(t, dir))
+	if !strings.Contains(rendered, "  hypothetical:\n    enabled: true\n") {
+		t.Errorf("the unknown agent toggle was dropped:\n%s", rendered)
 	}
 }
