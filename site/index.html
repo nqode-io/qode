@@ -819,13 +819,13 @@
       }
     }
 
-    /* IDE matrix */
-    .ide-table-scroll {
+    /* Agent matrix */
+    .agent-table-scroll {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
     }
 
-    .ide-table {
+    .agent-table {
       width: 100%;
       min-width: 720px;
       border-collapse: collapse;
@@ -836,37 +836,37 @@
       font-size: 13px;
     }
 
-    .ide-table th,
-    .ide-table td {
+    .agent-table th,
+    .agent-table td {
       padding: 14px 14px;
       text-align: left;
       border-bottom: 1px solid var(--border);
     }
 
-    .ide-table thead th {
+    .agent-table thead th {
       background: var(--bg-2);
       color: var(--fg-0);
       font-weight: 500;
       letter-spacing: 0.02em;
     }
 
-    .ide-table tbody th {
+    .agent-table tbody th {
       color: var(--fg-2);
       font-weight: 400;
       background: var(--bg-1);
     }
 
-    .ide-table tbody td {
+    .agent-table tbody td {
       color: var(--fg-1);
       background: var(--bg-1);
     }
 
-    .ide-table tbody tr:last-child th,
-    .ide-table tbody tr:last-child td {
+    .agent-table tbody tr:last-child th,
+    .agent-table tbody tr:last-child td {
       border-bottom: 0;
     }
 
-    .ide-table code {
+    .agent-table code {
       color: var(--green-300);
     }
 
@@ -984,7 +984,7 @@
       <li><a href="#workflow">Workflow</a></li>
       <li><a href="#install">Install</a></li>
       <li><a href="#scoring">Scoring</a></li>
-      <li><a href="#ide">IDEs</a></li>
+      <li><a href="#agents">Agents</a></li>
       <li><a href="#docs">Docs</a></li>
     </ul>
     <a class="gh-btn" href="https://github.com/nqode-io/qode">
@@ -999,7 +999,7 @@
   <header class="hero wrap">
     <div class="hero-grid">
       <div>
-        <span class="eyebrow">v0.3.3-beta · MIT licensed · Go 1.24+</span>
+        <span class="eyebrow">v0.4.0-beta · MIT licensed · Go 1.24+</span>
         <div class="qode-mark"><span class="slash">/</span><span class="word">qode</span><span class="caret"></span>
         </div>
         <h1>One workflow for AI-assisted coding across every stack.</h1>
@@ -1034,7 +1034,7 @@
             <span class="hl">feat-user-dashboard</span> <span class="flag">--auto-switch</span></span>
           <span class="ln out"> ✓ context created · auto-switched</span>
           <span class="ln">&nbsp;</span>
-          <span class="ln dim"># in your IDE — Cursor / Claude Code:</span>
+          <span class="ln dim"># in your agent — Cursor / Claude Code:</span>
           <span class="ln"><span class="step">/qode-ticket-fetch</span> <span
               class="arg">https://linear.app/acme/UD-241</span></span>
           <span class="ln out"> ✓ ticket fetched via MCP → context/ticket.md</span>
@@ -1088,7 +1088,7 @@
         <div class="feature">
           <div class="icon">⇄</div>
           <h3>MCP-native ticketing</h3>
-          <p>No API keys in qode. Jira, Linear, GitHub, Azure DevOps, Notion — fetched through your IDE's MCP server.
+          <p>No API keys in qode. Jira, Linear, GitHub, Azure DevOps, Notion — fetched through your agent's MCP server.
             Linked Figma, Docs, Confluence too.</p>
         </div>
         <div class="feature">
@@ -1305,19 +1305,20 @@
     </div>
   </section>
 
-  <section id="ide">
+  <span id="ide" aria-hidden="true"></span>
+  <section id="agents">
     <div class="wrap">
       <div class="section-head">
-        <span class="eyebrow">// IDE support</span>
-        <h2>Four IDEs. One vocabulary.</h2>
+        <span class="eyebrow">// agent support</span>
+        <h2>Four agents. One vocabulary.</h2>
         <p>Cursor, Claude Code and OpenCode receive slash commands. Codex receives skills that surface the same
           workflow names. Toggle in <code>qode.yaml</code>; re-run <code>qode init</code> and the toggle is
           honoured — your config is preserved, not reset. Run <code>qode init --config-only</code> to write
           <code>qode.yaml</code> and stop.</p>
       </div>
 
-      <div class="ide-table-scroll">
-        <table class="ide-table">
+      <div class="agent-table-scroll">
+        <table class="agent-table">
           <thead>
             <tr>
               <th></th>
@@ -1337,10 +1338,10 @@
             </tr>
             <tr>
               <th>Enable</th>
-              <td><code>ide.cursor.enabled: true</code></td>
-              <td><code>ide.claude_code.enabled: true</code></td>
-              <td><code>ide.codex.enabled: true</code></td>
-              <td><code>ide.opencode.enabled: true</code></td>
+              <td><code>agents.cursor.enabled: true</code></td>
+              <td><code>agents.claude_code.enabled: true</code></td>
+              <td><code>agents.codex.enabled: true</code></td>
+              <td><code>agents.opencode.enabled: true</code></td>
             </tr>
             <tr>
               <th>Invoke</th>
@@ -1352,6 +1353,12 @@
           </tbody>
         </table>
       </div>
+
+      <p style="color:var(--fg-2);font-size:14px;margin-top:18px">Upgrading from 0.3.x? The key used to be
+        <code>ide:</code>. Run <code>qode init</code> once per project and it is renamed to
+        <code>agents:</code> in place, with every toggle you set kept. Run it before anything else:
+        until you do, every command except <code>qode init</code> exits 1 — see the
+        <a href="https://github.com/nqode-io/qode/blob/main/CHANGELOG.md">changelog</a>.</p>
     </div>
   </section>
 
@@ -1372,7 +1379,7 @@
           style="text-decoration:none;color:inherit;border-color:var(--border)">
           <div class="icon">≡</div>
           <h3>qode.yaml reference</h3>
-          <p>Full configuration reference — IDE toggles, prompt overrides, context defaults.</p>
+          <p>Full configuration reference — agent toggles, prompt overrides, context defaults.</p>
         </a>
         <a class="feature" href="https://github.com/nqode-io/qode/blob/main/docs/how-to-use-ticket-fetch.md"
           style="text-decoration:none;color:inherit;border-color:var(--border)">
@@ -1427,7 +1434,7 @@
       </div>
       <div class="legal">
         <span>© 2026 nQode Software Company. qode is MIT-licensed.</span>
-        <span>v0.3.3-beta</span>
+        <span>v0.4.0-beta</span>
       </div>
     </div>
   </footer>

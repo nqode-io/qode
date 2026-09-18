@@ -15,7 +15,6 @@ To reset your rubrics to the built-in defaults, delete the file and re-run `qode
 1. Built-in defaults (in-binary)
 2. `qode.yaml` — scoring thresholds (`strict`, `target_score`) and all other settings
 3. `.qode/scoring.yaml` — rubric definitions override the defaults
-4. `~/.qode/config.yaml` — user-level overrides (optional)
 
 `.qode/scoring.yaml` wins over the built-in rubrics. `qode.yaml` does not contain rubrics and is not consulted for them.
 

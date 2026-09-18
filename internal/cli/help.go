@@ -43,13 +43,13 @@ func newWorkflowStatusCmd() *cobra.Command {
 		Use:   "status",
 		Short: "Show live completion status for each workflow step",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runWorkflowStatus(cmd.OutOrStdout())
+			return runWorkflowStatus(cmd.OutOrStdout(), cmd.ErrOrStderr())
 		},
 	}
 }
 
-func runWorkflowStatus(out io.Writer) error {
-	sess, err := loadSession()
+func runWorkflowStatus(out, errOut io.Writer) error {
+	sess, err := loadSession(errOut)
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func reviewItemStatus(present bool, score, min float64, cmd string, maxScore int
 const workflowList = `qode Workflow
 =============
 
-IDE invocation surface:
+Agent invocation surface:
   Cursor / Claude Code / OpenCode: /qode-*
   Codex:                           $qode-*  (skills generated under .agents/skills/)
 
@@ -199,8 +199,8 @@ IDE invocation surface:
     qode context init <name>
 
 2.  Add context
-    qode-ticket-fetch <url>  (in IDE)
-    Optional helper: qode-note-add  (in IDE, followed by free-form notes)
+    qode-ticket-fetch <url>  (in agent)
+    Optional helper: qode-note-add  (in agent, followed by free-form notes)
 
 3.  Refine requirements  (iterate until pass threshold)
     qode-plan-refine   — worker and scoring pass
@@ -228,7 +228,7 @@ IDE invocation surface:
 
 11. Resolve PR review comments
     qode-pr-resolve
-    Optional helper: qode-knowledge-add-context  (in IDE, capture lessons learned)
+    Optional helper: qode-knowledge-add-context  (in agent, capture lessons learned)
 
 12. Cleanup
     qode context remove

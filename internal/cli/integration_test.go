@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -252,10 +254,10 @@ func TestIntegration_PlanRefine_CancelledContext(t *testing.T) {
 // than the package-global rootCmd, so it constructs no command instance and resets no
 // global state.
 func TestIntegration_Init_CreatesOpenCodeCommands(t *testing.T) {
-	// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
-	isolateHome(t)
+	t.Parallel()
+
 	root := t.TempDir()
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, root, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, root, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -282,8 +284,7 @@ func TestIntegration_Init_CreatesOpenCodeCommands(t *testing.T) {
 // on a fresh command instance. --root is a persistent flag on rootCmd only, so the
 // working directory is switched instead of mutating the package global.
 func TestIntegration_Init_ConfigOnlyFlag(t *testing.T) {
-	// t.Chdir and t.Setenv both forbid t.Parallel; config.Load reads os.UserHomeDir().
-	isolateHome(t)
+	// t.Chdir forbids t.Parallel.
 	dir := t.TempDir()
 	t.Chdir(dir)
 
@@ -314,5 +315,44 @@ func TestIntegration_Init_ConfigOnlyFlag(t *testing.T) {
 	}
 	if !strings.Contains(string(data), "# Minimum scores a review must reach.") {
 		t.Errorf("generated config is not the commented default document:\n%s", data)
+	}
+}
+
+// TestIntegration_Init_MigratesLegacyIDEKey is the regression detector for a legacy
+// project being silently re-enabled. It drives runInitExisting directly rather than
+// the package-global rootCmd, so it constructs no command instance and resets no
+// global state.
+func TestIntegration_Init_MigratesLegacyIDEKey(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	legacy := filepath.Join(root, "qode.yaml")
+	if err := os.WriteFile(legacy, []byte("qode_version: 0.3.4-beta\nide:\n  cursor:\n    enabled: false\n"), 0644); err != nil {
+		t.Fatalf("seeding qode.yaml: %v", err)
+	}
+
+	var out bytes.Buffer
+	if err := runInitExisting(context.Background(), &out, io.Discard, root, "0.4.0-beta", false, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(root, ".cursor")); !errors.Is(err, fs.ErrNotExist) {
+		t.Error(".cursor was generated for an agent the legacy config disabled")
+	}
+
+	data, err := os.ReadFile(legacy)
+	if err != nil {
+		t.Fatalf("reading qode.yaml: %v", err)
+	}
+	rendered := string(data)
+	if got := strings.Count(rendered, "\nagents:\n"); got != 1 {
+		t.Errorf("found %d agents: blocks, want 1:\n%s", got, rendered)
+	}
+	if strings.Contains(rendered, "\nide:\n") {
+		t.Errorf("the deprecated ide: key survived qode init:\n%s", rendered)
+	}
+	const renameLine = "qode.yaml: 'ide:' has been renamed to 'agents:' — updated in place."
+	if got := strings.Count(out.String(), renameLine); got != 1 {
+		t.Errorf("rename line printed %d times, want 1:\n%s", got, out.String())
 	}
 }

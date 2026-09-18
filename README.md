@@ -68,21 +68,38 @@ cosign verify-blob \
 
 Releases tagged before this change shipped `checksums.txt.sig` + `checksums.txt.pem` instead — verify those with `--signature checksums.txt.sig --certificate checksums.txt.pem` and no `--bundle` flag.
 
+## Upgrading to 0.4.0-beta
+
+0.4.0-beta renames the `ide:` key in `qode.yaml` to `agents:`. Run `qode init` once in each existing project: the key is renamed in place, every toggle you set is kept, and the line
+
+```text
+qode.yaml: 'ide:' has been renamed to 'agents:' — updated in place.
+```
+
+confirms it. Until you run it, every command except `qode init` exits 1 with
+
+```text
+Error: qode binary (0.4.0-beta) is incompatible with this project's config (0.3.4-beta)
+Run 'qode init' to refresh your configuration, prompts, and agent assets
+```
+
+An `ide:` block pulled in through a `<<:` merge key is still read but never rewritten — rename that one by hand. If a file carries both keys, `agents:` wins, a warning is printed, and the `ide:` block is left exactly as written for you to delete yourself — the rest of the file is upgraded as usual.
+
 ## Quick Start
 
 ```bash
-# Onboard an existing project (generates qode.yaml and IDE configs)
+# Onboard an existing project (generates qode.yaml and agent configs)
 cd your-project
 qode init
 
 # Or review the config before anything else is generated
 qode init --config-only     # writes qode.yaml and stops
-$EDITOR qode.yaml           # e.g. set ide.codex.enabled: false
+$EDITOR qode.yaml           # e.g. set agents.codex.enabled: false
 qode init                   # scaffolds only what qode.yaml enables
 
 # Start a feature
 qode context init feat-user-dashboard --auto-switch
-# Then invoke qode-ticket-fetch in your IDE to fetch the ticket via MCP
+# Then invoke qode-ticket-fetch in your agent to fetch the ticket via MCP
 # Cursor / Claude Code / OpenCode: /qode-ticket-fetch <url>
 # Codex: $qode-ticket-fetch <url>
 ```
@@ -95,18 +112,18 @@ Before beginning, manually create a new branch for your work.
 
 ```markdown
 1.  qode context init <name>                          Create a named work context
-2.  qode-ticket-fetch <url>                (in IDE)   Fetch ticket via MCP into context
-    Optional helper: qode-note-add         (in IDE)   Follow with free-form notes to record scope, constraints, or course corrections
-3.  qode-plan-refine                       (in IDE)   Refine requirements — worker + clarification + scoring pass
-4.  qode-plan-spec                         (in IDE)   Generate tech spec
-5.  qode-start                             (in IDE)   Run implementation prompt
+2.  qode-ticket-fetch <url>                (in agent) Fetch ticket via MCP into context
+    Optional helper: qode-note-add         (in agent) Follow with free-form notes to record scope, constraints, or course corrections
+3.  qode-plan-refine                       (in agent) Refine requirements — worker + clarification + scoring pass
+4.  qode-plan-spec                         (in agent) Generate tech spec
+5.  qode-start                             (in agent) Run implementation prompt
 6.  Test locally                           (manual)   Verify the change behaves as expected
-7.  qode-check                             (in IDE)   Run quality gates (tests + lint)
-8.  qode-review-code                       (in IDE)   Code review
-9.  qode-review-security                   (in IDE)   Security review
-10. qode-pr-create                         (in IDE)   Create pull request via MCP
-11. qode-pr-resolve                        (in IDE)   Resolve PR review comments via MCP
-    Optional helper: qode-knowledge-add-context (in IDE)  Capture lessons learned
+7.  qode-check                             (in agent) Run quality gates (tests + lint)
+8.  qode-review-code                       (in agent) Code review
+9.  qode-review-security                   (in agent) Security review
+10. qode-pr-create                         (in agent) Create pull request via MCP
+11. qode-pr-resolve                        (in agent) Resolve PR review comments via MCP
+    Optional helper: qode-knowledge-add-context (in agent)  Capture lessons learned
 12. qode context remove                               Cleanup
 ```
 
@@ -155,19 +172,19 @@ Code and security reviews use hardened prompts designed to prevent shallow outpu
 
 Both prompts can be customised via `.qode/prompts/review/` local overrides.
 
-## IDE Support
+## Agent Support
 
-qode supports four IDEs out of the box. Cursor, Claude Code and OpenCode receive slash commands; Codex receives skills that surface the same workflow names in its picker.
+qode supports four agents out of the box. Cursor, Claude Code and OpenCode receive slash commands; Codex receives skills that surface the same workflow names in its picker.
 
-|                       | Cursor                           | Claude Code                       | Codex                            | OpenCode                         |
-| --------------------- | -------------------------------- | --------------------------------- | -------------------------------- | -------------------------------- |
-| Generated assets      | `.cursor/commands/*.mdc`         | `.claude/commands/*.md`           | `.agents/skills/*/SKILL.md`      | `.opencode/commands/*.md`        |
-| Enable in `qode.yaml` | `ide.cursor.enabled: true`       | `ide.claude_code.enabled: true`   | `ide.codex.enabled: true`        | `ide.opencode.enabled: true`     |
-| Regenerate            | Run `qode init` after toggling   | Run `qode init` after toggling    | Run `qode init` after toggling   | Run `qode init` after toggling   |
+|                       | Cursor                           | Claude Code                        | Codex                            | OpenCode                         |
+| --------------------- | -------------------------------- | ---------------------------------- | -------------------------------- | -------------------------------- |
+| Generated assets      | `.cursor/commands/*.mdc`         | `.claude/commands/*.md`            | `.agents/skills/*/SKILL.md`      | `.opencode/commands/*.md`        |
+| Enable in `qode.yaml` | `agents.cursor.enabled: true`    | `agents.claude_code.enabled: true` | `agents.codex.enabled: true`     | `agents.opencode.enabled: true`  |
+| Regenerate            | Run `qode init` after toggling   | Run `qode init` after toggling     | Run `qode init` after toggling   | Run `qode init` after toggling   |
 
-A toggle set to `false` is honoured: `qode init` skips that IDE's assets and leaves your `qode.yaml` untouched.
+A toggle set to `false` is honoured: `qode init` skips that agent's assets and never resets the toggle — your values survive the upgrade.
 
-Workflow names available in all IDEs:
+Workflow names available in all agents:
 
 - `qode-ticket-fetch <url>` — fetch ticket via MCP
 - `qode-note-add` — append concise technical notes to `.qode/contexts/current/notes.md` from free-form trailing text
@@ -186,12 +203,12 @@ Invocation syntax:
 - Cursor / Claude Code / OpenCode: `/qode-*`
 - Codex: `$qode-*` skills generated under `.agents/skills/`
 
-Run `qode init` after toggling enablement in `qode.yaml` to regenerate the IDE assets. Your toggle survives the run — `qode init` no longer resets `qode.yaml` to the defaults.
+Run `qode init` after toggling enablement in `qode.yaml` to regenerate the agent assets. Your toggle survives the run — `qode init` no longer resets `qode.yaml` to the defaults.
 
 ## Commands
 
 ```markdown
-qode init                                                      Initialise qode: generate or upgrade qode.yaml, create .qode/ dirs, generate IDE configs for enabled IDEs
+qode init                                                      Initialise qode: generate or upgrade qode.yaml, create .qode/ dirs, generate agent configs for enabled agents
 qode init --config-only                                        Write qode.yaml with commented defaults and stop
 qode init --force                                              Overwrite qode.yaml with the defaults (NOT the guard bypass --force means on plan/review/start)
 
@@ -201,21 +218,21 @@ qode context clear [name]                                      Clear a context's
 qode context remove [name]                                     Remove a context directory
 qode context reset                                             Clear the active context selection
 
-qode plan refine                                               Generate worker refinement prompt to stdout (use in IDE via /qode-plan-refine)
+qode plan refine                                               Generate worker refinement prompt to stdout (use in your agent via /qode-plan-refine)
 qode plan refine --to-file                                     Save worker prompt to file for debugging
 qode plan judge                                                Generate judge scoring prompt to stdout (requires refined-analysis.md)
 qode plan judge --to-file                                      Save judge prompt to file for debugging
-qode plan spec                                                 Generate tech spec prompt to stdout (use in IDE via the qode-plan-spec workflow)
+qode plan spec                                                 Generate tech spec prompt to stdout (use in your agent via the qode-plan-spec workflow)
 qode plan spec --force                                         Bypass score gate (prerequisite check still applies)
 qode plan spec --to-file                                       Save spec prompt to file for debugging
 
-qode start                                                     Generate implementation prompt to stdout (use in IDE via the qode-start workflow)
+qode start                                                     Generate implementation prompt to stdout (use in your agent via the qode-start workflow)
 qode start --force                                             Bypass spec prerequisite gate
 qode start --to-file                                           Save implementation prompt to file for debugging
 
-qode review code                                               Generate code review prompt to stdout (use in IDE via the qode-review-code workflow)
+qode review code                                               Generate code review prompt to stdout (use in your agent via the qode-review-code workflow)
 qode review code --force                                       Bypass uncommitted-diff check
-qode review security                                           Generate security review prompt to stdout (use in IDE via the qode-review-security workflow)
+qode review security                                           Generate security review prompt to stdout (use in your agent via the qode-review-security workflow)
 qode review security --force                                   Bypass uncommitted-diff check
 
 qode knowledge add <path>                                      Add file to knowledge base
@@ -229,7 +246,7 @@ qode workflow status                                           Show live complet
 
 ## Ticket Fetch via MCP
 
-Ticket fetching uses IDE-native MCP servers — no API keys in qode itself. Configure the MCP server for your ticketing system (Jira, Linear, GitHub, Azure DevOps, Notion) and linked-resource services (Figma, Google Docs, Confluence, etc.) in your IDE, then invoke `qode-ticket-fetch` in your IDE (`/qode-ticket-fetch <url>` in Cursor/Claude Code/OpenCode, `$qode-ticket-fetch <url>` in Codex).
+Ticket fetching uses agent-native MCP servers — no API keys in qode itself. Configure the MCP server for your ticketing system (Jira, Linear, GitHub, Azure DevOps, Notion) and linked-resource services (Figma, Google Docs, Confluence, etc.) in your agent, then invoke `qode-ticket-fetch` in your agent (`/qode-ticket-fetch <url>` in Cursor/Claude Code/OpenCode, `$qode-ticket-fetch <url>` in Codex).
 
 See [docs/how-to-use-ticket-fetch.md](docs/how-to-use-ticket-fetch.md) for full MCP setup instructions per service.
 

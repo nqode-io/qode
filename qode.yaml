@@ -1,10 +1,10 @@
-qode_version: 0.3.4-beta
+qode_version: 0.4.0-beta
 review:
   min_code_score: 10
   min_security_score: 10
 scoring:
   strict: true
-ide:
+agents:
   cursor:
     enabled: true
   claude_code:

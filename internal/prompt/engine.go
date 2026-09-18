@@ -18,11 +18,11 @@ import (
 //go:embed templates
 var embeddedFS embed.FS
 
-// IDE identifiers accepted by TemplateData.IDE.
+// Agent identifiers accepted by TemplateData.Agent.
 const (
-	ideClaude   = "claude"
-	ideCursor   = "cursor"
-	ideOpenCode = "opencode"
+	agentClaude   = "claude"
+	agentCursor   = "cursor"
+	agentOpenCode = "opencode"
 )
 
 // TemplateProject holds the project name for template rendering.
@@ -55,24 +55,24 @@ func NewEngine(root string) (*Engine, error) {
 		// Example: {{printf "%.1f" (pct 75 .Rubric.Total)}} → "7.5" for a 10-pt rubric.
 		"pct": func(percent float64, n int) float64 { return float64(n) * percent / 100.0 },
 		// questionTool returns the name of the structured-question tool available in the
-		// given IDE, or "" when that IDE has none. The empty return is load-bearing: it is
-		// falsy in text/template, so {{if questionTool .IDE}} is the structured-question
-		// branch test and {{questionTool .IDE}} interpolates the tool name. Never return a
+		// given agent, or "" when that agent has none. The empty return is load-bearing: it
+		// is falsy in text/template, so {{if questionTool .Agent}} is the structured-question
+		// branch test and {{questionTool .Agent}} interpolates the tool name. Never return a
 		// non-empty placeholder such as "none" — every such conditional would invert.
-		"questionTool": func(ide string) string {
-			switch ide {
-			case ideClaude:
+		"questionTool": func(agent string) string {
+			switch agent {
+			case agentClaude:
 				return "AskUserQuestion"
-			case ideOpenCode:
+			case agentOpenCode:
 				return "question"
 			default:
 				return ""
 			}
 		},
-		// hasFrontmatter reports whether the given IDE's command files open with a YAML
+		// hasFrontmatter reports whether the given agent's command files open with a YAML
 		// frontmatter block rather than a Markdown title heading.
-		"hasFrontmatter": func(ide string) bool {
-			return ide == ideCursor || ide == ideOpenCode
+		"hasFrontmatter": func(agent string) bool {
+			return agent == agentCursor || agent == agentOpenCode
 		},
 	}
 	return e, nil
@@ -85,7 +85,7 @@ func (e *Engine) ProjectName() string {
 
 // TemplateData is passed into every template.
 type TemplateData struct {
-	IDE          string // target IDE ("claude", "cursor", "codex" or "opencode"); used by scaffold templates
+	Agent        string // target agent ("claude", "cursor", "codex" or "opencode"); used by scaffold templates
 	Project      TemplateProject
 	Ticket       string         // inline content; set only for knowledge/add-context
 	Analysis     string         // inline content; set for knowledge/add-context and scoring judge

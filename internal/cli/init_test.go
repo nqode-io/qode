@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -18,11 +19,39 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// hostileDirName carries an ANSI erase-line sequence and a carriage return: printed
+// raw, it wipes the line it appears on and lets whatever follows read as qode's own
+// output. A clone can ship a directory named like this.
+const hostileDirName = "evil\x1b[2K\r"
+
+func TestRunInitExisting_EscapesAControlCharacterInThePathItPrints(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), hostileDirName)
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Skipf("cannot create a directory named with control characters: %v", err)
+	}
+
+	var out bytes.Buffer
+	if err := runInitExisting(context.Background(), &out, io.Discard, root, "0.4.0-beta", true, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	printed := out.String()
+	if strings.ContainsAny(printed, "\x1b\r") {
+		t.Errorf("printed a raw control character:\n%q", printed)
+	}
+	if !strings.Contains(printed, `evil\x1b[2K\r`) {
+		t.Errorf("the escaped path is not in the output:\n%q", printed)
+	}
+}
+
 func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -45,10 +74,11 @@ func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 }
 
 func TestRunInitExisting_CreatesDirs(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -61,10 +91,11 @@ func TestRunInitExisting_CreatesDirs(t *testing.T) {
 }
 
 func TestRunInitExisting_CopiesTemplates(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -94,11 +125,12 @@ func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 	}
 }
 
-func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
-	isolateHome(t)
+func TestRunInitExisting_CreatesAgentConfigs(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -134,10 +166,11 @@ func TestRunInitExisting_CreatesIDEConfigs(t *testing.T) {
 }
 
 func TestRunInitExisting_NoCursorRules(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -152,11 +185,12 @@ func TestRunInitExisting_NoCursorRules(t *testing.T) {
 }
 
 func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	var buf bytes.Buffer
-	if err := runInitExisting(context.Background(), &buf, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &buf, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -175,10 +209,11 @@ func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 }
 
 func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -189,10 +224,11 @@ func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
 }
 
 func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("first runInitExisting: %v", err)
 	}
 
@@ -204,7 +240,7 @@ func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 	}
 
 	// Second run must succeed and must not overwrite .qode/scoring.yaml.
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("second runInitExisting: %v", err)
 	}
 
@@ -219,10 +255,11 @@ func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 }
 
 func TestRunInitExisting_AppendsGitignoreRules(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -240,13 +277,14 @@ func TestRunInitExisting_AppendsGitignoreRules(t *testing.T) {
 }
 
 func TestRunInitExisting_GitignoreIsIdempotent(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("first runInitExisting: %v", err)
 	}
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("second runInitExisting: %v", err)
 	}
 
@@ -263,11 +301,11 @@ func TestRunInitExisting_GitignoreIsIdempotent(t *testing.T) {
 	}
 }
 
-func TestRootCmd_NoIDESubcommand(t *testing.T) {
-	// Confirm 'ide' is not a registered subcommand.
-	ideCmd, _, findErr := rootCmd.Find([]string{"ide"})
-	if findErr == nil && ideCmd != rootCmd {
-		t.Error("'ide' subcommand must not be registered on rootCmd")
+func TestRootCmd_NoAgentsSubcommand(t *testing.T) {
+	// Confirm 'agents' is not a registered subcommand.
+	agentsCmd, _, findErr := rootCmd.Find([]string{"agents"})
+	if findErr == nil && agentsCmd != rootCmd {
+		t.Error("'agents' subcommand must not be registered on rootCmd")
 	}
 }
 
@@ -291,10 +329,11 @@ func readProjectConfig(t *testing.T, dir string) string {
 }
 
 func TestRunInitExisting_ConfigOnly_WritesOnlyConfig(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", true, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", true, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -315,12 +354,13 @@ func TestRunInitExisting_ConfigOnly_WritesOnlyConfig(t *testing.T) {
 }
 
 func TestRunInitExisting_ConfigOnly_RefusesExisting(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	const existing = "qode_version: 0.1.0\n"
 	seedProjectConfig(t, dir, existing)
 
-	err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", true, false)
+	err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", true, false)
 	if !errors.Is(err, config.ErrConfigExists) {
 		t.Fatalf("error = %v, want ErrConfigExists", err)
 	}
@@ -330,11 +370,12 @@ func TestRunInitExisting_ConfigOnly_RefusesExisting(t *testing.T) {
 }
 
 func TestRunInitExisting_ConfigOnly_ForceOverwrites(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, "qode_version: 0.1.0\n")
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", true, true); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", true, true); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 	if !strings.Contains(readProjectConfig(t, dir), "# Minimum scores a review must reach.") {
@@ -343,14 +384,14 @@ func TestRunInitExisting_ConfigOnly_ForceOverwrites(t *testing.T) {
 }
 
 // customisedConfig is a hand-tuned project config: three non-default values, a
-// hand-written comment, and no ide.opencode block.
+// hand-written comment, and no agents.opencode block.
 const customisedConfig = `# keep me
 qode_version: 0.1.0
 review:
   min_security_score: 10
 scoring:
   strict: true
-ide:
+agents:
   cursor:
     enabled: false
   claude_code:
@@ -360,11 +401,12 @@ ide:
 `
 
 func TestRunInitExisting_UpgradesExistingConfig(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, customisedConfig)
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "0.4.0-beta", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "0.4.0-beta", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -373,7 +415,7 @@ func TestRunInitExisting_UpgradesExistingConfig(t *testing.T) {
 		t.Errorf("hand-written comment was dropped:\n%s", rendered)
 	}
 	if !strings.Contains(rendered, "  opencode:\n    enabled: true") {
-		t.Errorf("opencode was not appended under the existing ide mapping:\n%s", rendered)
+		t.Errorf("opencode was not appended under the existing agents mapping:\n%s", rendered)
 	}
 
 	cfg, err := config.Load(dir)
@@ -386,8 +428,8 @@ func TestRunInitExisting_UpgradesExistingConfig(t *testing.T) {
 	if !cfg.Scoring.Strict {
 		t.Error("scoring.strict was reset to false")
 	}
-	if cfg.IDE.Cursor.Enabled {
-		t.Error("ide.cursor.enabled was reset to true")
+	if cfg.Agents.Cursor.Enabled {
+		t.Error("agents.cursor.enabled was reset to true")
 	}
 	if cfg.QodeVersion != "0.4.0-beta" {
 		t.Errorf("qode_version = %q, want it re-stamped to 0.4.0-beta", cfg.QodeVersion)
@@ -395,11 +437,12 @@ func TestRunInitExisting_UpgradesExistingConfig(t *testing.T) {
 }
 
 func TestRunInitExisting_SecondRunIsNoOp(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, customisedConfig)
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "0.4.0-beta", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "0.4.0-beta", false, false); err != nil {
 		t.Fatalf("first runInitExisting: %v", err)
 	}
 	before := readProjectConfig(t, dir)
@@ -409,7 +452,7 @@ func TestRunInitExisting_SecondRunIsNoOp(t *testing.T) {
 		t.Fatalf("stat: %v", err)
 	}
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "0.4.0-beta", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "0.4.0-beta", false, false); err != nil {
 		t.Fatalf("second runInitExisting: %v", err)
 	}
 	if got := readProjectConfig(t, dir); got != before {
@@ -424,7 +467,9 @@ func TestRunInitExisting_SecondRunIsNoOp(t *testing.T) {
 	}
 }
 
-func TestRunInitExisting_SkipsDisabledIDEs(t *testing.T) {
+func TestRunInitExisting_SkipsDisabledAgents(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		key      string
@@ -451,17 +496,17 @@ func TestRunInitExisting_SkipsDisabledIDEs(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
-			isolateHome(t)
-			dir := t.TempDir()
-			seedProjectConfig(t, dir, "ide:\n  "+tc.key+":\n    enabled: false\n")
+			t.Parallel()
 
-			if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+			dir := t.TempDir()
+			seedProjectConfig(t, dir, "agents:\n  "+tc.key+":\n    enabled: false\n")
+
+			if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 				t.Fatalf("runInitExisting: %v", err)
 			}
 
 			if _, err := os.Stat(filepath.Join(dir, tc.skipped)); !errors.Is(err, fs.ErrNotExist) {
-				t.Errorf("%s was generated for a disabled IDE", tc.skipped)
+				t.Errorf("%s was generated for a disabled agent", tc.skipped)
 			}
 			for _, rel := range tc.expected {
 				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
@@ -472,10 +517,11 @@ func TestRunInitExisting_SkipsDisabledIDEs(t *testing.T) {
 	}
 }
 
-func TestRunInitExisting_NoIDEsEnabled(t *testing.T) {
-	isolateHome(t)
+func TestRunInitExisting_NoAgentsEnabled(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
-	seedProjectConfig(t, dir, `ide:
+	seedProjectConfig(t, dir, `agents:
   cursor:
     enabled: false
   claude_code:
@@ -487,15 +533,17 @@ func TestRunInitExisting_NoIDEsEnabled(t *testing.T) {
 `)
 
 	var buf bytes.Buffer
-	if err := runInitExisting(context.Background(), &buf, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &buf, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
-	if !strings.Contains(buf.String(), "No IDEs enabled") {
-		t.Errorf("output does not guide a user with every IDE disabled:\n%s", buf.String())
+	if !strings.Contains(buf.String(), "No agents enabled") {
+		t.Errorf("output does not guide a user with every agent disabled:\n%s", buf.String())
 	}
 }
 
 func TestRunInitExisting_BrokenConfigIsUntouched(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		body string
@@ -506,12 +554,12 @@ func TestRunInitExisting_BrokenConfigIsUntouched(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
-			isolateHome(t)
+			t.Parallel()
+
 			dir := t.TempDir()
 			seedProjectConfig(t, dir, tc.body)
 
-			err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false)
+			err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false)
 			if !errors.Is(err, config.ErrConfigInvalid) {
 				t.Fatalf("error = %v, want ErrConfigInvalid", err)
 			}
@@ -526,6 +574,8 @@ func TestRunInitExisting_BrokenConfigIsUntouched(t *testing.T) {
 }
 
 func TestRunInitExisting_BrokenScoringYamlHasNoOverwriteHint(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		body      string
@@ -539,8 +589,8 @@ func TestRunInitExisting_BrokenScoringYamlHasNoOverwriteHint(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
-			isolateHome(t)
+			t.Parallel()
+
 			dir := t.TempDir()
 			const valid = "qode_version: 0.1.0\n"
 			seedProjectConfig(t, dir, valid)
@@ -553,7 +603,7 @@ func TestRunInitExisting_BrokenScoringYamlHasNoOverwriteHint(t *testing.T) {
 				t.Fatalf("writing %s: %v", config.ScoringFileName, err)
 			}
 
-			err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false)
+			err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false)
 			if err == nil {
 				t.Fatal("expected an error for a broken scoring.yaml")
 			}
@@ -573,11 +623,12 @@ func TestRunInitExisting_BrokenScoringYamlHasNoOverwriteHint(t *testing.T) {
 }
 
 func TestRunInitExisting_EmptyConfigIsFilled(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, "")
 
-	if err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -597,12 +648,13 @@ func TestRunInitExisting_EmptyConfigIsFilled(t *testing.T) {
 }
 
 func TestRunInitExisting_UpgradeOutputLine(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, "qode_version: 0.1.0\n")
 
 	var buf bytes.Buffer
-	if err := runInitExisting(context.Background(), &buf, dir, "", false, false); err != nil {
+	if err := runInitExisting(context.Background(), &buf, io.Discard, dir, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
 	}
 
@@ -618,7 +670,8 @@ func TestRunInitExisting_UpgradeOutputLine(t *testing.T) {
 }
 
 func TestRunInitExisting_UnreadableConfigHasNoOverwriteHint(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	if os.Geteuid() == 0 {
 		t.Skip("root ignores file permissions")
 	}
@@ -631,7 +684,7 @@ func TestRunInitExisting_UnreadableConfigHasNoOverwriteHint(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(path, 0644) })
 
-	err := runInitExisting(context.Background(), &bytes.Buffer{}, dir, "", false, false)
+	err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false)
 	if err == nil {
 		t.Fatal("expected an error when qode.yaml cannot be read")
 	}
@@ -640,5 +693,90 @@ func TestRunInitExisting_UnreadableConfigHasNoOverwriteHint(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), "--config-only --force") {
 		t.Errorf("hint attached to an error that overwriting will not fix: %v", err)
+	}
+}
+
+// --- deprecated ide: key ---
+
+const legacyRenameLine = "qode.yaml: 'ide:' has been renamed to 'agents:' — updated in place."
+
+func TestRunInitExisting_RenamesLegacyIDEKey(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	seedProjectConfig(t, dir, "qode_version: 0.3.4-beta\nide:\n  cursor:\n    enabled: false\n")
+
+	var buf bytes.Buffer
+	if err := runInitExisting(context.Background(), &buf, io.Discard, dir, "0.4.0-beta", false, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	if got := strings.Count(buf.String(), legacyRenameLine); got != 1 {
+		t.Errorf("rename line printed %d times, want 1:\n%s", got, buf.String())
+	}
+	rendered := readProjectConfig(t, dir)
+	if !strings.Contains(rendered, "\nagents:\n") {
+		t.Errorf("qode.yaml has no agents: block:\n%s", rendered)
+	}
+	if strings.Contains(rendered, "\nide:\n") {
+		t.Errorf("qode.yaml still carries the deprecated ide: block:\n%s", rendered)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".cursor")); !errors.Is(err, fs.ErrNotExist) {
+		t.Error(".cursor was generated for an agent the legacy config disabled")
+	}
+}
+
+func TestRunInitExisting_BothKeys_DoesNotPrintRenameLine(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	const body = "qode_version: 0.3.4-beta\nagents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n    enabled: false\n"
+	seedProjectConfig(t, dir, body)
+
+	var buf bytes.Buffer
+	if err := runInitExisting(context.Background(), &buf, io.Discard, dir, "0.4.0-beta", false, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	if strings.Contains(buf.String(), legacyRenameLine) {
+		t.Errorf("rename line printed for a file carrying both keys:\n%s", buf.String())
+	}
+	rendered := readProjectConfig(t, dir)
+	if !strings.Contains(rendered, "ide:\n  cursor:\n    enabled: false\n") {
+		t.Errorf("the deprecated block was rewritten:\n%s", rendered)
+	}
+}
+
+func TestInitCmd_LongHelpUsesAgentVocabulary(t *testing.T) {
+	t.Parallel()
+
+	long := newInitCmd().Long
+	if !strings.Contains(long, "agent workflow assets") {
+		t.Errorf("init --help does not describe agent workflow assets:\n%s", long)
+	}
+	if strings.Contains(long, "IDE") {
+		t.Errorf("init --help still says IDE:\n%s", long)
+	}
+}
+
+func TestRunInitExisting_BothKeysConfig_WarnsOnce(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	seedProjectConfig(t, dir,
+		"qode_version: 0.3.4-beta\nagents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n    enabled: false\n")
+
+	var out, errOut bytes.Buffer
+	if err := runInitExisting(context.Background(), &out, &errOut, dir, "0.4.0-beta", false, false); err != nil {
+		t.Fatalf("runInitExisting: %v", err)
+	}
+
+	if got := strings.Count(errOut.String(), "both 'agents:' and 'ide:' are set"); got != 1 {
+		t.Errorf("warning printed %d times, want 1:\n%s", got, errOut.String())
+	}
+	// The two notices are mutually exclusive: a file carrying both keys is never
+	// renamed, so the rename line must not appear beside the warning.
+	if strings.Contains(out.String(), legacyRenameLine) {
+		t.Errorf("rename line printed alongside the both-keys warning:\n%s", out.String())
 	}
 }

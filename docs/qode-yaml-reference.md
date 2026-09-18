@@ -13,7 +13,7 @@ qode_version: "0.1"
 review:
   min_code_score: 10
   min_security_score: 8
-ide:
+agents:
   cursor:
     enabled: true
   claude_code:
@@ -38,7 +38,20 @@ diff:
 >
 > `qode init --config-only` writes `qode.yaml` and stops, so you can review and edit it before anything else is generated. It refuses to overwrite an existing file unless you add `--force`. `qode init --force` is the explicit clean reset — a different meaning from `--force` on `plan`, `review` and `start`, where it bypasses step guard checks.
 >
-> A key you never wrote falls back to its default, so an absent `ide.opencode` block means OpenCode is **enabled**, not disabled. Settings can also come from `~/.qode/config.yaml`, merged over the project file on that machine only: a machine-wide `ide.codex.enabled: false` there suppresses `.agents/skills/` in every project on that machine with nothing in the project to show for it. `qode init` never copies those machine-local values, or the rubrics from `.qode/scoring.yaml`, into your project's `qode.yaml`.
+> A key you never wrote falls back to its default, so an absent `agents.opencode` block means OpenCode is **enabled**, not disabled. Every setting comes from the project's own `qode.yaml`; `qode init` never copies the rubrics from `.qode/scoring.yaml` into it.
+
+## Migrating from `ide:`
+
+Before 0.4.0-beta the agent toggles lived under a key called `ide:`. That key is still read, so no project stops working, but it is deprecated and `qode.yaml` is never written with it again.
+
+| Where the `ide:` block is | What `qode init` does | What every command does |
+|---|---|---|
+| The project `qode.yaml`, as a plain top-level key | Renames it to `agents:` in place, keeping every value you set, and prints `qode.yaml: 'ide:' has been renamed to 'agents:' — updated in place.` | — |
+| The project `qode.yaml`, alongside an `agents:` key | Leaves the `ide:` block exactly as written — renaming would create a duplicate key — and upgrades the rest of the file as usual | Warns that `agents:` wins and `ide:` is ignored; delete the `ide:` block yourself |
+| The project `qode.yaml`, alongside an `agents:` key written with no value | Leaves the `ide:` block exactly as written — renaming would create a duplicate key — and upgrades the rest of the file as usual | Reads the `ide:` block as `agents:` and warns. Renaming the key here would give you two `agents:` keys, which the next `qode init` refuses: delete the empty `agents:` line first, then rename `ide:` |
+| Pulled in through a `<<:` merge key | **Nothing.** The rename only sees a literal top-level `ide:` key | Reads it as `agents:` and warns; rename the key by hand |
+
+A partial block keeps its meaning through the rename: an agent the `ide:` block never names keeps its default, exactly as an absent `agents:` sub-key does.
 
 ## Full reference
 
@@ -54,7 +67,7 @@ scoring:
   strict: false           # enforce step ordering; exit 1 when a gate fails
   # Rubric dimensions are not configured here — edit .qode/scoring.yaml instead.
 
-ide:
+agents:
   cursor:
     enabled: true
   claude_code:
@@ -121,18 +134,18 @@ Override the pass threshold for `/qode-plan-refine`. When not set, the threshold
 
 Rubric dimensions are **not configured in `qode.yaml`**. They live in `.qode/scoring.yaml` so that re-running `qode init` never overwrites them. See [scoring-yaml-reference.md](scoring-yaml-reference.md) for the full rubric format and field reference.
 
-### `ide.cursor.enabled` / `ide.claude_code.enabled` / `ide.codex.enabled` / `ide.opencode.enabled`
+### `agents.cursor.enabled` / `agents.claude_code.enabled` / `agents.codex.enabled` / `agents.opencode.enabled`
 
-Toggle whether `qode init` generates IDE assets for each supported editor.
+Toggle whether `qode init` generates agent assets for each supported agent.
 
 | Key | Generated assets | Default |
 |---|---|---|
-| `ide.cursor.enabled` | `.cursor/commands/*.mdc` | `true` |
-| `ide.claude_code.enabled` | `.claude/commands/*.md` | `true` |
-| `ide.codex.enabled` | `.agents/skills/*/SKILL.md` | `true` |
-| `ide.opencode.enabled` | `.opencode/commands/*.md` | `true` |
+| `agents.cursor.enabled` | `.cursor/commands/*.mdc` | `true` |
+| `agents.claude_code.enabled` | `.claude/commands/*.md` | `true` |
+| `agents.codex.enabled` | `.agents/skills/*/SKILL.md` | `true` |
+| `agents.opencode.enabled` | `.opencode/commands/*.md` | `true` |
 
-Set a value to `false` to skip generation for that IDE on the next `qode init`. Re-run `qode init` after changing the flag to bring the on-disk assets in sync. Cursor, Claude Code, Codex, and OpenCode are the IDEs supported in this release.
+Set a value to `false` to skip generation for that agent on the next `qode init`. Re-run `qode init` after changing the flag to bring the on-disk assets in sync. Cursor, Claude Code, Codex, and OpenCode are the agents supported in this release.
 
 ### `knowledge.path`
 

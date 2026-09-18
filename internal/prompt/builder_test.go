@@ -13,8 +13,8 @@ func TestNewTemplateData_Defaults(t *testing.T) {
 	if data.Project.Name != "my-project" {
 		t.Errorf("Project.Name = %q, want %q", data.Project.Name, "my-project")
 	}
-	if data.IDE != "" {
-		t.Errorf("IDE = %q, want empty", data.IDE)
+	if data.Agent != "" {
+		t.Errorf("Agent = %q, want empty", data.Agent)
 	}
 	if data.Ticket != "" {
 		t.Errorf("Ticket = %q, want empty", data.Ticket)
@@ -33,7 +33,7 @@ func TestTemplateDataBuilder_AllSetters(t *testing.T) {
 	}
 
 	data := NewTemplateData("proj").
-		WithIDE("claude").
+		WithAgent("claude").
 		WithOutputPath("/tmp/out.md").
 		WithRubric(rubric).
 		WithTargetScore(25).
@@ -52,7 +52,7 @@ func TestTemplateDataBuilder_AllSetters(t *testing.T) {
 		got   string
 		want  string
 	}{
-		{"IDE", data.IDE, "claude"},
+		{"Agent", data.Agent, "claude"},
 		{"OutputPath", data.OutputPath, "/tmp/out.md"},
 		{"Ticket", data.Ticket, "ticket content"},
 		{"Analysis", data.Analysis, "analysis content"},

@@ -3,6 +3,7 @@
 package cli
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -75,5 +76,26 @@ func TestTruncateLines_PreservesContent(t *testing.T) {
 	const wantLines = maxLines + 2 // content lines + empty line + "(truncated)"
 	if len(lines) != wantLines {
 		t.Errorf("expected %d lines, got %d", wantLines, len(lines))
+	}
+}
+
+func TestRunKnowledgeList_BothKeysConfig_WarnsOnce(t *testing.T) {
+	// flagRoot is a package global, so this test cannot run in parallel.
+	root := t.TempDir()
+	flagRoot = root
+	t.Cleanup(func() { flagRoot = "" })
+	writeConfigFile(t, root, bothKeysConfig)
+
+	var out, errOut bytes.Buffer
+	if err := runKnowledgeList(&out, &errOut); err != nil {
+		t.Fatalf("runKnowledgeList: %v", err)
+	}
+	if got := strings.Count(errOut.String(), bothKeysWarning); got != 1 {
+		t.Errorf("warning printed %d times, want 1:\n%s", got, errOut.String())
+	}
+	// Prompts and listings are piped into files; a warning on stdout would land
+	// in the file instead of in front of the user.
+	if strings.Contains(out.String(), bothKeysWarning) {
+		t.Errorf("warning leaked onto stdout:\n%s", out.String())
 	}
 }

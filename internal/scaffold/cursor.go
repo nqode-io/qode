@@ -11,7 +11,7 @@ import (
 
 const cursorCommandsDir = ".cursor/commands"
 
-// SetupCursor generates Cursor IDE configuration files.
+// SetupCursor generates Cursor configuration files.
 func SetupCursor(out io.Writer, root string) error {
 	if err := iokit.EnsureDir(filepath.Join(root, cursorCommandsDir)); err != nil {
 		return err
@@ -23,7 +23,7 @@ func SetupCursor(out io.Writer, root string) error {
 	}
 
 	data := prompt.NewTemplateData(filepath.Base(root)).
-		WithIDE("cursor").
+		WithAgent("cursor").
 		Build()
 
 	for _, workflow := range qodeWorkflows {

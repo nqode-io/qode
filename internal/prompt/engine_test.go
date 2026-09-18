@@ -197,8 +197,8 @@ func TestRender_FuncMap_Pct(t *testing.T) {
 	}
 }
 
-// renderIDETemplate writes tmplBody as a local override and renders it for ide.
-func renderIDETemplate(t *testing.T, name, tmplBody, ide string) string {
+// renderAgentTemplate writes tmplBody as a local override and renders it for agent.
+func renderAgentTemplate(t *testing.T, name, tmplBody, agent string) string {
 	t.Helper()
 	root := t.TempDir()
 	overridePath := filepath.Join(root, ".qode", "prompts", name+".md.tmpl")
@@ -212,7 +212,7 @@ func renderIDETemplate(t *testing.T, name, tmplBody, ide string) string {
 	if err != nil {
 		t.Fatalf("NewEngine: %v", err)
 	}
-	out, err := e.Render(name, minimalTemplateData().WithIDE(ide).Build())
+	out, err := e.Render(name, minimalTemplateData().WithAgent(agent).Build())
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -223,25 +223,25 @@ func TestRender_FuncMap_QuestionTool(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name string
-		ide  string
-		want string
+		name  string
+		agent string
+		want  string
 	}{
 		{"claude has AskUserQuestion", "claude", "Y:AskUserQuestion"},
 		{"cursor has none", "cursor", "N"},
 		{"codex has none", "codex", "N"},
 		{"opencode has question", "opencode", "Y:question"},
-		{"empty ide has none", "", "N"},
-		{"unknown ide has none", "aider", "N"},
+		{"empty agent has none", "", "N"},
+		{"unknown agent has none", "aider", "N"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := renderIDETemplate(t, "test-question-tool",
-				`{{if questionTool .IDE}}Y:{{questionTool .IDE}}{{else}}N{{end}}`, tt.ide)
+			got := renderAgentTemplate(t, "test-question-tool",
+				`{{if questionTool .Agent}}Y:{{questionTool .Agent}}{{else}}N{{end}}`, tt.agent)
 			if got != tt.want {
-				t.Errorf("questionTool(%q) rendered %q, want %q", tt.ide, got, tt.want)
+				t.Errorf("questionTool(%q) rendered %q, want %q", tt.agent, got, tt.want)
 			}
 		})
 	}
@@ -251,25 +251,25 @@ func TestRender_FuncMap_HasFrontmatter(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name string
-		ide  string
-		want string
+		name  string
+		agent string
+		want  string
 	}{
 		{"claude uses a title heading", "claude", "N"},
 		{"cursor uses frontmatter", "cursor", "Y"},
 		{"codex uses a title heading", "codex", "N"},
 		{"opencode uses frontmatter", "opencode", "Y"},
-		{"empty ide uses a title heading", "", "N"},
-		{"unknown ide uses a title heading", "aider", "N"},
+		{"empty agent uses a title heading", "", "N"},
+		{"unknown agent uses a title heading", "aider", "N"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := renderIDETemplate(t, "test-has-frontmatter",
-				`{{if hasFrontmatter .IDE}}Y{{else}}N{{end}}`, tt.ide)
+			got := renderAgentTemplate(t, "test-has-frontmatter",
+				`{{if hasFrontmatter .Agent}}Y{{else}}N{{end}}`, tt.agent)
 			if got != tt.want {
-				t.Errorf("hasFrontmatter(%q) rendered %q, want %q", tt.ide, got, tt.want)
+				t.Errorf("hasFrontmatter(%q) rendered %q, want %q", tt.agent, got, tt.want)
 			}
 		})
 	}

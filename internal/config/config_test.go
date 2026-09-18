@@ -1,11 +1,16 @@
 package config
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -19,16 +24,16 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Scoring.TargetScore != 0 {
 		t.Errorf("expected TargetScore 0 (use rubric max), got %d", cfg.Scoring.TargetScore)
 	}
-	if !cfg.IDE.Cursor.Enabled {
+	if !cfg.Agents.Cursor.Enabled {
 		t.Error("expected Cursor enabled by default")
 	}
-	if !cfg.IDE.ClaudeCode.Enabled {
+	if !cfg.Agents.ClaudeCode.Enabled {
 		t.Error("expected ClaudeCode enabled by default")
 	}
-	if !cfg.IDE.Codex.Enabled {
+	if !cfg.Agents.Codex.Enabled {
 		t.Error("expected Codex enabled by default")
 	}
-	if !cfg.IDE.OpenCode.Enabled {
+	if !cfg.Agents.OpenCode.Enabled {
 		t.Error("expected OpenCode enabled by default")
 	}
 	wantRubrics := DefaultRubricConfigs()
@@ -46,10 +51,8 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestSave_Load(t *testing.T) {
-	// config.Load merges ~/.qode/config.yaml, so HOME must be isolated.
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	cfg := DefaultConfig()
@@ -79,23 +82,23 @@ func TestSave_Load(t *testing.T) {
 	if loaded.Scoring.TargetScore != cfg.Scoring.TargetScore {
 		t.Errorf("TargetScore: got %d, want %d", loaded.Scoring.TargetScore, cfg.Scoring.TargetScore)
 	}
-	if loaded.IDE.Cursor.Enabled != cfg.IDE.Cursor.Enabled {
-		t.Errorf("Cursor.Enabled: got %v, want %v", loaded.IDE.Cursor.Enabled, cfg.IDE.Cursor.Enabled)
+	if loaded.Agents.Cursor.Enabled != cfg.Agents.Cursor.Enabled {
+		t.Errorf("Cursor.Enabled: got %v, want %v", loaded.Agents.Cursor.Enabled, cfg.Agents.Cursor.Enabled)
 	}
-	if loaded.IDE.ClaudeCode.Enabled != cfg.IDE.ClaudeCode.Enabled {
-		t.Errorf("ClaudeCode.Enabled: got %v, want %v", loaded.IDE.ClaudeCode.Enabled, cfg.IDE.ClaudeCode.Enabled)
+	if loaded.Agents.ClaudeCode.Enabled != cfg.Agents.ClaudeCode.Enabled {
+		t.Errorf("ClaudeCode.Enabled: got %v, want %v", loaded.Agents.ClaudeCode.Enabled, cfg.Agents.ClaudeCode.Enabled)
 	}
 	if len(loaded.Scoring.Rubrics) != len(cfg.Scoring.Rubrics) {
 		t.Errorf("Rubrics count: got %d, want %d", len(loaded.Scoring.Rubrics), len(cfg.Scoring.Rubrics))
 	}
 }
 
-func TestLoad_LegacyConfigWithoutOpenCode(t *testing.T) {
+func TestLoad_ConfigWithoutOpenCode_DefaultsEnabled(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
 	legacy := `qode_version: "0.3.0"
-ide:
+agents:
     cursor:
         enabled: true
     claude_code:
@@ -111,8 +114,8 @@ ide:
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	if !loaded.IDE.OpenCode.Enabled {
-		t.Error("expected OpenCode enabled when ide.opencode is absent from qode.yaml")
+	if !loaded.Agents.OpenCode.Enabled {
+		t.Error("expected OpenCode enabled when agents.opencode is absent from qode.yaml")
 	}
 }
 
@@ -145,8 +148,8 @@ func TestDiffConfig_YAMLRoundTrip(t *testing.T) {
 	if len(loaded.Scoring.Rubrics) != len(cfg.Scoring.Rubrics) {
 		t.Errorf("Rubrics count: got %d, want %d", len(loaded.Scoring.Rubrics), len(cfg.Scoring.Rubrics))
 	}
-	if loaded.IDE.Cursor.Enabled != cfg.IDE.Cursor.Enabled {
-		t.Errorf("Cursor.Enabled: got %v, want %v", loaded.IDE.Cursor.Enabled, cfg.IDE.Cursor.Enabled)
+	if loaded.Agents.Cursor.Enabled != cfg.Agents.Cursor.Enabled {
+		t.Errorf("Cursor.Enabled: got %v, want %v", loaded.Agents.Cursor.Enabled, cfg.Agents.Cursor.Enabled)
 	}
 }
 
@@ -223,5 +226,403 @@ func TestLoad_InvalidScoringYAML(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "scoring") {
 		t.Errorf("expected error to mention 'scoring', got: %v", err)
+	}
+}
+
+// --- read-path containment ---
+
+// oversizedConfig renders a valid configuration document larger than n bytes, one
+// distinct key per line: valid YAML and a valid config, which is what makes it a
+// denial of service rather than a parse error.
+func oversizedConfig(n int) string {
+	var sb strings.Builder
+	sb.WriteString("qode_version: \"0.4.0-beta\"\n")
+	for i := 0; sb.Len() <= n; i++ {
+		fmt.Fprintf(&sb, "k%06d: v\n", i)
+	}
+	return sb.String()
+}
+
+func TestLoad_RefusesAProjectConfigPastTheSizeLimit(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, oversizedConfig(maxConfigBytes))
+
+	_, err := Load(dir)
+	if err == nil {
+		t.Fatal("Load accepted a config past the size limit")
+	}
+	if !strings.Contains(err.Error(), "past the 65536-byte limit for a configuration") {
+		t.Errorf("error = %v, want it to name the size limit", err)
+	}
+	if !strings.Contains(err.Error(), ConfigFileName) {
+		t.Errorf("error = %v, want it to name the file it refused", err)
+	}
+}
+
+func TestLoad_AcceptsAConfigJustUnderTheSizeLimit(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	body := oversizedConfig(maxConfigBytes - 2048)
+	if len(body) > maxConfigBytes {
+		t.Fatalf("fixture is %d bytes, past the %d-byte limit it is meant to stay under", len(body), maxConfigBytes)
+	}
+	writeProjectConfig(t, dir, body)
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load refused a config inside the size limit: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{true, true, true, true})
+}
+
+func TestLoad_KeepsTheDefaultsForAConfigWithNoValues(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		body string
+	}{
+		{"empty file", ""},
+		{"comments only", "# nothing here yet\n"},
+		{"bare document marker", "---\n"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			writeProjectConfig(t, dir, tc.body)
+
+			cfg, err := Load(dir)
+			if err != nil {
+				t.Fatalf("load: %v", err)
+			}
+			assertAgents(t, cfg, [4]bool{true, true, true, true})
+			if cfg.Review.MinCodeScore != DefaultConfig().Review.MinCodeScore {
+				t.Errorf("min_code_score = %v, want the default %v",
+					cfg.Review.MinCodeScore, DefaultConfig().Review.MinCodeScore)
+			}
+		})
+	}
+}
+
+func TestLoad_RefusesAProjectConfigThatIsNotARegularFile(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := syscall.Mkfifo(filepath.Join(dir, ConfigFileName), 0644); err != nil {
+		t.Skipf("mkfifo unavailable: %v", err)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := Load(dir)
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("Load accepted a named pipe as a config")
+		}
+		if !strings.Contains(err.Error(), "not a regular file") {
+			t.Errorf("error = %v, want it to say the file is not a regular file", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Load blocked reading a named pipe")
+	}
+}
+
+// --- deprecated ide: key ---
+
+// writeProjectConfig writes body as the project qode.yaml and returns its path.
+func writeProjectConfig(t *testing.T, dir, body string) string {
+	t.Helper()
+	path := filepath.Join(dir, ConfigFileName)
+	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
+		t.Fatalf("writing %s: %v", path, err)
+	}
+	return path
+}
+
+// assertAgents compares the four toggles in cursor, claude_code, codex, opencode
+// order and fails with the whole vector, which is what makes a dropped setting
+// readable rather than a single boolean mismatch.
+func assertAgents(t *testing.T, cfg *Config, want [4]bool) {
+	t.Helper()
+	got := [4]bool{
+		cfg.Agents.Cursor.Enabled,
+		cfg.Agents.ClaudeCode.Enabled,
+		cfg.Agents.Codex.Enabled,
+		cfg.Agents.OpenCode.Enabled,
+	}
+	if got != want {
+		t.Errorf("agents = %v, want %v", got, want)
+	}
+	if cfg.IDE.Kind != 0 {
+		t.Errorf("cfg.IDE.Kind = %d, want 0: the legacy node must never survive a load", cfg.IDE.Kind)
+	}
+}
+
+func TestLoad_LegacyIDEPartialBlock_KeepsUnmentionedAgentDefaults(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, "ide:\n  cursor:\n    enabled: false\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{false, true, true, true})
+}
+
+func TestLoad_LegacyIDEThroughMergeKey_KeepsUnmentionedAgentDefaults(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, "base: &base\n  ide:\n    cursor:\n      enabled: false\n<<: *base\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{false, true, true, true})
+}
+
+func TestLoad_LegacyIDENullSection_KeepsAllAgentsEnabled(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, "ide:\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{true, true, true, true})
+}
+
+func TestLoad_LegacyIDEWithAgents_AgentsWins(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeProjectConfig(t, dir,
+		"agents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n    enabled: false\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{true, true, true, true})
+}
+
+func TestLoad_LegacyIDEWrongType_IsRefused(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "sequence", body: "qode_version: 0.4.0-beta\nide: [cursor]\n"},
+		{name: "scalar", body: "qode_version: 0.4.0-beta\nide: cursor\n"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			path := writeProjectConfig(t, dir, tc.body)
+
+			_, err := Load(dir)
+			if err == nil {
+				t.Fatalf("Load accepted an ide: key that is not a mapping")
+			}
+			if !strings.Contains(err.Error(), "cannot unmarshal") {
+				t.Errorf("error = %v, want it to say what could not be unmarshalled", err)
+			}
+			// The path belongs in the message once. Load adds it; the probe
+			// unmarshal must not add it a second time.
+			if got := strings.Count(err.Error(), path); got != 1 {
+				t.Errorf("the config path appears %d times in %v, want 1", got, err)
+			}
+
+			after, readErr := os.ReadFile(path)
+			if readErr != nil {
+				t.Fatalf("reading %s: %v", path, readErr)
+			}
+			if string(after) != tc.body {
+				t.Errorf("a refused load rewrote the file:\ngot\n%s\nwant\n%s", after, tc.body)
+			}
+		})
+	}
+}
+
+func TestLoad_LegacyKeyNotices(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		project string
+		want    func(projectPath string) []string
+	}{
+		{
+			name:    "legacy key alone",
+			project: "ide:\n  cursor:\n    enabled: false\n",
+			want: func(p string) []string {
+				return []string{fmt.Sprintf(legacyKeyNotice, p)}
+			},
+		},
+		{
+			name:    "canonical key alone",
+			project: "agents:\n  cursor:\n    enabled: false\n",
+			want:    func(string) []string { return nil },
+		},
+		{
+			name:    "both keys",
+			project: "agents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n    enabled: false\n",
+			want: func(p string) []string {
+				return []string{fmt.Sprintf(bothKeysNotice, p)}
+			},
+		},
+		{
+			// The ordinary "rename the key" advice would produce a duplicate
+			// agents: here, which the next qode init refuses, so this shape gets
+			// the two-step wording instead.
+			name:    "null agents key beside a legacy block",
+			project: "agents:\nide:\n  cursor:\n    enabled: false\n",
+			want: func(p string) []string {
+				return []string{fmt.Sprintf(emptyAgentsNotice, p)}
+			},
+		},
+		{
+			name:    "neither key",
+			project: "qode_version: 0.4.0-beta\n",
+			want:    func(string) []string { return nil },
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			projectPath := writeProjectConfig(t, dir, tc.project)
+
+			cfg, err := Load(dir)
+			if err != nil {
+				t.Fatalf("load: %v", err)
+			}
+			got := cfg.Notices()
+			want := tc.want(projectPath)
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("Notices() =\n%#v\nwant\n%#v", got, want)
+			}
+		})
+	}
+}
+
+func TestUpgrade_AcceptsWhatTheEmptyAgentsNoticeTellsTheUserToDo(t *testing.T) {
+	t.Parallel()
+
+	// A valueless agents: beside an ide: block is the one shape where the
+	// ordinary deprecation advice — "rename the key to 'agents:'" — leaves the
+	// user worse off than before. emptyAgentsNotice sends them down the second
+	// row instead; this is what makes the two rows different.
+	tests := []struct {
+		name    string
+		edited  string
+		wantErr error
+	}{
+		{
+			name:    "renaming the key, as the ordinary notice says",
+			edited:  "qode_version: 0.4.0-beta\nagents:\nagents:\n  cursor:\n    enabled: false\n",
+			wantErr: ErrConfigInvalid,
+		},
+		{
+			name:   "deleting the empty line first, as the empty-agents notice says",
+			edited: "qode_version: 0.4.0-beta\nagents:\n  cursor:\n    enabled: false\n",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := seedConfig(t, tc.edited)
+
+			_, err := Upgrade(context.Background(), dir, "0.4.0-beta")
+			if tc.wantErr != nil {
+				if !errors.Is(err, tc.wantErr) {
+					t.Fatalf("error = %v, want %v", err, tc.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Upgrade: %v", err)
+			}
+			var got Config
+			if err := yaml.Unmarshal(readConfig(t, dir), &got); err != nil {
+				t.Fatalf("unmarshalling upgraded config: %v", err)
+			}
+			if got.Agents.Cursor.Enabled {
+				t.Error("the remedy the notice recommends re-enabled cursor")
+			}
+		})
+	}
+}
+
+func TestNotices_EscapeAControlCharacterInAPath(t *testing.T) {
+	t.Parallel()
+
+	// A project root can be a directory a clone brought with it, so a notice's path
+	// is untrusted text: this one erases the line it is printed on.
+	hostile := "/tmp/evil\x1b[2K\r/qode.yaml"
+	cfg := &Config{}
+	cfg.Legacy.IDEKeyPaths = []string{hostile}
+	cfg.Legacy.BothKeyPaths = []string{hostile}
+	cfg.Legacy.EmptyAgentsPaths = []string{hostile}
+
+	for _, n := range cfg.Notices() {
+		if strings.ContainsAny(n, "\x1b\r") {
+			t.Errorf("notice carries a raw control character:\n%q", n)
+		}
+		if !strings.Contains(n, `evil\x1b[2K\r`) {
+			t.Errorf("notice does not carry the escaped path:\n%q", n)
+		}
+	}
+}
+
+func TestSave_NeverEmitsLegacyKeys(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, "ide:\n  cursor:\n    enabled: false\n")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{false, true, true, true})
+
+	out := t.TempDir()
+	if err := Save(out, cfg); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(out, ConfigFileName))
+	if err != nil {
+		t.Fatalf("reading saved config: %v", err)
+	}
+	for _, banned := range []string{"ide:", "legacy:"} {
+		if strings.Contains(string(data), banned) {
+			t.Errorf("saved config contains %q:\n%s", banned, data)
+		}
+	}
+	if !strings.Contains(string(data), "agents:") {
+		t.Errorf("saved config has no agents: block:\n%s", data)
 	}
 }

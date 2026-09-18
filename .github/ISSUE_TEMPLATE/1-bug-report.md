@@ -23,7 +23,7 @@ What you expected to happen.
 - **OS**: (e.g. macOS 15.3, Ubuntu 24.04)
 - **Go version**: (output of `go version`)
 - **qode version**: (output of `qode --version`)
-- **IDE**: (e.g. Cursor, VS Code, Claude Code)
+- **Agent**: (e.g. Cursor, VS Code, Claude Code)
 
 ## Logs / error output
 

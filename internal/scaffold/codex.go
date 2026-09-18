@@ -27,7 +27,7 @@ func SetupCodex(out io.Writer, root string) error {
 	}
 
 	data := prompt.NewTemplateData(filepath.Base(root)).
-		WithIDE("codex").
+		WithAgent("codex").
 		Build()
 
 	for _, workflow := range qodeWorkflows {

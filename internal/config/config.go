@@ -26,7 +26,6 @@ const (
 // Load reads and merges configuration from:
 //  1. Default values
 //  2. qode.yaml in root (FindRoot walks ancestors; Load does not)
-//  3. ~/.qode/config.yaml (user-level overrides)
 //
 // CLI flags override all of these at call site.
 func Load(root string) (*Config, error) {
@@ -42,15 +41,6 @@ func Load(root string) (*Config, error) {
 	scoringPath := filepath.Join(root, QodeDir, ScoringFileName)
 	if err := mergeScoringFromFile(scoringPath, &cfg); err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("loading %s: %w", scoringPath, err)
-	}
-
-	// Try to load user-level config.
-	home, err := os.UserHomeDir()
-	if err == nil {
-		userPath := filepath.Join(home, QodeDir, "config.yaml")
-		if err := mergeFromFile(userPath, &cfg); err != nil && !os.IsNotExist(err) {
-			return nil, fmt.Errorf("loading %s: %w", userPath, err)
-		}
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -104,10 +94,148 @@ func FindRoot(dir string) (string, error) {
 	}
 }
 
+// Deprecation notice wording. %s is the path of the file that carried the key.
+const (
+	bothKeysNotice = "warning: %s: both 'agents:' and 'ide:' are set — " +
+		"'agents:' wins, 'ide:' is ignored. Delete the 'ide:' block."
+	legacyKeyNotice = "warning: %s: 'ide:' is deprecated — read as 'agents:'. " +
+		"Rename the key to 'agents:'."
+	// emptyAgentsNotice replaces legacyKeyNotice when the file also carries an
+	// `agents:` key written with no value. Renaming `ide:` in that file would
+	// produce two `agents:` keys, which the next 'qode init' refuses outright, so
+	// the ordinary advice has to be taken in two steps here.
+	emptyAgentsNotice = "warning: %s: 'ide:' is deprecated — read as 'agents:'. " +
+		"Delete the empty 'agents:' line first, then rename 'ide:' to 'agents:'."
+)
+
+// LegacyKeys records deprecated configuration keys seen while loading, by the
+// path of the file that carried them. Load merges one file that can carry those
+// keys — the project qode.yaml — so at most one field holds at most one path.
+// Every line names its own file, so the order across fields is presentational.
+type LegacyKeys struct {
+	IDEKeyPaths      []string // files that carried `ide:` alone
+	BothKeyPaths     []string // files that carried both `ide:` and `agents:`
+	EmptyAgentsPaths []string // files that carried `ide:` beside a valueless `agents:`
+}
+
+// Notices returns the user-facing lines for those observations: the both-keys
+// warnings first, then the deprecation warnings. A file with a valueless
+// `agents:` gets the two-step deprecation wording instead of the ordinary one,
+// never both. Pure: it formats strings and performs no I/O, so config stays
+// printer-free.
+func (c *Config) Notices() []string {
+	var out []string
+	for _, p := range c.Legacy.BothKeyPaths {
+		out = append(out, fmt.Sprintf(bothKeysNotice, iokit.DisplayPath(p)))
+	}
+	for _, p := range c.Legacy.IDEKeyPaths {
+		out = append(out, fmt.Sprintf(legacyKeyNotice, iokit.DisplayPath(p)))
+	}
+	for _, p := range c.Legacy.EmptyAgentsPaths {
+		out = append(out, fmt.Sprintf(emptyAgentsNotice, iokit.DisplayPath(p)))
+	}
+	return out
+}
+
+// legacyProbe detects which agent keys the file carries. It is needed because
+// mergeFromFile decodes onto a Config that already holds the defaults, so the
+// decoded cfg.Agents cannot say whether the file wrote an `agents:` key at all —
+// which is the difference between "agents: wins" and "promote the ide: block".
+type legacyProbe struct {
+	// Agents is a node, and a value rather than a pointer, so that `agents:`
+	// written with nothing after it can be told apart from no `agents:` key at
+	// all: the first is a null node, the second is a node yaml never touched.
+	// The two need different advice. A *yaml.Node cannot make that distinction —
+	// yaml.v3 leaves a pointer nil for a null value. The block is still
+	// type-checked, by the full unmarshal that follows this probe.
+	Agents yaml.Node     `yaml:"agents"`
+	IDE    *AgentsConfig `yaml:"ide"`
+}
+
+// readConfigFile reads one configuration file under the containment Upgrade
+// already applies on the write side: a regular file, no larger than maxConfigBytes.
+// Load runs on every command except init, so this is the read a hostile file
+// reaches first, and it has to be refused before it is parsed: yaml.v3's
+// duplicate-key check is quadratic in a mapping's key count, which is what makes a
+// megabyte of valid YAML cost tens of seconds. Neither message names the path,
+// because Load already names the file it was loading.
+func readConfigFile(path string) ([]byte, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case !info.Mode().IsRegular():
+		return nil, errors.New("not a regular file")
+	case info.Size() > maxConfigBytes:
+		return nil, fmt.Errorf("%d bytes, past the %d-byte limit for a configuration",
+			info.Size(), maxConfigBytes)
+	}
+	return os.ReadFile(path)
+}
+
 func mergeFromFile(path string, cfg *Config) error {
-	data, err := os.ReadFile(path)
+	data, err := readConfigFile(path)
 	if err != nil {
 		return err
 	}
-	return yaml.Unmarshal(data, cfg)
+	// Parse the bytes once and decode that tree twice. The probe and the config
+	// read the same document, and a second yaml.Unmarshal would re-parse the file
+	// rather than re-walk what the first parse already built. A file with nothing
+	// to carry a value — empty, or only comments — leaves the node untouched, and
+	// yaml.v3 decodes such a node as a null, which is a no-op for both destinations:
+	// the defaults survive, exactly as they did when this read two bare unmarshals.
+	var doc yaml.Node
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return err
+	}
+	var probe legacyProbe
+	// Bare, like the decode below it: Load already names the file, and the
+	// probe is the first thing to reject a mistyped ide: block, so a wrapper
+	// here would stamp the path into the message twice. A mistyped agents:
+	// block is rejected by the decode below instead, the probe's own agents
+	// field being a node that accepts any shape.
+	if err := doc.Decode(&probe); err != nil {
+		return err
+	}
+	if err := doc.Decode(cfg); err != nil {
+		return err
+	}
+	return promoteLegacy(cfg, path, &probe.Agents)
+}
+
+// promoteLegacy applies this file's deprecated ide: block over cfg.Agents key by
+// key, so an agent the block does not name keeps the value it already has. A file
+// that also carries agents: with a value is not promoted: agents: wins. The node
+// is zeroed either way, so it can never survive into Save. agentsKey is this
+// file's agents: value node, left at Kind 0 when the file has no such key. Both
+// the notice and the error name the file by path.
+//
+// "Carries agents:" means something narrower here than on the write side, and the
+// difference is deliberate. A null agents: counts as unset here, so the ide: block
+// is still promoted and the user's values are read correctly; renameLegacyAgentsKey
+// counts that same key as present and refuses to rename, because renaming would
+// duplicate it. Such a file is therefore never migrated and warns on every run
+// until the empty agents: key is deleted by hand — which is why it gets its own
+// notice, the ordinary "rename the key" advice being the one thing that does not
+// work there.
+func promoteLegacy(cfg *Config, path string, agentsKey *yaml.Node) error {
+	node := cfg.IDE
+	cfg.IDE = yaml.Node{}
+	if node.Kind == 0 {
+		return nil
+	}
+	switch {
+	case agentsKey.Kind != 0 && !isNull(agentsKey):
+		cfg.Legacy.BothKeyPaths = append(cfg.Legacy.BothKeyPaths, path)
+		return nil
+	case agentsKey.Kind != 0:
+		cfg.Legacy.EmptyAgentsPaths = append(cfg.Legacy.EmptyAgentsPaths, path)
+	default:
+		cfg.Legacy.IDEKeyPaths = append(cfg.Legacy.IDEKeyPaths, path)
+	}
+	if err := node.Decode(&cfg.Agents); err != nil {
+		return fmt.Errorf("parsing %s: decoding deprecated 'ide:' block: %w", path, err)
+	}
+	return nil
 }

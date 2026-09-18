@@ -1,6 +1,6 @@
 # qode Architecture Report
 
-Go CLI that generates structured AI prompts for a standardized developer workflow. It does **not** run AI — it assembles context and renders prompt templates for AI IDEs (Cursor, Claude Code, etc.).
+Go CLI that generates structured AI prompts for a standardized developer workflow. It does **not** run AI — it assembles context and renders prompt templates for AI agents (Cursor, Claude Code, Codex, OpenCode).
 
 ## Commands
 
@@ -28,7 +28,7 @@ internal/
   scoring/         Rubrics, two-pass worker/judge scoring
   workflow/        Step-ordering guards (pure, no I/O)
   knowledge/       Project lessons-learned markdown loader
-  scaffold/        IDE configuration generator (qode init)
+  scaffold/        Agent configuration generator (qode init)
   env/             .env file loader
   iokit/           File I/O utilities, atomic writes
   log/             Structured logging (slog)
@@ -41,7 +41,7 @@ tools/             Release scripts
 
 Config (`config`) -> Context (`qodecontext`) -> Prompt engine (`prompt`) -> Domain builders (`plan`, `review`) -> CLI commands (`cli`) -> Output
 
-- **Config** loads `qode.yaml`; provides scoring rubrics, review thresholds, diff command, and IDE settings
+- **Config** loads `qode.yaml`; provides scoring rubrics, review thresholds, diff command, and agent settings
 - **Context** reads per-context state from `.qode/contexts/<name>/` via the `current` symlink (ticket, analysis, spec, reviews)
 - **Prompt engine** resolves templates local-override-first: `.qode/prompts/` before `go:embed` fallback. `TemplateData` is the single struct for all templates
 - **Workflow guards** (`workflow`) enforce step ordering — e.g. spec requires minimum refine score

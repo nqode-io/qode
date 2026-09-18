@@ -16,9 +16,9 @@ func NewTemplateData(projectName string) *TemplateDataBuilder {
 	}
 }
 
-// WithIDE sets the target IDE identifier.
-func (b *TemplateDataBuilder) WithIDE(ide string) *TemplateDataBuilder {
-	b.data.IDE = ide
+// WithAgent sets the target agent identifier.
+func (b *TemplateDataBuilder) WithAgent(agent string) *TemplateDataBuilder {
+	b.data.Agent = agent
 	return b
 }
 
