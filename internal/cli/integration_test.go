@@ -254,8 +254,8 @@ func TestIntegration_PlanRefine_CancelledContext(t *testing.T) {
 // than the package-global rootCmd, so it constructs no command instance and resets no
 // global state.
 func TestIntegration_Init_CreatesOpenCodeCommands(t *testing.T) {
-	// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
-	isolateHome(t)
+	t.Parallel()
+
 	root := t.TempDir()
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, root, "", false, false); err != nil {
 		t.Fatalf("runInitExisting: %v", err)
@@ -284,8 +284,7 @@ func TestIntegration_Init_CreatesOpenCodeCommands(t *testing.T) {
 // on a fresh command instance. --root is a persistent flag on rootCmd only, so the
 // working directory is switched instead of mutating the package global.
 func TestIntegration_Init_ConfigOnlyFlag(t *testing.T) {
-	// t.Chdir and t.Setenv both forbid t.Parallel; config.Load reads os.UserHomeDir().
-	isolateHome(t)
+	// t.Chdir forbids t.Parallel.
 	dir := t.TempDir()
 	t.Chdir(dir)
 
@@ -324,8 +323,8 @@ func TestIntegration_Init_ConfigOnlyFlag(t *testing.T) {
 // the package-global rootCmd, so it constructs no command instance and resets no
 // global state.
 func TestIntegration_Init_MigratesLegacyIDEKey(t *testing.T) {
-	// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
-	isolateHome(t)
+	t.Parallel()
+
 	root := t.TempDir()
 	legacy := filepath.Join(root, "qode.yaml")
 	if err := os.WriteFile(legacy, []byte("qode_version: 0.3.4-beta\nide:\n  cursor:\n    enabled: false\n"), 0644); err != nil {

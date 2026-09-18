@@ -25,7 +25,8 @@ import (
 const hostileDirName = "evil\x1b[2K\r"
 
 func TestRunInitExisting_EscapesAControlCharacterInThePathItPrints(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	root := filepath.Join(t.TempDir(), hostileDirName)
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Skipf("cannot create a directory named with control characters: %v", err)
@@ -46,7 +47,8 @@ func TestRunInitExisting_EscapesAControlCharacterInThePathItPrints(t *testing.T)
 }
 
 func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
@@ -72,7 +74,8 @@ func TestRunInitExisting_WritesQodeVersion(t *testing.T) {
 }
 
 func TestRunInitExisting_CreatesDirs(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
@@ -88,7 +91,8 @@ func TestRunInitExisting_CreatesDirs(t *testing.T) {
 }
 
 func TestRunInitExisting_CopiesTemplates(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
@@ -122,7 +126,8 @@ func TestRunInitExisting_CopiesTemplates(t *testing.T) {
 }
 
 func TestRunInitExisting_CreatesAgentConfigs(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
@@ -161,7 +166,8 @@ func TestRunInitExisting_CreatesAgentConfigs(t *testing.T) {
 }
 
 func TestRunInitExisting_NoCursorRules(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
@@ -179,7 +185,8 @@ func TestRunInitExisting_NoCursorRules(t *testing.T) {
 }
 
 func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	var buf bytes.Buffer
@@ -202,7 +209,8 @@ func TestRunInitExisting_NoDetectionOutput(t *testing.T) {
 }
 
 func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
@@ -216,7 +224,8 @@ func TestRunInitExisting_CreatesScoringYaml(t *testing.T) {
 }
 
 func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
@@ -246,7 +255,8 @@ func TestRunInitExisting_RerunPreservesScoringYaml(t *testing.T) {
 }
 
 func TestRunInitExisting_AppendsGitignoreRules(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
@@ -267,7 +277,8 @@ func TestRunInitExisting_AppendsGitignoreRules(t *testing.T) {
 }
 
 func TestRunInitExisting_GitignoreIsIdempotent(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", false, false); err != nil {
@@ -318,7 +329,8 @@ func readProjectConfig(t *testing.T, dir string) string {
 }
 
 func TestRunInitExisting_ConfigOnly_WritesOnlyConfig(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	if err := runInitExisting(context.Background(), &bytes.Buffer{}, io.Discard, dir, "", true, false); err != nil {
@@ -342,7 +354,8 @@ func TestRunInitExisting_ConfigOnly_WritesOnlyConfig(t *testing.T) {
 }
 
 func TestRunInitExisting_ConfigOnly_RefusesExisting(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	const existing = "qode_version: 0.1.0\n"
 	seedProjectConfig(t, dir, existing)
@@ -357,7 +370,8 @@ func TestRunInitExisting_ConfigOnly_RefusesExisting(t *testing.T) {
 }
 
 func TestRunInitExisting_ConfigOnly_ForceOverwrites(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, "qode_version: 0.1.0\n")
 
@@ -387,7 +401,8 @@ agents:
 `
 
 func TestRunInitExisting_UpgradesExistingConfig(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, customisedConfig)
 
@@ -422,7 +437,8 @@ func TestRunInitExisting_UpgradesExistingConfig(t *testing.T) {
 }
 
 func TestRunInitExisting_SecondRunIsNoOp(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, customisedConfig)
 
@@ -452,6 +468,8 @@ func TestRunInitExisting_SecondRunIsNoOp(t *testing.T) {
 }
 
 func TestRunInitExisting_SkipsDisabledAgents(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		key      string
@@ -478,8 +496,8 @@ func TestRunInitExisting_SkipsDisabledAgents(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
-			isolateHome(t)
+			t.Parallel()
+
 			dir := t.TempDir()
 			seedProjectConfig(t, dir, "agents:\n  "+tc.key+":\n    enabled: false\n")
 
@@ -500,7 +518,8 @@ func TestRunInitExisting_SkipsDisabledAgents(t *testing.T) {
 }
 
 func TestRunInitExisting_NoAgentsEnabled(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, `agents:
   cursor:
@@ -523,6 +542,8 @@ func TestRunInitExisting_NoAgentsEnabled(t *testing.T) {
 }
 
 func TestRunInitExisting_BrokenConfigIsUntouched(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		body string
@@ -533,8 +554,8 @@ func TestRunInitExisting_BrokenConfigIsUntouched(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
-			isolateHome(t)
+			t.Parallel()
+
 			dir := t.TempDir()
 			seedProjectConfig(t, dir, tc.body)
 
@@ -553,6 +574,8 @@ func TestRunInitExisting_BrokenConfigIsUntouched(t *testing.T) {
 }
 
 func TestRunInitExisting_BrokenScoringYamlHasNoOverwriteHint(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		body      string
@@ -566,8 +589,8 @@ func TestRunInitExisting_BrokenScoringYamlHasNoOverwriteHint(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
-			isolateHome(t)
+			t.Parallel()
+
 			dir := t.TempDir()
 			const valid = "qode_version: 0.1.0\n"
 			seedProjectConfig(t, dir, valid)
@@ -600,7 +623,8 @@ func TestRunInitExisting_BrokenScoringYamlHasNoOverwriteHint(t *testing.T) {
 }
 
 func TestRunInitExisting_EmptyConfigIsFilled(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, "")
 
@@ -624,7 +648,8 @@ func TestRunInitExisting_EmptyConfigIsFilled(t *testing.T) {
 }
 
 func TestRunInitExisting_UpgradeOutputLine(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, "qode_version: 0.1.0\n")
 
@@ -645,7 +670,8 @@ func TestRunInitExisting_UpgradeOutputLine(t *testing.T) {
 }
 
 func TestRunInitExisting_UnreadableConfigHasNoOverwriteHint(t *testing.T) {
-	isolateHome(t)
+	t.Parallel()
+
 	if os.Geteuid() == 0 {
 		t.Skip("root ignores file permissions")
 	}
@@ -675,8 +701,8 @@ func TestRunInitExisting_UnreadableConfigHasNoOverwriteHint(t *testing.T) {
 const legacyRenameLine = "qode.yaml: 'ide:' has been renamed to 'agents:' — updated in place."
 
 func TestRunInitExisting_RenamesLegacyIDEKey(t *testing.T) {
-	// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	seedProjectConfig(t, dir, "qode_version: 0.3.4-beta\nide:\n  cursor:\n    enabled: false\n")
 
@@ -701,8 +727,8 @@ func TestRunInitExisting_RenamesLegacyIDEKey(t *testing.T) {
 }
 
 func TestRunInitExisting_BothKeys_DoesNotPrintRenameLine(t *testing.T) {
-	// t.Setenv forbids t.Parallel; config.Load reads os.UserHomeDir().
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	const body = "qode_version: 0.3.4-beta\nagents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n    enabled: false\n"
 	seedProjectConfig(t, dir, body)
@@ -734,8 +760,8 @@ func TestInitCmd_LongHelpUsesAgentVocabulary(t *testing.T) {
 }
 
 func TestRunInitExisting_BothKeysConfig_WarnsOnce(t *testing.T) {
-	// t.Setenv (via isolateHome) forbids t.Parallel.
-	isolateHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	seedProjectConfig(t, dir,
 		"qode_version: 0.3.4-beta\nagents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n    enabled: false\n")

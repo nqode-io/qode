@@ -16,7 +16,6 @@ import (
 )
 
 func TestLoadSession_HappyPath(t *testing.T) {
-	isolateHome(t)
 	root := t.TempDir()
 	flagRoot = root
 	t.Cleanup(func() { flagRoot = "" })
@@ -54,7 +53,6 @@ func TestLoadSession_HappyPath(t *testing.T) {
 
 func TestLoadSession_NoCurrentContext(t *testing.T) {
 	// Setup root with config but no context symlink (no Init/Switch).
-	isolateHome(t)
 	root := t.TempDir()
 	flagRoot = root
 	t.Cleanup(func() { flagRoot = "" })
@@ -93,8 +91,7 @@ const bothKeysConfig = "agents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n
 const bothKeysWarning = "both 'agents:' and 'ide:' are set"
 
 func TestLoadSession_BothKeysConfig_WarnsOnce(t *testing.T) {
-	// t.Setenv (via isolateHome) forbids t.Parallel.
-	isolateHome(t)
+	// flagRoot is a package global, so this test cannot run in parallel.
 	root := t.TempDir()
 	flagRoot = root
 	t.Cleanup(func() { flagRoot = "" })

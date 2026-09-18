@@ -80,8 +80,7 @@ func TestTruncateLines_PreservesContent(t *testing.T) {
 }
 
 func TestRunKnowledgeList_BothKeysConfig_WarnsOnce(t *testing.T) {
-	// t.Setenv (via isolateHome) forbids t.Parallel.
-	isolateHome(t)
+	// flagRoot is a package global, so this test cannot run in parallel.
 	root := t.TempDir()
 	flagRoot = root
 	t.Cleanup(func() { flagRoot = "" })
