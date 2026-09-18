@@ -1269,3 +1269,49 @@ base: &base
 		t.Errorf("the merged deprecated block was modified:\n%s", rendered)
 	}
 }
+
+func TestUpgrade_DoesNotRenameWhenAgentsComesFromAMergeKey(t *testing.T) {
+	t.Parallel()
+
+	// agents: reaches this file only through the merge key, so no literal entry
+	// carries it. Renaming ide: here would create a literal agents: that outranks
+	// the merged block, and mergeMissing would then write codex back to enabled.
+	const body = `qode_version: 0.3.4-beta
+base: &base
+  agents:
+    codex:
+      enabled: false
+<<: *base
+ide:
+  cursor:
+    enabled: false
+`
+	dir := seedConfig(t, body)
+
+	res, err := Upgrade(context.Background(), dir, "0.4.0-beta")
+	if err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+	if res.LegacyKeyRenamed {
+		t.Error("Upgrade renamed a key that would have shadowed the merged agents: block")
+	}
+
+	rendered := string(readConfig(t, dir))
+	if got := countKeyLines(t, rendered, "agents"); got != 0 {
+		t.Errorf("found %d top-level agents: keys, want 0:\n%s", got, rendered)
+	}
+	if !strings.Contains(rendered, "ide:\n  cursor:\n    enabled: false\n") {
+		t.Errorf("the deprecated block was modified:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "    codex:\n      enabled: false\n") {
+		t.Errorf("the merged codex toggle was rewritten:\n%s", rendered)
+	}
+
+	var got Config
+	if err := yaml.Unmarshal([]byte(rendered), &got); err != nil {
+		t.Fatalf("unmarshalling upgraded config: %v", err)
+	}
+	if got.Agents.Codex.Enabled {
+		t.Errorf("codex was re-enabled behind the user's back:\n%s", rendered)
+	}
+}

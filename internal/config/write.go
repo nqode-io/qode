@@ -214,12 +214,22 @@ type UpgradeResult struct {
 }
 
 // renameLegacyAgentsKey rewrites a deprecated top-level `ide:` key to `agents:`,
-// keeping the value node, so every toggle the user set survives. It refuses to
-// fire when the file already carries `agents:`: a second key of that name is a
-// duplicate that Upgrade's write-time validateDocument rejects. It reports
+// keeping the value node, so every toggle the user set survives. It reports
 // whether it renamed anything.
-func renameLegacyAgentsKey(root *yaml.Node) bool {
-	if root.Kind != yaml.MappingNode || lookupValue(root, "agents") != nil {
+//
+// It refuses to fire when the file already resolves `agents:` from either source.
+// A literal key of that name would be duplicated, which Upgrade's write-time
+// validateDocument rejects. A merge-supplied one is worse than a duplicate: the
+// literal key the rename creates outranks the merged block, so Load would read
+// the `ide:` values instead, and mergeMissing would then fill the new block with
+// all-enabled defaults — writing the opposite value over an agent the user had
+// switched off. merged therefore has to come from mergedKeys, which is the only
+// thing that can see a key no literal entry carries.
+//
+// A null `agents:` key counts as present here while Load counts it as unset; see
+// promoteLegacy for why the two sides differ and what the user sees.
+func renameLegacyAgentsKey(root *yaml.Node, merged map[string]bool) bool {
+	if root.Kind != yaml.MappingNode || lookupValue(root, "agents") != nil || merged["agents"] {
 		return false
 	}
 	for i := 0; i+1 < len(root.Content); i += 2 {
@@ -240,18 +250,15 @@ func renameLegacyAgentsKey(root *yaml.Node) bool {
 // ide: key only through a merge key, which renameLegacyAgentsKey cannot reach:
 // appending agents: there would hand Load a canonical all-enabled block that wins
 // over the merged ide: values and silently re-enable an agent the user disabled.
-// The load side promotes the merged block instead, on every run.
-func upgradeDefaults(root *yaml.Node, binaryVersion string) (*yaml.Node, error) {
+// The load side promotes the merged block instead, on every run. merged is the
+// key set upgradeTree resolved once, shared with renameLegacyAgentsKey.
+func upgradeDefaults(root *yaml.Node, merged map[string]bool, binaryVersion string) *yaml.Node {
 	def := defaultDocument(binaryVersion).Content[0]
 	if lookupValue(root, legacyAgentsKey) != nil || lookupValue(root, "agents") != nil {
-		return def, nil
-	}
-	merged, err := mergedKeys(root)
-	if err != nil {
-		return nil, err
+		return def
 	}
 	if !merged[legacyAgentsKey] {
-		return def, nil
+		return def
 	}
 	for i := 0; i+1 < len(def.Content); i += 2 {
 		if def.Content[i].Value == "agents" {
@@ -259,7 +266,7 @@ func upgradeDefaults(root *yaml.Node, binaryVersion string) (*yaml.Node, error) 
 			break
 		}
 	}
-	return def, nil
+	return def
 }
 
 // upgradeTree applies the in-place edits Upgrade makes to an already-validated
@@ -267,15 +274,19 @@ func upgradeDefaults(root *yaml.Node, binaryVersion string) (*yaml.Node, error) 
 // missing, and the version stamp. It reports whether the tree changed at all and
 // whether the rename was one of the changes.
 func upgradeTree(rootNode *yaml.Node, binaryVersion string) (bool, bool, error) {
-	// Rename before merging: once agents: is a default key, mergeMissing would
-	// otherwise append an all-enabled block beside the user's ide: block and
-	// silently re-enable an agent they had switched off.
-	renamed := renameLegacyAgentsKey(rootNode)
-	def, err := upgradeDefaults(rootNode, binaryVersion)
+	// Resolve the merge keys once, before the rename mutates the mapping: both
+	// the rename and the defaults have to know which keys the file already gets
+	// through a <<:, and resolving twice would only invite the two to disagree.
+	merged, err := mergedKeys(rootNode)
 	if err != nil {
 		return false, false, err
 	}
-	merged, err := mergeMissing(rootNode, def)
+	// Rename before merging: once agents: is a default key, mergeMissing would
+	// otherwise append an all-enabled block beside the user's ide: block and
+	// silently re-enable an agent they had switched off.
+	renamed := renameLegacyAgentsKey(rootNode, merged)
+	def := upgradeDefaults(rootNode, merged, binaryVersion)
+	filled, err := mergeMissing(rootNode, def)
 	if err != nil {
 		return false, false, err
 	}
@@ -283,7 +294,7 @@ func upgradeTree(rootNode *yaml.Node, binaryVersion string) (bool, bool, error) 
 	if err != nil {
 		return false, false, err
 	}
-	return merged || stamped || renamed, renamed, nil
+	return filled || stamped || renamed, renamed, nil
 }
 
 // Upgrade preserves an existing qode.yaml: every value the user set is kept,
