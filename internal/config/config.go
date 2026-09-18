@@ -164,6 +164,14 @@ func mergeFromFile(path string, cfg *Config) error {
 // key, so an agent the block does not name keeps the value it already has. A file
 // that also carries agents: is not promoted: agents: wins. The node is zeroed
 // either way, so it can never survive into the next file or into Save.
+//
+// "Carries agents:" means something narrower here than on the write side, and the
+// difference is deliberate. sawAgents comes from a *AgentsConfig that a null value
+// leaves nil, so `agents:` with nothing after it counts as unset and the ide: block
+// is still promoted; renameLegacyAgentsKey counts that same key as present and
+// refuses to rename, because renaming would duplicate it. The user's values are
+// read correctly either way, but such a file is never migrated and warns on every
+// run until the empty agents: key is deleted by hand.
 func promoteLegacy(cfg *Config, path string, sawAgents bool) error {
 	node := cfg.IDE
 	cfg.IDE = yaml.Node{}

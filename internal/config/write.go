@@ -440,6 +440,15 @@ func validateDocument(doc *yaml.Node, path string) error {
 // rewritten or re-marshalled — that single rule is what preserves enabled: false,
 // scoring.strict: true and any threshold the user tuned. Comments therefore arrive
 // only with keys that are added.
+//
+// Presence is what counts, not the value: a key written with nothing after it
+// (`agents:` alone on a line) is present but is not a mapping, so nothing recurses
+// into it and its sub-keys are never filled in — not on this run and not on any
+// later one. A null `ide:` becomes exactly that after renameLegacyAgentsKey, as a
+// null `review:` always has. Load reads such a section as all defaults, so the
+// user loses the generated comments and any toggle a later release adds, not a
+// setting. Treating null as absent would mean writing over a key the user wrote,
+// which is the one thing this function exists not to do.
 func mergeMissing(dst, def *yaml.Node) (bool, error) {
 	if dst.Kind != yaml.MappingNode || def.Kind != yaml.MappingNode {
 		return false, nil

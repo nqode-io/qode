@@ -1315,3 +1315,57 @@ ide:
 		t.Errorf("codex was re-enabled behind the user's back:\n%s", rendered)
 	}
 }
+
+func TestUpgrade_NullLegacyKeyRenamesToANullAgentsKey(t *testing.T) {
+	t.Parallel()
+
+	// Documented, not desirable: mergeMissing treats a key with no value as
+	// present, so the renamed section stays empty for the life of the file. The
+	// runtime reads it as all four agents enabled, which is what the user of a
+	// null ide: got before the rename.
+	dir := seedConfig(t, "qode_version: 0.3.4-beta\nide:\n")
+
+	res, err := Upgrade(context.Background(), dir, "0.4.0-beta")
+	if err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+	if !res.LegacyKeyRenamed {
+		t.Fatalf("Upgrade = %+v, want the null ide: key renamed", res)
+	}
+
+	rendered := string(readConfig(t, dir))
+	if got := countKeyLines(t, rendered, "agents"); got != 1 {
+		t.Errorf("found %d top-level agents: keys, want 1:\n%s", got, rendered)
+	}
+	if strings.Contains(rendered, "opencode:") {
+		t.Errorf("the empty agents: section gained toggles; update mergeMissing's doc comment:\n%s", rendered)
+	}
+}
+
+func TestUpgrade_DoesNotRenameWhenTheAgentsKeyIsNull(t *testing.T) {
+	t.Parallel()
+
+	// The write side counts a valueless agents: as present — renaming would
+	// duplicate it — while Load counts it as unset and promotes the ide: block.
+	// The file is therefore never migrated and warns on every run; see
+	// promoteLegacy.
+	dir := seedConfig(t, "qode_version: 0.3.4-beta\nagents:\nide:\n  cursor:\n    enabled: false\n")
+
+	res, err := Upgrade(context.Background(), dir, "0.4.0-beta")
+	if err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+	if res.LegacyKeyRenamed {
+		t.Error("Upgrade renamed a key that would have duplicated the null agents: key")
+	}
+
+	rendered := string(readConfig(t, dir))
+	for _, key := range []string{"agents", legacyAgentsKey} {
+		if got := countKeyLines(t, rendered, key); got != 1 {
+			t.Errorf("found %d top-level %s: keys, want 1:\n%s", got, key, rendered)
+		}
+	}
+	if !strings.Contains(rendered, "ide:\n  cursor:\n    enabled: false\n") {
+		t.Errorf("the deprecated block was modified:\n%s", rendered)
+	}
+}
