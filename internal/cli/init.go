@@ -96,7 +96,7 @@ func ensureConfig(ctx context.Context, out, errOut io.Writer, root, binaryVersio
 	}
 	// Load unconditionally: one code path, and a freshly written file is parsed and
 	// validated before anything is scaffolded against it. Errors here may name
-	// .qode/scoring.yaml or ~/.qode/config.yaml, so they are returned undecorated.
+	// .qode/scoring.yaml, so they are returned undecorated.
 	cfg, err := loadConfigNotifying(errOut, root)
 	if err != nil {
 		return nil, err

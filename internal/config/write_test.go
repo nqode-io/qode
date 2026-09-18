@@ -502,19 +502,8 @@ func TestUpgrade_InvalidFile(t *testing.T) {
 	}
 }
 
-func TestUpgrade_DoesNotPersistUserLevelOrRubrics(t *testing.T) {
-	// t.Setenv forbids t.Parallel; the planted user-level config lives under HOME.
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-
-	userCfg := filepath.Join(home, QodeDir, "config.yaml")
-	if err := os.MkdirAll(filepath.Dir(userCfg), 0755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(userCfg, []byte("agents:\n  codex:\n    enabled: false\n"), 0644); err != nil {
-		t.Fatalf("writing user config: %v", err)
-	}
+func TestUpgrade_DoesNotPersistRubrics(t *testing.T) {
+	t.Parallel()
 
 	dir := seedConfig(t, "qode_version: 0.1.0\n")
 	scoringPath := filepath.Join(dir, QodeDir, ScoringFileName)
@@ -536,9 +525,6 @@ func TestUpgrade_DoesNotPersistUserLevelOrRubrics(t *testing.T) {
 	rendered := string(readConfig(t, dir))
 	if strings.Contains(rendered, "rubrics") {
 		t.Errorf("rubric definitions leaked into qode.yaml:\n%s", rendered)
-	}
-	if strings.Contains(rendered, "enabled: false") {
-		t.Errorf("user-level agent override leaked into qode.yaml:\n%s", rendered)
 	}
 }
 

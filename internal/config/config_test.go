@@ -51,10 +51,8 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestSave_Load(t *testing.T) {
-	// config.Load merges ~/.qode/config.yaml, so HOME must be isolated.
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
+	t.Parallel()
+
 	dir := t.TempDir()
 
 	cfg := DefaultConfig()
@@ -246,7 +244,8 @@ func oversizedConfig(n int) string {
 }
 
 func TestLoad_RefusesAProjectConfigPastTheSizeLimit(t *testing.T) {
-	seedLegacyHome(t) // t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
+	t.Parallel()
+
 	dir := t.TempDir()
 	writeProjectConfig(t, dir, oversizedConfig(maxConfigBytes))
 
@@ -262,23 +261,9 @@ func TestLoad_RefusesAProjectConfigPastTheSizeLimit(t *testing.T) {
 	}
 }
 
-func TestLoad_RefusesAUserConfigPastTheSizeLimit(t *testing.T) {
-	home := seedLegacyHome(t) // t.Setenv forbids t.Parallel.
-	dir := t.TempDir()
-	writeProjectConfig(t, dir, "qode_version: \"0.4.0-beta\"\n")
-	writeUserConfig(t, home, oversizedConfig(maxConfigBytes))
-
-	_, err := Load(dir)
-	if err == nil {
-		t.Fatal("Load accepted a user config past the size limit")
-	}
-	if !strings.Contains(err.Error(), "past the 65536-byte limit for a configuration") {
-		t.Errorf("error = %v, want it to name the size limit", err)
-	}
-}
-
 func TestLoad_AcceptsAConfigJustUnderTheSizeLimit(t *testing.T) {
-	seedLegacyHome(t) // t.Setenv forbids t.Parallel.
+	t.Parallel()
+
 	dir := t.TempDir()
 	body := oversizedConfig(maxConfigBytes - 2048)
 	if len(body) > maxConfigBytes {
@@ -294,7 +279,8 @@ func TestLoad_AcceptsAConfigJustUnderTheSizeLimit(t *testing.T) {
 }
 
 func TestLoad_KeepsTheDefaultsForAConfigWithNoValues(t *testing.T) {
-	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		body string
@@ -305,7 +291,8 @@ func TestLoad_KeepsTheDefaultsForAConfigWithNoValues(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			seedLegacyHome(t)
+			t.Parallel()
+
 			dir := t.TempDir()
 			writeProjectConfig(t, dir, tc.body)
 
@@ -323,7 +310,8 @@ func TestLoad_KeepsTheDefaultsForAConfigWithNoValues(t *testing.T) {
 }
 
 func TestLoad_RefusesAProjectConfigThatIsNotARegularFile(t *testing.T) {
-	seedLegacyHome(t) // t.Setenv forbids t.Parallel.
+	t.Parallel()
+
 	dir := t.TempDir()
 	if err := syscall.Mkfifo(filepath.Join(dir, ConfigFileName), 0644); err != nil {
 		t.Skipf("mkfifo unavailable: %v", err)
@@ -350,33 +338,10 @@ func TestLoad_RefusesAProjectConfigThatIsNotARegularFile(t *testing.T) {
 
 // --- deprecated ide: key ---
 
-// seedLegacyHome isolates HOME so Load's user-level merge is deterministic and
-// returns the isolated home directory.
-func seedLegacyHome(t *testing.T) string {
-	t.Helper()
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-	return home
-}
-
 // writeProjectConfig writes body as the project qode.yaml and returns its path.
 func writeProjectConfig(t *testing.T, dir, body string) string {
 	t.Helper()
 	path := filepath.Join(dir, ConfigFileName)
-	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
-		t.Fatalf("writing %s: %v", path, err)
-	}
-	return path
-}
-
-// writeUserConfig writes body as ~/.qode/config.yaml and returns its path.
-func writeUserConfig(t *testing.T, home, body string) string {
-	t.Helper()
-	path := filepath.Join(home, QodeDir, "config.yaml")
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
 	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
 		t.Fatalf("writing %s: %v", path, err)
 	}
@@ -403,8 +368,8 @@ func assertAgents(t *testing.T, cfg *Config, want [4]bool) {
 }
 
 func TestLoad_LegacyIDEPartialBlock_KeepsUnmentionedAgentDefaults(t *testing.T) {
-	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
-	seedLegacyHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	writeProjectConfig(t, dir, "ide:\n  cursor:\n    enabled: false\n")
 
@@ -415,23 +380,9 @@ func TestLoad_LegacyIDEPartialBlock_KeepsUnmentionedAgentDefaults(t *testing.T) 
 	assertAgents(t, cfg, [4]bool{false, true, true, true})
 }
 
-func TestLoad_LegacyIDEPartialBlockInUserConfig_KeepsUnmentionedAgentDefaults(t *testing.T) {
-	// t.Setenv forbids t.Parallel; the legacy block lives under HOME.
-	home := seedLegacyHome(t)
-	dir := t.TempDir()
-	writeProjectConfig(t, dir, "qode_version: 0.4.0-beta\n")
-	writeUserConfig(t, home, "ide:\n  codex:\n    enabled: false\n")
-
-	cfg, err := Load(dir)
-	if err != nil {
-		t.Fatalf("load: %v", err)
-	}
-	assertAgents(t, cfg, [4]bool{true, true, false, true})
-}
-
 func TestLoad_LegacyIDEThroughMergeKey_KeepsUnmentionedAgentDefaults(t *testing.T) {
-	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
-	seedLegacyHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	writeProjectConfig(t, dir, "base: &base\n  ide:\n    cursor:\n      enabled: false\n<<: *base\n")
 
@@ -442,25 +393,9 @@ func TestLoad_LegacyIDEThroughMergeKey_KeepsUnmentionedAgentDefaults(t *testing.
 	assertAgents(t, cfg, [4]bool{false, true, true, true})
 }
 
-func TestLoad_LegacyIDEInProjectAndUserConfig_AppliesBoth(t *testing.T) {
-	// t.Setenv forbids t.Parallel; one of the two legacy blocks lives under HOME.
-	home := seedLegacyHome(t)
-	dir := t.TempDir()
-	writeProjectConfig(t, dir, "ide:\n  cursor:\n    enabled: false\n")
-	writeUserConfig(t, home, "ide:\n  codex:\n    enabled: false\n")
-
-	cfg, err := Load(dir)
-	if err != nil {
-		t.Fatalf("load: %v", err)
-	}
-	// Promotion must run per file: the user file's ide: node replaces the project
-	// file's in cfg.IDE, so a single promotion at the end loses cursor: false.
-	assertAgents(t, cfg, [4]bool{false, true, false, true})
-}
-
 func TestLoad_LegacyIDENullSection_KeepsAllAgentsEnabled(t *testing.T) {
-	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
-	seedLegacyHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	writeProjectConfig(t, dir, "ide:\n")
 
@@ -472,8 +407,8 @@ func TestLoad_LegacyIDENullSection_KeepsAllAgentsEnabled(t *testing.T) {
 }
 
 func TestLoad_LegacyIDEWithAgents_AgentsWins(t *testing.T) {
-	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
-	seedLegacyHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	writeProjectConfig(t, dir,
 		"agents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n    enabled: false\n")
@@ -485,23 +420,9 @@ func TestLoad_LegacyIDEWithAgents_AgentsWins(t *testing.T) {
 	assertAgents(t, cfg, [4]bool{true, true, true, true})
 }
 
-func TestLoad_LegacyIDEWithAgentsInUserConfig_AgentsWins(t *testing.T) {
-	// t.Setenv forbids t.Parallel; both keys live in ~/.qode/config.yaml.
-	home := seedLegacyHome(t)
-	dir := t.TempDir()
-	writeProjectConfig(t, dir, "qode_version: 0.4.0-beta\n")
-	writeUserConfig(t, home,
-		"agents:\n  codex:\n    enabled: true\nide:\n  codex:\n    enabled: false\n")
-
-	cfg, err := Load(dir)
-	if err != nil {
-		t.Fatalf("load: %v", err)
-	}
-	assertAgents(t, cfg, [4]bool{true, true, true, true})
-}
-
 func TestLoad_LegacyIDEWrongType_IsRefused(t *testing.T) {
-	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		body string
@@ -512,7 +433,8 @@ func TestLoad_LegacyIDEWrongType_IsRefused(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			seedLegacyHome(t)
+			t.Parallel()
+
 			dir := t.TempDir()
 			path := writeProjectConfig(t, dir, tc.body)
 
@@ -541,29 +463,29 @@ func TestLoad_LegacyIDEWrongType_IsRefused(t *testing.T) {
 }
 
 func TestLoad_LegacyKeyNotices(t *testing.T) {
-	// t.Setenv forbids t.Parallel; every case isolates HOME.
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		project string
-		user    string
-		want    func(projectPath, userPath string) []string
+		want    func(projectPath string) []string
 	}{
 		{
 			name:    "legacy key alone",
 			project: "ide:\n  cursor:\n    enabled: false\n",
-			want: func(p, _ string) []string {
+			want: func(p string) []string {
 				return []string{fmt.Sprintf(legacyKeyNotice, p)}
 			},
 		},
 		{
 			name:    "canonical key alone",
 			project: "agents:\n  cursor:\n    enabled: false\n",
-			want:    func(string, string) []string { return nil },
+			want:    func(string) []string { return nil },
 		},
 		{
 			name:    "both keys",
 			project: "agents:\n  cursor:\n    enabled: true\nide:\n  cursor:\n    enabled: false\n",
-			want: func(p, _ string) []string {
+			want: func(p string) []string {
 				return []string{fmt.Sprintf(bothKeysNotice, p)}
 			},
 		},
@@ -573,51 +495,30 @@ func TestLoad_LegacyKeyNotices(t *testing.T) {
 			// the two-step wording instead.
 			name:    "null agents key beside a legacy block",
 			project: "agents:\nide:\n  cursor:\n    enabled: false\n",
-			want: func(p, _ string) []string {
+			want: func(p string) []string {
 				return []string{fmt.Sprintf(emptyAgentsNotice, p)}
-			},
-		},
-		{
-			name:    "both keys in the user config",
-			project: "qode_version: 0.4.0-beta\n",
-			user:    "agents:\n  codex:\n    enabled: true\nide:\n  codex:\n    enabled: false\n",
-			want: func(string, string) []string {
-				// The machine-local file is named the way the user would type it,
-				// not by an absolute path carrying their account name.
-				return []string{fmt.Sprintf(bothKeysNotice, userConfigDisplayPath)}
-			},
-		},
-		{
-			name:    "legacy key in the user config",
-			project: "qode_version: 0.4.0-beta\n",
-			user:    "ide:\n  codex:\n    enabled: false\n",
-			want: func(string, string) []string {
-				return []string{fmt.Sprintf(legacyKeyNotice, userConfigDisplayPath)}
 			},
 		},
 		{
 			name:    "neither key",
 			project: "qode_version: 0.4.0-beta\n",
-			want:    func(string, string) []string { return nil },
+			want:    func(string) []string { return nil },
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			home := seedLegacyHome(t)
+			t.Parallel()
+
 			dir := t.TempDir()
 			projectPath := writeProjectConfig(t, dir, tc.project)
-			userPath := filepath.Join(home, QodeDir, "config.yaml")
-			if tc.user != "" {
-				userPath = writeUserConfig(t, home, tc.user)
-			}
 
 			cfg, err := Load(dir)
 			if err != nil {
 				t.Fatalf("load: %v", err)
 			}
 			got := cfg.Notices()
-			want := tc.want(projectPath, userPath)
+			want := tc.want(projectPath)
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("Notices() =\n%#v\nwant\n%#v", got, want)
 			}
@@ -696,53 +597,9 @@ func TestNotices_EscapeAControlCharacterInAPath(t *testing.T) {
 	}
 }
 
-func TestLoad_NamesTheMachineLocalConfigWithoutTheHomePath(t *testing.T) {
-	// t.Setenv forbids t.Parallel; the legacy block lives under HOME.
-	home := seedLegacyHome(t)
-	dir := t.TempDir()
-	writeProjectConfig(t, dir, "qode_version: 0.4.0-beta\n")
-	writeUserConfig(t, home, "ide:\n  codex:\n    enabled: false\n")
-
-	cfg, err := Load(dir)
-	if err != nil {
-		t.Fatalf("load: %v", err)
-	}
-
-	notices := cfg.Notices()
-	if len(notices) != 1 {
-		t.Fatalf("Notices() = %#v, want one deprecation line", notices)
-	}
-	if strings.Contains(notices[0], home) {
-		t.Errorf("the notice prints the home directory:\n%s", notices[0])
-	}
-	if !strings.Contains(notices[0], userConfigDisplayPath) {
-		t.Errorf("the notice does not name %s:\n%s", userConfigDisplayPath, notices[0])
-	}
-}
-
-func TestLoad_LegacyKeyNotices_BothFilesOrderedProjectFirst(t *testing.T) {
-	// t.Setenv forbids t.Parallel; one of the two legacy blocks lives under HOME.
-	home := seedLegacyHome(t)
-	dir := t.TempDir()
-	projectPath := writeProjectConfig(t, dir, "ide:\n  cursor:\n    enabled: false\n")
-	writeUserConfig(t, home, "ide:\n  codex:\n    enabled: false\n")
-
-	cfg, err := Load(dir)
-	if err != nil {
-		t.Fatalf("load: %v", err)
-	}
-	want := []string{
-		fmt.Sprintf(legacyKeyNotice, projectPath),
-		fmt.Sprintf(legacyKeyNotice, userConfigDisplayPath),
-	}
-	if !reflect.DeepEqual(cfg.Notices(), want) {
-		t.Errorf("Notices() =\n%#v\nwant\n%#v", cfg.Notices(), want)
-	}
-}
-
 func TestSave_NeverEmitsLegacyKeys(t *testing.T) {
-	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
-	seedLegacyHome(t)
+	t.Parallel()
+
 	dir := t.TempDir()
 	writeProjectConfig(t, dir, "ide:\n  cursor:\n    enabled: false\n")
 

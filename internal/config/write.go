@@ -456,7 +456,7 @@ func isEmptyDocument(doc *yaml.Node) bool {
 // validateDocument decodes the project file alone onto the defaults and validates it.
 // Node.Decode onto a pre-populated struct merges key-by-key exactly like
 // mergeFromFile, so this reproduces Load's project-file semantics without reading
-// .qode/scoring.yaml or ~/.qode/config.yaml.
+// .qode/scoring.yaml.
 func validateDocument(doc *yaml.Node, path string) error {
 	cfg := DefaultConfig()
 	if err := doc.Decode(&cfg); err != nil {
