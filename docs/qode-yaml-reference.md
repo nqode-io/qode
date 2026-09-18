@@ -38,7 +38,7 @@ diff:
 >
 > `qode init --config-only` writes `qode.yaml` and stops, so you can review and edit it before anything else is generated. It refuses to overwrite an existing file unless you add `--force`. `qode init --force` is the explicit clean reset — a different meaning from `--force` on `plan`, `review` and `start`, where it bypasses step guard checks.
 >
-> A key you never wrote falls back to its default, so an absent `agents.opencode` block means OpenCode is **enabled**, not disabled. Settings can also come from `~/.qode/config.yaml`, merged over the project file on that machine only: a machine-wide `agents.codex.enabled: false` there suppresses `.agents/skills/` in every project on that machine with nothing in the project to show for it. `qode init` never copies those machine-local values, or the rubrics from `.qode/scoring.yaml`, into your project's `qode.yaml`.
+> A key you never wrote falls back to its default, so an absent `agents.opencode` block means OpenCode is **enabled**, not disabled. Every setting comes from the project's own `qode.yaml`; `qode init` never copies the rubrics from `.qode/scoring.yaml` into it.
 
 ## Migrating from `ide:`
 
@@ -49,7 +49,6 @@ Before 0.4.0-beta the agent toggles lived under a key called `ide:`. That key is
 | The project `qode.yaml`, as a plain top-level key | Renames it to `agents:` in place, keeping every value you set, and prints `qode.yaml: 'ide:' has been renamed to 'agents:' — updated in place.` | — |
 | The project `qode.yaml`, alongside an `agents:` key | Leaves the `ide:` block exactly as written — renaming would create a duplicate key — and upgrades the rest of the file as usual | Warns that `agents:` wins and `ide:` is ignored; delete the `ide:` block yourself |
 | The project `qode.yaml`, alongside an `agents:` key written with no value | Leaves the `ide:` block exactly as written — renaming would create a duplicate key — and upgrades the rest of the file as usual | Reads the `ide:` block as `agents:` and warns. Renaming the key here would give you two `agents:` keys, which the next `qode init` refuses: delete the empty `agents:` line first, then rename `ide:` |
-| `~/.qode/config.yaml` | **Nothing.** No qode command ever rewrites your machine-wide config | Reads it as `agents:` and warns; rename the key by hand |
 | Pulled in through a `<<:` merge key | **Nothing.** The rename only sees a literal top-level `ide:` key | Reads it as `agents:` and warns; rename the key by hand |
 
 A partial block keeps its meaning through the rename: an agent the `ide:` block never names keeps its default, exactly as an absent `agents:` sub-key does.

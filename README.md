@@ -83,7 +83,7 @@ Error: qode binary (0.4.0-beta) is incompatible with this project's config (0.3.
 Run 'qode init' to refresh your configuration, prompts, and agent assets
 ```
 
-An `ide:` block in `~/.qode/config.yaml`, or one pulled in through a `<<:` merge key, is still read but never rewritten — rename those by hand. If a file carries both keys, `agents:` wins, a warning is printed, and the `ide:` block is left exactly as written for you to delete yourself — the rest of the file is upgraded as usual.
+An `ide:` block pulled in through a `<<:` merge key is still read but never rewritten — rename that one by hand. If a file carries both keys, `agents:` wins, a warning is printed, and the `ide:` block is left exactly as written for you to delete yourself — the rest of the file is upgraded as usual.
 
 ## Quick Start
 
