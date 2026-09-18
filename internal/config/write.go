@@ -273,13 +273,19 @@ func upgradeDefaults(root *yaml.Node, merged map[string]bool, binaryVersion stri
 // document: the deprecated key rename, the merge of the defaults the file is
 // missing, and the version stamp. It reports whether the tree changed at all and
 // whether the rename was one of the changes.
-func upgradeTree(rootNode *yaml.Node, binaryVersion string) (bool, bool, error) {
-	// Resolve the merge keys once, before the rename mutates the mapping: both
-	// the rename and the defaults have to know which keys the file already gets
-	// through a <<:, and resolving twice would only invite the two to disagree.
+func upgradeTree(rootNode *yaml.Node, binaryVersion string) (UpgradeResult, error) {
+	// Resolve the merge keys once, before the rename mutates the mapping, and
+	// share that one set with both consumers. The rename reads it on an
+	// untouched tree, so it is accurate by construction. upgradeDefaults reads
+	// it only after both literal lookups come back nil, and that state is
+	// reachable only when the rename did not fire — so it too sees a tree the
+	// resolve still describes. Re-resolving after the rename would genuinely
+	// produce a different set, because the rename rewrites a literal key's
+	// value from ide to agents; it would just make no difference to either
+	// decision.
 	merged, err := mergedKeys(rootNode)
 	if err != nil {
-		return false, false, err
+		return UpgradeResult{}, err
 	}
 	// Rename before merging: once agents: is a default key, mergeMissing would
 	// otherwise append an all-enabled block beside the user's ide: block and
@@ -288,13 +294,13 @@ func upgradeTree(rootNode *yaml.Node, binaryVersion string) (bool, bool, error) 
 	def := upgradeDefaults(rootNode, merged, binaryVersion)
 	filled, err := mergeMissing(rootNode, def)
 	if err != nil {
-		return false, false, err
+		return UpgradeResult{}, err
 	}
 	stamped, err := stampVersion(rootNode, binaryVersion)
 	if err != nil {
-		return false, false, err
+		return UpgradeResult{}, err
 	}
-	return filled || stamped || renamed, renamed, nil
+	return UpgradeResult{Changed: filled || stamped || renamed, LegacyKeyRenamed: renamed}, nil
 }
 
 // Upgrade preserves an existing qode.yaml: every value the user set is kept,
@@ -325,11 +331,11 @@ func Upgrade(ctx context.Context, root, binaryVersion string) (UpgradeResult, er
 	if err := validateDocument(doc, path); err != nil {
 		return UpgradeResult{}, err
 	}
-	changed, renamed, err := upgradeTree(doc.Content[0], binaryVersion)
+	res, err := upgradeTree(doc.Content[0], binaryVersion)
 	if err != nil {
 		return UpgradeResult{}, fmt.Errorf("%w: %s: %v", ErrConfigInvalid, path, err)
 	}
-	if !changed {
+	if !res.Changed {
 		return UpgradeResult{}, nil
 	}
 	// Validate again: the merge appends keys by raw name while yaml resolves them
@@ -341,7 +347,7 @@ func Upgrade(ctx context.Context, root, binaryVersion string) (UpgradeResult, er
 	if err := writeDocument(ctx, target, path, doc); err != nil {
 		return UpgradeResult{}, err
 	}
-	return UpgradeResult{Changed: true, LegacyKeyRenamed: renamed}, nil
+	return res, nil
 }
 
 // parseDocument parses qode.yaml into a document node whose root is always a
@@ -513,11 +519,14 @@ func mergeMissing(dst, def *yaml.Node) (bool, error) {
 	return changed, nil
 }
 
-// mergedKeys returns the keys a mapping resolves to through YAML merge keys (<<),
-// which lookupValue cannot see because no literal entry carries them. Mappings
-// without a merge key — every ordinary config — skip the decode entirely. A merge
-// key that cannot be resolved is an error rather than an empty result: treating it
-// as "no merged keys" would append defaults over values the user set.
+// mergedKeys returns every key a mapping carrying a merge key (<<) resolves to —
+// the literal entries as well as the merge-supplied ones, because it decodes the
+// whole mapping. Callers want it for the merge-supplied half, which lookupValue
+// cannot see; the literal half is harmless, since a caller that asks about a key
+// lookupValue already found has its answer from lookupValue. Mappings without a
+// merge key — every ordinary config — skip the decode entirely and get a nil map.
+// A merge key that cannot be resolved is an error rather than an empty result:
+// treating it as "no merged keys" would append defaults over values the user set.
 func mergedKeys(m *yaml.Node) (map[string]bool, error) {
 	if !hasMergeKey(m) {
 		return nil, nil
