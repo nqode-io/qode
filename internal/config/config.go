@@ -163,21 +163,53 @@ type legacyProbe struct {
 	IDE    *AgentsConfig `yaml:"ide"`
 }
 
+// readConfigFile reads one configuration file under the containment Upgrade
+// already applies on the write side: a regular file, no larger than maxConfigBytes.
+// Load runs on every command except init, so this is the read a hostile file
+// reaches first, and it has to be refused before it is parsed: yaml.v3's
+// duplicate-key check is quadratic in a mapping's key count, which is what makes a
+// megabyte of valid YAML cost tens of seconds. Neither message names the path,
+// because Load already names the file it was loading.
+func readConfigFile(path string) ([]byte, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case !info.Mode().IsRegular():
+		return nil, errors.New("not a regular file")
+	case info.Size() > maxConfigBytes:
+		return nil, fmt.Errorf("%d bytes, past the %d-byte limit for a configuration",
+			info.Size(), maxConfigBytes)
+	}
+	return os.ReadFile(path)
+}
+
 func mergeFromFile(path string, cfg *Config) error {
-	data, err := os.ReadFile(path)
+	data, err := readConfigFile(path)
 	if err != nil {
 		return err
 	}
-	var probe legacyProbe
-	// Bare, like the unmarshal below it: Load already names the file, and the
-	// probe is the first thing to reject a mistyped ide: block, so a wrapper
-	// here would stamp the path into the message twice. A mistyped agents:
-	// block is rejected by the unmarshal below instead, the probe's own agents
-	// field being a node that accepts any shape.
-	if err := yaml.Unmarshal(data, &probe); err != nil {
+	// Parse the bytes once and decode that tree twice. The probe and the config
+	// read the same document, and a second yaml.Unmarshal would re-parse the file
+	// rather than re-walk what the first parse already built. A file with nothing
+	// to carry a value — empty, or only comments — leaves the node untouched, and
+	// yaml.v3 decodes such a node as a null, which is a no-op for both destinations:
+	// the defaults survive, exactly as they did when this read two bare unmarshals.
+	var doc yaml.Node
+	if err := yaml.Unmarshal(data, &doc); err != nil {
 		return err
 	}
-	if err := yaml.Unmarshal(data, cfg); err != nil {
+	var probe legacyProbe
+	// Bare, like the decode below it: Load already names the file, and the
+	// probe is the first thing to reject a mistyped ide: block, so a wrapper
+	// here would stamp the path into the message twice. A mistyped agents:
+	// block is rejected by the decode below instead, the probe's own agents
+	// field being a node that accepts any shape.
+	if err := doc.Decode(&probe); err != nil {
+		return err
+	}
+	if err := doc.Decode(cfg); err != nil {
 		return err
 	}
 	return promoteLegacy(cfg, path, &probe.Agents)

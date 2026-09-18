@@ -8,7 +8,9 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -226,6 +228,123 @@ func TestLoad_InvalidScoringYAML(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "scoring") {
 		t.Errorf("expected error to mention 'scoring', got: %v", err)
+	}
+}
+
+// --- read-path containment ---
+
+// oversizedConfig renders a valid configuration document larger than n bytes, one
+// distinct key per line: valid YAML and a valid config, which is what makes it a
+// denial of service rather than a parse error.
+func oversizedConfig(n int) string {
+	var sb strings.Builder
+	sb.WriteString("qode_version: \"0.4.0-beta\"\n")
+	for i := 0; sb.Len() <= n; i++ {
+		fmt.Fprintf(&sb, "k%06d: v\n", i)
+	}
+	return sb.String()
+}
+
+func TestLoad_RefusesAProjectConfigPastTheSizeLimit(t *testing.T) {
+	seedLegacyHome(t) // t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, oversizedConfig(maxConfigBytes))
+
+	_, err := Load(dir)
+	if err == nil {
+		t.Fatal("Load accepted a config past the size limit")
+	}
+	if !strings.Contains(err.Error(), "past the 65536-byte limit for a configuration") {
+		t.Errorf("error = %v, want it to name the size limit", err)
+	}
+	if !strings.Contains(err.Error(), ConfigFileName) {
+		t.Errorf("error = %v, want it to name the file it refused", err)
+	}
+}
+
+func TestLoad_RefusesAUserConfigPastTheSizeLimit(t *testing.T) {
+	home := seedLegacyHome(t) // t.Setenv forbids t.Parallel.
+	dir := t.TempDir()
+	writeProjectConfig(t, dir, "qode_version: \"0.4.0-beta\"\n")
+	writeUserConfig(t, home, oversizedConfig(maxConfigBytes))
+
+	_, err := Load(dir)
+	if err == nil {
+		t.Fatal("Load accepted a user config past the size limit")
+	}
+	if !strings.Contains(err.Error(), "past the 65536-byte limit for a configuration") {
+		t.Errorf("error = %v, want it to name the size limit", err)
+	}
+}
+
+func TestLoad_AcceptsAConfigJustUnderTheSizeLimit(t *testing.T) {
+	seedLegacyHome(t) // t.Setenv forbids t.Parallel.
+	dir := t.TempDir()
+	body := oversizedConfig(maxConfigBytes - 2048)
+	if len(body) > maxConfigBytes {
+		t.Fatalf("fixture is %d bytes, past the %d-byte limit it is meant to stay under", len(body), maxConfigBytes)
+	}
+	writeProjectConfig(t, dir, body)
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load refused a config inside the size limit: %v", err)
+	}
+	assertAgents(t, cfg, [4]bool{true, true, true, true})
+}
+
+func TestLoad_KeepsTheDefaultsForAConfigWithNoValues(t *testing.T) {
+	// t.Setenv forbids t.Parallel; Load merges ~/.qode/config.yaml.
+	tests := []struct {
+		name string
+		body string
+	}{
+		{"empty file", ""},
+		{"comments only", "# nothing here yet\n"},
+		{"bare document marker", "---\n"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			seedLegacyHome(t)
+			dir := t.TempDir()
+			writeProjectConfig(t, dir, tc.body)
+
+			cfg, err := Load(dir)
+			if err != nil {
+				t.Fatalf("load: %v", err)
+			}
+			assertAgents(t, cfg, [4]bool{true, true, true, true})
+			if cfg.Review.MinCodeScore != DefaultConfig().Review.MinCodeScore {
+				t.Errorf("min_code_score = %v, want the default %v",
+					cfg.Review.MinCodeScore, DefaultConfig().Review.MinCodeScore)
+			}
+		})
+	}
+}
+
+func TestLoad_RefusesAProjectConfigThatIsNotARegularFile(t *testing.T) {
+	seedLegacyHome(t) // t.Setenv forbids t.Parallel.
+	dir := t.TempDir()
+	if err := syscall.Mkfifo(filepath.Join(dir, ConfigFileName), 0644); err != nil {
+		t.Skipf("mkfifo unavailable: %v", err)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := Load(dir)
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("Load accepted a named pipe as a config")
+		}
+		if !strings.Contains(err.Error(), "not a regular file") {
+			t.Errorf("error = %v, want it to say the file is not a regular file", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Load blocked reading a named pipe")
 	}
 }
 
