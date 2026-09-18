@@ -68,23 +68,6 @@ cosign verify-blob \
 
 Releases tagged before this change shipped `checksums.txt.sig` + `checksums.txt.pem` instead — verify those with `--signature checksums.txt.sig --certificate checksums.txt.pem` and no `--bundle` flag.
 
-## Upgrading to 0.4.0-beta
-
-0.4.0-beta renames the `ide:` key in `qode.yaml` to `agents:`. Run `qode init` once in each existing project: the key is renamed in place, every toggle you set is kept, and the line
-
-```text
-qode.yaml: 'ide:' has been renamed to 'agents:' — updated in place.
-```
-
-confirms it. Until you run it, every command except `qode init` exits 1 with
-
-```text
-Error: qode binary (0.4.0-beta) is incompatible with this project's config (0.3.4-beta)
-Run 'qode init' to refresh your configuration, prompts, and agent assets
-```
-
-An `ide:` block pulled in through a `<<:` merge key is still read but never rewritten — rename that one by hand. If a file carries both keys, `agents:` wins, a warning is printed, and the `ide:` block is left exactly as written for you to delete yourself — the rest of the file is upgraded as usual.
-
 ## Quick Start
 
 ```bash
