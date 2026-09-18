@@ -48,6 +48,7 @@ Before 0.4.0-beta the agent toggles lived under a key called `ide:`. That key is
 |---|---|---|
 | The project `qode.yaml`, as a plain top-level key | Renames it to `agents:` in place, keeping every value you set, and prints `qode.yaml: 'ide:' has been renamed to 'agents:' — updated in place.` | — |
 | The project `qode.yaml`, alongside an `agents:` key | Leaves the `ide:` block exactly as written — renaming would create a duplicate key — and upgrades the rest of the file as usual | Warns that `agents:` wins and `ide:` is ignored; delete the `ide:` block yourself |
+| The project `qode.yaml`, alongside an `agents:` key written with no value | Leaves the `ide:` block exactly as written — renaming would create a duplicate key — and upgrades the rest of the file as usual | Reads the `ide:` block as `agents:` and warns. Renaming the key here would give you two `agents:` keys, which the next `qode init` refuses: delete the empty `agents:` line first, then rename `ide:` |
 | `~/.qode/config.yaml` | **Nothing.** No qode command ever rewrites your machine-wide config | Reads it as `agents:` and warns; rename the key by hand |
 | Pulled in through a `<<:` merge key | **Nothing.** The rename only sees a literal top-level `ide:` key | Reads it as `agents:` and warns; rename the key by hand |
 

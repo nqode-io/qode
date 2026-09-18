@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -448,10 +449,13 @@ func TestLoad_LegacyKeyNotices(t *testing.T) {
 			},
 		},
 		{
+			// The ordinary "rename the key" advice would produce a duplicate
+			// agents: here, which the next qode init refuses, so this shape gets
+			// the two-step wording instead.
 			name:    "null agents key beside a legacy block",
 			project: "agents:\nide:\n  cursor:\n    enabled: false\n",
 			want: func(p, _ string) []string {
-				return []string{fmt.Sprintf(legacyKeyNotice, p)}
+				return []string{fmt.Sprintf(emptyAgentsNotice, p)}
 			},
 		},
 		{
@@ -495,6 +499,56 @@ func TestLoad_LegacyKeyNotices(t *testing.T) {
 			want := tc.want(projectPath, userPath)
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("Notices() =\n%#v\nwant\n%#v", got, want)
+			}
+		})
+	}
+}
+
+func TestUpgrade_AcceptsWhatTheEmptyAgentsNoticeTellsTheUserToDo(t *testing.T) {
+	t.Parallel()
+
+	// A valueless agents: beside an ide: block is the one shape where the
+	// ordinary deprecation advice — "rename the key to 'agents:'" — leaves the
+	// user worse off than before. emptyAgentsNotice sends them down the second
+	// row instead; this is what makes the two rows different.
+	tests := []struct {
+		name    string
+		edited  string
+		wantErr error
+	}{
+		{
+			name:    "renaming the key, as the ordinary notice says",
+			edited:  "qode_version: 0.4.0-beta\nagents:\nagents:\n  cursor:\n    enabled: false\n",
+			wantErr: ErrConfigInvalid,
+		},
+		{
+			name:   "deleting the empty line first, as the empty-agents notice says",
+			edited: "qode_version: 0.4.0-beta\nagents:\n  cursor:\n    enabled: false\n",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := seedConfig(t, tc.edited)
+
+			_, err := Upgrade(context.Background(), dir, "0.4.0-beta")
+			if tc.wantErr != nil {
+				if !errors.Is(err, tc.wantErr) {
+					t.Fatalf("error = %v, want %v", err, tc.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Upgrade: %v", err)
+			}
+			var got Config
+			if err := yaml.Unmarshal(readConfig(t, dir), &got); err != nil {
+				t.Fatalf("unmarshalling upgraded config: %v", err)
+			}
+			if got.Agents.Cursor.Enabled {
+				t.Error("the remedy the notice recommends re-enabled cursor")
 			}
 		})
 	}

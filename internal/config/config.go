@@ -110,18 +110,27 @@ const (
 		"'agents:' wins, 'ide:' is ignored. Delete the 'ide:' block."
 	legacyKeyNotice = "warning: %s: 'ide:' is deprecated — read as 'agents:'. " +
 		"Rename the key to 'agents:'."
+	// emptyAgentsNotice replaces legacyKeyNotice when the file also carries an
+	// `agents:` key written with no value. Renaming `ide:` in that file would
+	// produce two `agents:` keys, which the next 'qode init' refuses outright, so
+	// the ordinary advice has to be taken in two steps here.
+	emptyAgentsNotice = "warning: %s: 'ide:' is deprecated — read as 'agents:'. " +
+		"Delete the empty 'agents:' line first, then rename 'ide:' to 'agents:'."
 )
 
 // LegacyKeys records deprecated configuration keys seen while loading, in load
 // order: the project qode.yaml before ~/.qode/config.yaml.
 type LegacyKeys struct {
-	IDEKeyPaths  []string // files that carried `ide:` alone
-	BothKeyPaths []string // files that carried both `ide:` and `agents:`
+	IDEKeyPaths      []string // files that carried `ide:` alone
+	BothKeyPaths     []string // files that carried both `ide:` and `agents:`
+	EmptyAgentsPaths []string // files that carried `ide:` beside a valueless `agents:`
 }
 
 // Notices returns the user-facing lines for those observations: the both-keys
-// warnings first, then the deprecation warnings, each in load order. Pure: it
-// formats strings and performs no I/O, so config stays printer-free.
+// warnings first, then the deprecation warnings, each in load order. A file with
+// a valueless `agents:` gets the two-step deprecation wording instead of the
+// ordinary one, never both. Pure: it formats strings and performs no I/O, so
+// config stays printer-free.
 func (c *Config) Notices() []string {
 	var out []string
 	for _, p := range c.Legacy.BothKeyPaths {
@@ -129,6 +138,9 @@ func (c *Config) Notices() []string {
 	}
 	for _, p := range c.Legacy.IDEKeyPaths {
 		out = append(out, fmt.Sprintf(legacyKeyNotice, p))
+	}
+	for _, p := range c.Legacy.EmptyAgentsPaths {
+		out = append(out, fmt.Sprintf(emptyAgentsNotice, p))
 	}
 	return out
 }
@@ -138,7 +150,13 @@ func (c *Config) Notices() []string {
 // file followed by a modern user file is otherwise indistinguishable from one
 // file carrying both keys.
 type legacyProbe struct {
-	Agents *AgentsConfig `yaml:"agents"`
+	// Agents is a node, and a value rather than a pointer, so that `agents:`
+	// written with nothing after it can be told apart from no `agents:` key at
+	// all: the first is a null node, the second is a node yaml never touched.
+	// The two need different advice. A *yaml.Node cannot make that distinction —
+	// yaml.v3 leaves a pointer nil for a null value. The block is still
+	// type-checked, by the full unmarshal that follows this probe.
+	Agents yaml.Node     `yaml:"agents"`
 	IDE    *AgentsConfig `yaml:"ide"`
 }
 
@@ -149,40 +167,49 @@ func mergeFromFile(path string, cfg *Config) error {
 	}
 	var probe legacyProbe
 	// Bare, like the unmarshal below it: Load already names the file, and the
-	// probe is the first thing to reject a mistyped agents: or ide: block, so a
-	// wrapper here would stamp the path into the message twice.
+	// probe is the first thing to reject a mistyped ide: block, so a wrapper
+	// here would stamp the path into the message twice. A mistyped agents:
+	// block is rejected by the unmarshal below instead, the probe's own agents
+	// field being a node that accepts any shape.
 	if err := yaml.Unmarshal(data, &probe); err != nil {
 		return err
 	}
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return err
 	}
-	return promoteLegacy(cfg, path, probe.Agents != nil)
+	return promoteLegacy(cfg, path, &probe.Agents)
 }
 
 // promoteLegacy applies this file's deprecated ide: block over cfg.Agents key by
 // key, so an agent the block does not name keeps the value it already has. A file
-// that also carries agents: is not promoted: agents: wins. The node is zeroed
-// either way, so it can never survive into the next file or into Save.
+// that also carries agents: with a value is not promoted: agents: wins. The node
+// is zeroed either way, so it can never survive into the next file or into Save.
+// agentsKey is this file's agents: value node, left at Kind 0 when the file has
+// no such key.
 //
 // "Carries agents:" means something narrower here than on the write side, and the
-// difference is deliberate. sawAgents comes from a *AgentsConfig that a null value
-// leaves nil, so `agents:` with nothing after it counts as unset and the ide: block
-// is still promoted; renameLegacyAgentsKey counts that same key as present and
-// refuses to rename, because renaming would duplicate it. The user's values are
-// read correctly either way, but such a file is never migrated and warns on every
-// run until the empty agents: key is deleted by hand.
-func promoteLegacy(cfg *Config, path string, sawAgents bool) error {
+// difference is deliberate. A null agents: counts as unset here, so the ide: block
+// is still promoted and the user's values are read correctly; renameLegacyAgentsKey
+// counts that same key as present and refuses to rename, because renaming would
+// duplicate it. Such a file is therefore never migrated and warns on every run
+// until the empty agents: key is deleted by hand — which is why it gets its own
+// notice, the ordinary "rename the key" advice being the one thing that does not
+// work there.
+func promoteLegacy(cfg *Config, path string, agentsKey *yaml.Node) error {
 	node := cfg.IDE
 	cfg.IDE = yaml.Node{}
 	if node.Kind == 0 {
 		return nil
 	}
-	if sawAgents {
+	switch {
+	case agentsKey.Kind != 0 && !isNull(agentsKey):
 		cfg.Legacy.BothKeyPaths = append(cfg.Legacy.BothKeyPaths, path)
 		return nil
+	case agentsKey.Kind != 0:
+		cfg.Legacy.EmptyAgentsPaths = append(cfg.Legacy.EmptyAgentsPaths, path)
+	default:
+		cfg.Legacy.IDEKeyPaths = append(cfg.Legacy.IDEKeyPaths, path)
 	}
-	cfg.Legacy.IDEKeyPaths = append(cfg.Legacy.IDEKeyPaths, path)
 	if err := node.Decode(&cfg.Agents); err != nil {
 		return fmt.Errorf("parsing %s: decoding deprecated 'ide:' block: %w", path, err)
 	}
