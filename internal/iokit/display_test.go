@@ -1,7 +1,7 @@
 package iokit
 
 import (
-	"strings"
+	"bytes"
 	"testing"
 )
 
@@ -53,7 +53,8 @@ func TestDisplayPath_EscapesRawC1Bytes(t *testing.T) {
 			if got == tc.path {
 				t.Errorf("raw C1 byte passed through unescaped: %q", got)
 			}
-			if strings.ContainsAny(got, "\x9b\x9d") {
+			// ContainsAny takes a UTF-8 string, so check the raw bytes directly.
+			if bytes.ContainsAny([]byte(got), "\x9b\x9d") {
 				t.Errorf("escaped form still carries a raw control byte: %q", got)
 			}
 		})
