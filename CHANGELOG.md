@@ -37,6 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   A released binary stamps `qode_version: "0.4.0-beta+<build>"` rather than a bare `0.4.0-beta`; that is expected and does not affect compatibility. Two places qode never rewrites for you: `~/.qode/config.yaml` and an `ide:` block supplied through a `<<:` merge key. Both are still read as `agents:` and both warn on every run — rename those by hand.
 
+## [0.3.4-beta] - 2026-05-04
+
+### Fixed
+
+- `install.sh` failed on systems where `awk` is `mawk` or another substitute rather than GNU awk, so the installer could not parse the release metadata. ([#66](https://github.com/nqode-io/qode/pull/66))
+- Corrected the version numbers shown on the marketing site and added the missing hyperlinks.
+
 ## [0.3.3-beta] - 2026-04-28
 
 ### Changed

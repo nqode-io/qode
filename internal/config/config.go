@@ -118,8 +118,10 @@ const (
 		"Delete the empty 'agents:' line first, then rename 'ide:' to 'agents:'."
 )
 
-// LegacyKeys records deprecated configuration keys seen while loading, in load
-// order: the project qode.yaml before ~/.qode/config.yaml.
+// LegacyKeys records deprecated configuration keys seen while loading. Within
+// each field the paths are in load order, the project qode.yaml before
+// ~/.qode/config.yaml; across fields they are not, because Notices drains the
+// fields in turn. Every line names its own file, so the order is presentational.
 type LegacyKeys struct {
 	IDEKeyPaths      []string // files that carried `ide:` alone
 	BothKeyPaths     []string // files that carried both `ide:` and `agents:`
@@ -127,7 +129,8 @@ type LegacyKeys struct {
 }
 
 // Notices returns the user-facing lines for those observations: the both-keys
-// warnings first, then the deprecation warnings, each in load order. A file with
+// warnings first, then the deprecation warnings, each in load order within its
+// own group. A file with
 // a valueless `agents:` gets the two-step deprecation wording instead of the
 // ordinary one, never both. Pure: it formats strings and performs no I/O, so
 // config stays printer-free.
